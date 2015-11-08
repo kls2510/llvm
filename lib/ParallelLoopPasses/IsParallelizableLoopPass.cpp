@@ -20,16 +20,16 @@ namespace {
 
 		//Set LoopInfo pass to run before this one so we can access its results
 		void getAnalysisUsage(AnalysisUsage &AU) const {
-			AU.addRequired<LoopInfo>();
+			AU.addRequired<LoopInfoWrapperPass>();
 			//this pass is just analysis and so does not change any other analysis results
 			AU.setPreservesAll();
 		}
 
 		virtual bool runOnFunction(Function &F) {
 			//get data from the loopInfo analysis
-			LoopInfo &LI = getAnalysis<LoopInfo>();
+			LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
 
-			cout << "Running parallelizable loop analysis on function " << (F.getName()).operator std::string << "\n";
+			cout << "Running parallelizable loop analysis on function " << (F.getName()).data() << "\n";
 
 			//initialize iterators and loop counter
 			LoopInfo::iterator i = LI.begin();
@@ -41,7 +41,7 @@ namespace {
 				Loop *L = *i;
 				cout << "Found loop " << LoopCounter << "\n";
 				//for now just dump the contents of the loop
-				L->dump;
+				L->dump();
 				//call the function that will be implemented to analyse the code
 				if (isParallelizable(L)) {
 					cout << "this loop is parallelizable\n";
