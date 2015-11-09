@@ -86,7 +86,9 @@ namespace {
 							unique_ptr<Dependence> dependence = DA->depends(inst, inst2, false);
 							if (dependence) {
 								depCounter++;
-								cout << "With " << (dependence->getDst()) << " direction " << (dependence->getDirection(0)) << " and distance " << (dependence->getDistance(0)) << " at level 0\n";
+								cout << "With ";
+								(dependence->getDst())->dump();
+								//cout << " direction " << (dependence->getDirection(0)) << " and distance " << (dependence->getDistance(0)) << " at level 0\n";
 							}
 							//also check for aliasing within instructions
 						}
