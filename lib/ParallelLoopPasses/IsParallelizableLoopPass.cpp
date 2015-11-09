@@ -78,12 +78,12 @@ namespace {
 					//loop through the basic blocks instructions to check for aliasing and dependencies
 					for (BasicBlock::iterator inst = ((*bb)->getIterator())->begin(); inst != ((*bb)->getIterator())->end(); inst++) {
 						inst->dump();
-						cout << "For this instruction, checking def-use chain: \n";
-						for (Value::use_iterator i = inst->use_begin(); i != inst->use_end(); i++) {
+						cout << "This value is used " << inst->getNumUses() << " times \n";
+						/* for (Value::use_iterator i = inst->use_begin(); i != inst->use_end(); i++) {
 							//for now just dump instruction that depends on the write if it is in the loop
 							Value *v = i->get();
 							v->dump();
-						}
+						} */
 					}
 				}
 			}
