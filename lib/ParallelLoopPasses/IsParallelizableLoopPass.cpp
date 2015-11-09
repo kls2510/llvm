@@ -77,8 +77,20 @@ namespace {
 				for (Loop::block_iterator bb = L->block_begin(); bb != L->block_end(); bb++) {
 					//loop through the basic blocks instructions to check for aliasing and dependencies
 					for (BasicBlock::iterator inst = ((*bb)->getIterator())->begin(); inst != ((*bb)->getIterator())->end(); inst++) {
+						cout << "Dependencies for instruction: ";
 						inst->dump();
-						cout << "This value is used " << inst->getNumUses() << " times \n";
+						BasicBlock::iterator inst2 = inst;
+						int depCounter = 0;
+						for (++inst2; inst2 != ((*bb)->getIterator())->end(); inst2++) {
+							//check for dependencies between instructions
+							unique_ptr<Dependence> dependence = DA->depends(inst, inst2, false);
+							if (dependence) {
+								depCounter++;
+								cout << "With " << (dependence->getDst()) << " direction " << (dependence->getDirection(0)) << " and distance " << (dependence->getDistance(0)) << " at level 0\n";
+							}
+							//also check for aliasing within instructions
+						}
+						
 						/* for (Value::use_iterator i = inst->use_begin(); i != inst->use_end(); i++) {
 							//for now just dump instruction that depends on the write if it is in the loop
 							Value *v = i->get();
