@@ -83,9 +83,7 @@ namespace {
 							for (Value::use_iterator i = inst->use_begin(); i != inst->use_end(); i++) {
 								//for now just dump instruction that depends on the write if it is in the loop
 								Value *v = i->get();
-								if (L->contains(v)) {
-									v->dump();
-								}
+								v->dump();
 							}
 						}
 					}
