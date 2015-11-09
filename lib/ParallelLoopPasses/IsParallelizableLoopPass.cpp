@@ -77,7 +77,7 @@ namespace {
 				for (Loop::block_iterator bb = L->block_begin(); bb != L->block_end(); bb++) {
 					//loop through the basic blocks instructions to check for aliasing and dependencies
 					for (BasicBlock::iterator inst = ((*bb)->getIterator())->begin(); inst != ((*bb)->getIterator())->end(); inst++) {
-						cout << "Dependencies for instruction: ";
+						cout << "Dependencies for instruction: \n";
 						inst->dump();
 						BasicBlock::iterator inst2 = inst;
 						int depCounter = 0;
@@ -86,7 +86,7 @@ namespace {
 							unique_ptr<Dependence> dependence = DA->depends(inst, inst2, false);
 							if (dependence) {
 								depCounter++;
-								cout << "With ";
+								cout << "With \n";
 								(dependence->getDst())->dump();
 								//cout << " direction " << (dependence->getDirection(0)) << " and distance " << (dependence->getDistance(0)) << " at level 0\n";
 							}
