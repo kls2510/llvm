@@ -39,7 +39,7 @@ namespace {
 			//get data from the loopInfo analysis
 			LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
 			DA = &getAnalysis<DependenceAnalysis>();
-			AA = &getAnalysis<AAResultsWrapperPass>();
+			AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
 			cout << "Running parallelizable loop analysis on function " << (F.getName()).data() << "\n";
 
