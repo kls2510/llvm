@@ -77,8 +77,17 @@ namespace {
 				for (Loop::block_iterator bb = L->block_begin(); bb != L->block_end(); bb++) {
 					//loop through the basic blocks instructions to check for aliasing and dependencies
 					for (BasicBlock::iterator inst = ((*bb)->getIterator())->begin(); inst != ((*bb)->getIterator())->end(); inst++) {
-						//for now dump the instruction
-						inst->dump();
+						if (inst->mayWriteToMemory()) {
+							inst->dump();
+							cout << "this instruction may write to memory, checking def-use chain: \n";
+							for (Value::use_iterator i = inst->use_begin(); i != inst->use_end(); i++) {
+								//for now just dump instruction that depends on the write if it is in the loop
+								Value *v = i->get();
+								if (L->contains(v)) {
+									v->dump();
+								}
+							}
+						}
 					}
 				}
 			}
