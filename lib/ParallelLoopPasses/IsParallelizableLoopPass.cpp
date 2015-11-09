@@ -30,7 +30,7 @@ namespace {
 		void getAnalysisUsage(AnalysisUsage &AU) const {
 			AU.addRequired<LoopInfoWrapperPass>();
 			AU.addRequired<DependenceAnalysis>();
-			AU.addRequired<AliasAnalysis>();
+			AU.addRequired<AAResultsWrapperPass>();
 			//this pass is just analysis and so does not change any other analysis results
 			AU.setPreservesAll();
 		}
@@ -39,7 +39,7 @@ namespace {
 			//get data from the loopInfo analysis
 			LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
 			DA = &getAnalysis<DependenceAnalysis>();
-			AA = &getAnalysis<AliasAnalysis>();
+			AA = &getAnalysis<AAResultsWrapperPass>();
 
 			cout << "Running parallelizable loop analysis on function " << (F.getName()).data() << "\n";
 
