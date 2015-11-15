@@ -80,6 +80,7 @@ namespace {
 				StringRef inductionVariable = phi->getName();
 				//loop through instructions dependendent on the induction variable and check to see whether
 				//there are interloop dependencies
+				set<Instruction *> *dependentInstructions = new set<Instruction *>();
 				for (Instruction::user_iterator pui = phi->user_begin(); pui != phi->user_end(); pui++) {
 					Instruction *dependency = dyn_cast<Instruction>(*pui);
 					cout << "found instruction dependent on induction variable at:\n";
@@ -88,20 +89,15 @@ namespace {
 					//if ((dependency->getOperand(0)->getName() == inductionVariable)
 						//&& (string(dependency->getOpcodeName()).compare("trunc") != 0) && (string(dependency->getOpcodeName()).compare("zext") != 0)) {
 						//cout << "and this instruction passes a manipulated version to...\n";
-						set<Instruction *> *dependentInstructions = new set<Instruction *>();
 						//if so, look for instructions dependent on that instruction's value
-						for (Instruction::user_iterator ui = dependency->user_begin(); ui != dependency->user_end(); ui++) {
-							Instruction *dependency2 = dyn_cast<Instruction>(*ui);
-							getDependencies(dependency2, phi, dependentInstructions);
-						}
-						cout << "found potential dependent instructions:\n";
-						for (set<Instruction *>::iterator si = dependentInstructions->begin(); si != dependentInstructions->end(); si++) {
-							(*si)->dump();
-						}
-					//}
-					//else {
-						cout << "Instruction not going to cause dependencies\n";
-					//}
+					for (Instruction::user_iterator ui = dependency->user_begin(); ui != dependency->user_end(); ui++) {
+						Instruction *dependency2 = dyn_cast<Instruction>(*ui);
+						getDependencies(dependency2, phi, dependentInstructions);
+					}
+				}
+				cout << "found potential dependent instructions within the loop:\n";
+				for (set<Instruction *>::iterator si = dependentInstructions->begin(); si != dependentInstructions->end(); si++) {
+					(*si)->dump();
 				}
 			}
 			return false;
