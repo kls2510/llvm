@@ -79,25 +79,17 @@ namespace {
 					for (BasicBlock::iterator inst = ((*bb)->getIterator())->begin(); inst != ((*bb)->getIterator())->end(); inst++) {
 						cout << "Dependencies for instruction: \n";
 						inst->dump();
-						BasicBlock::iterator inst2 = inst;
-						int depCounter = 0;
-						for (++inst2; inst2 != ((*bb)->getIterator())->end(); inst2++) {
-							//check for dependencies between instructions
-							unique_ptr<Dependence> dependence = DA->depends(inst, inst2, false);
-							if (dependence) {
-								depCounter++;
-								cout << "With \n";
-								(dependence->getDst())->dump();
-								//cout << " direction " << (dependence->getDirection(0)) << " and distance " << (dependence->getDistance(0)) << " at level 0\n";
+						int depCount = 1;
+						for (Instruction::user_iterator ui = inst->user_begin; ui != inst->user_end(); ui++) {
+							Instruction *dependency = dyn_cast<Instruction>(*ui);
+							if (L->contains(*ui)) {
+								//check for dependencies between instructions
+								cout << "dependency " << depCount << ":\n";
+								dependency->dump();
+								depCount++;
+								//also check for aliasing within instructions
 							}
-							//also check for aliasing within instructions
 						}
-						
-						/* for (Value::use_iterator i = inst->use_begin(); i != inst->use_end(); i++) {
-							//for now just dump instruction that depends on the write if it is in the loop
-							Value *v = i->get();
-							v->dump();
-						} */
 					}
 				}
 			}
