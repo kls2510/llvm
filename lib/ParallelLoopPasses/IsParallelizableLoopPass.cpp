@@ -4,6 +4,7 @@
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include <iostream>
+#include <string>
 
 using namespace llvm;
 using namespace std;
@@ -84,9 +85,8 @@ namespace {
 					dependency->dump();
 					//check to see whether the instruction manipulates the value of the IV in any way
 					if ((dependency->getOperand(0)->getName() == inductionVariable)
-						&& (dependency->getOpcodeName() != "trunc") && dependency->getOpcodeName() != "zext") {
+						&& (string(dependency->getOpcodeName()).compare("trunc") != 0) && (string(dependency->getOpcodeName()).compare("zext") != 0)) {
 						cout << "and this instruction passes a manipulated version to...\n";
-						int uses = dependency->getNumUses();
 						//if so, look for instructions dependent on that instruction's value
 						for (Instruction::user_iterator ui = dependency->user_begin(); ui != dependency->user_end(); ui++) {
 							Instruction *dependency2 = dyn_cast<Instruction>(*ui);
