@@ -88,15 +88,15 @@ namespace {
 					//if ((dependency->getOperand(0)->getName() == inductionVariable)
 						//&& (string(dependency->getOpcodeName()).compare("trunc") != 0) && (string(dependency->getOpcodeName()).compare("zext") != 0)) {
 						//cout << "and this instruction passes a manipulated version to...\n";
-						set<Instruction> *dependentInstructions = new set<Instruction>();
+						set<Instruction *> *dependentInstructions = new set<Instruction *>();
 						//if so, look for instructions dependent on that instruction's value
 						for (Instruction::user_iterator ui = dependency->user_begin(); ui != dependency->user_end(); ui++) {
 							Instruction *dependency2 = dyn_cast<Instruction>(*ui);
 							getDependencies(dependency2, phi, dependentInstructions);
 						}
 						cout << "found potential dependent instructions:\n";
-						for (set<Instruction>::iterator si = dependentInstructions->begin(); si != dependentInstructions->end(); si++) {
-							(*si).dump();
+						for (set<Instruction *>::iterator si = dependentInstructions->begin(); si != dependentInstructions->end(); si++) {
+							(*si)->dump();
 						}
 					//}
 					//else {
@@ -107,7 +107,7 @@ namespace {
 			return false;
 		}
 
-		void getDependencies(Instruction *inst, PHINode *phi, set<Instruction> *dependents) {
+		void getDependencies(Instruction *inst, PHINode *phi, set<Instruction *> *dependents) {
 			cout << "For\n";
 			inst->dump();
 			cout << "we find it...\n";
@@ -117,11 +117,11 @@ namespace {
 			else {
 				if (inst->mayReadFromMemory()) {
 					cout << "is a read memory instruction so this could be bad\n\n";
-					dependents->insert(*inst);
+					dependents->insert(inst);
 				}
 				else if (inst->mayWriteToMemory()) {
 					cout << "is a write memory instruction so this could be bad\n\n";
-					dependents->insert(*inst);
+					dependents->insert(inst);
 				}
 				else {
 					if (inst->getNumUses() > 0) {
