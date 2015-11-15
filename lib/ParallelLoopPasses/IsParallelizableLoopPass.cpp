@@ -80,7 +80,7 @@ namespace {
 						cout << "Dependencies for instruction: \n";
 						inst->dump();
 						int depCount = 1;
-						for (Instruction::user_iterator ui = inst->user_begin; ui != inst->user_end(); ui++) {
+						for (Instruction::user_iterator ui = inst->user_begin(); ui != inst->user_end(); ui++) {
 							Instruction *dependency = dyn_cast<Instruction>(*ui);
 							if (L->contains(*ui)) {
 								//check for dependencies between instructions
