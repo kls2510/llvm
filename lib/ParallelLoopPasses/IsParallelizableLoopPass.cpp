@@ -88,21 +88,19 @@ namespace {
 						cout << "and this instruction passes a manipulated version to...\n";
 						int uses = dependency->getNumUses();
 						//if so, look for instructions dependent on that instruction's value
-						while (uses > 0) {
-							for (Instruction::user_iterator ui = dependency->user_begin(); ui != dependency->user_end(); ui++) {
-								Instruction *dependency2 = dyn_cast<Instruction>(*ui);
-								if (dependency2 == phi) {
-									cout << "The phi node so this is OK\n";
+						for (Instruction::user_iterator ui = dependency->user_begin(); ui != dependency->user_end(); ui++) {
+							Instruction *dependency2 = dyn_cast<Instruction>(*ui);
+							if (dependency2 == phi) {
+								cout << "The phi node so this is OK\n";
+							}
+							else {
+								if (dependency2->mayReadFromMemory()) {
+									cout << "A read memory instruction so this could be bad\n";
 								}
-								else {
-									if (dependency2->mayReadFromMemory()) {
-										cout << "A read memory instruction so this could be bad\n";
-									}
-									else if (dependency2->mayWriteToMemory()) {
-										cout << "A write memory instruction so this could be bad\n";
-									}
-									//go down just one level for now - will extract into a recursive function
+								else if (dependency2->mayWriteToMemory()) {
+									cout << "A write memory instruction so this could be bad\n";
 								}
+								//go down just one level for now - will extract into a recursive function
 							}
 						}
 					}
