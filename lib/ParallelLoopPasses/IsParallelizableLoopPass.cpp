@@ -105,7 +105,12 @@ namespace {
 						i1->dump();
 						i2->dump();
 						cout << "is\n";
-						cout << d->getDirection(0) << " " << d->getDistance(0) << "\n";
+						if (d != nullptr) {
+							cout << d->getDirection(0) << " " << d->getDistance(0) << "\n";
+						}
+						else {
+							cout << "no dependency\n";
+						}
 					}
 				}
 
