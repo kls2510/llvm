@@ -83,7 +83,7 @@ namespace {
 					cout << "found instruction dependent on induction variable at:\n";
 					dependency->dump();
 					//check to see whether the instruction manipulates the value of the IV in any way
-					if (dependency->getOperand(1)->getName() == inductionVariable) {
+					if (dependency->getOperand(0)->getName() == inductionVariable) {
 						cout << "and this instruction may pass a manipulated version somewhere else\n";
 					}
 					//if so, look for instructions dependent on that instruction's value
