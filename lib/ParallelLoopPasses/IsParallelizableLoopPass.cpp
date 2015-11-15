@@ -82,7 +82,7 @@ namespace {
 						int depCount = 1;
 						for (Instruction::user_iterator ui = inst->user_begin(); ui != inst->user_end(); ui++) {
 							Instruction *dependency = dyn_cast<Instruction>(*ui);
-							if (L->contains(*ui)) {
+							if (L->contains(dependency)) {
 								//check for dependencies between instructions
 								cout << "dependency " << depCount << ":\n";
 								dependency->dump();
