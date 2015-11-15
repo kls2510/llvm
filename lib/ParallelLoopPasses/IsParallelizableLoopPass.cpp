@@ -116,7 +116,7 @@ namespace {
 					cout << "is a write memory instruction so this could be bad\n\n";
 				}
 				else {
-					if (inst->getNumUses > 0) {
+					if (inst->getNumUses() > 0) {
 						cout << "could still pass edited iterator to a read/write instruction, recursing on..\n";
 						for (Instruction::user_iterator ui = inst->user_begin(); ui != inst->user_end(); ui++) {
 							getDependencies(dyn_cast<Instruction>(*ui), phi);
