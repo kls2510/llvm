@@ -116,9 +116,14 @@ namespace {
 					cout << "is a write memory instruction so this could be bad\n\n";
 				}
 				else {
-					cout << "could still pass edited iterator to a read/write instruction, recursing on..\n";
-					for (Instruction::user_iterator ui = inst->user_begin(); ui != inst->user_end(); ui++) {
-						getDependencies(dyn_cast<Instruction>(*ui), phi);
+					if (inst->getNumUses > 0) {
+						cout << "could still pass edited iterator to a read/write instruction, recursing on..\n";
+						for (Instruction::user_iterator ui = inst->user_begin(); ui != inst->user_end(); ui++) {
+							getDependencies(dyn_cast<Instruction>(*ui), phi);
+						}
+					}
+					else {
+						cout << "not used in a read/write so doesn't cause loop dependencies\n";
 					}
 				}
 			}
