@@ -100,6 +100,10 @@ namespace {
 								else if (dependency2->mayWriteToMemory()) {
 									cout << "A write memory instruction so this could be bad\n";
 								}
+								else {
+									"Could still pass value to another instruction..\n";
+									dependency2->dump();
+								}
 								//go down just one level for now - will extract into a recursive function
 							}
 						}
