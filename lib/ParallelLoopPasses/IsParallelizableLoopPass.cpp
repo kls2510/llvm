@@ -5,6 +5,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include <iostream>
 #include <string>
+#include <set>
 
 using namespace llvm;
 using namespace std;
@@ -84,24 +85,29 @@ namespace {
 					cout << "found instruction dependent on induction variable at:\n";
 					dependency->dump();
 					//check to see whether the instruction manipulates the value of the IV in any way
-					if ((dependency->getOperand(0)->getName() == inductionVariable)
-						&& (string(dependency->getOpcodeName()).compare("trunc") != 0) && (string(dependency->getOpcodeName()).compare("zext") != 0)) {
-						cout << "and this instruction passes a manipulated version to...\n";
+					//if ((dependency->getOperand(0)->getName() == inductionVariable)
+						//&& (string(dependency->getOpcodeName()).compare("trunc") != 0) && (string(dependency->getOpcodeName()).compare("zext") != 0)) {
+						//cout << "and this instruction passes a manipulated version to...\n";
+						set<Instruction> *dependentInstructions;
 						//if so, look for instructions dependent on that instruction's value
 						for (Instruction::user_iterator ui = dependency->user_begin(); ui != dependency->user_end(); ui++) {
 							Instruction *dependency2 = dyn_cast<Instruction>(*ui);
-							getDependencies(dependency2, phi);
+							getDependencies(dependency2, phi, dependentInstructions);
 						}
-					}
-					else {
+						cout << "found potential dependent instructions:\n";
+						for (set<Instruction>::iterator si = dependentInstructions->begin(); si != dependentInstructions->end(); si++) {
+							(*si).dump();
+						}
+					//}
+					//else {
 						cout << "Instruction not going to cause dependencies\n";
-					}
+					//}
 				}
 			}
 			return false;
 		}
 
-		void getDependencies(Instruction *inst, PHINode *phi) {
+		void getDependencies(Instruction *inst, PHINode *phi, set<Instruction> *dependents) {
 			cout << "For\n";
 			inst->dump();
 			cout << "we find it...\n";
@@ -111,13 +117,15 @@ namespace {
 			else {
 				if (inst->mayReadFromMemory()) {
 					cout << "is a read memory instruction so this could be bad\n\n";
+					dependents->insert(*inst);
 				}
 				else if (inst->mayWriteToMemory()) {
 					cout << "is a write memory instruction so this could be bad\n\n";
+					dependents->insert(*inst);
 				}
 				else {
 					if (inst->getNumUses() > 0) {
-						cout << "could still pass edited iterator to a read/write instruction, recursing on..\n";
+						cout << "could still pass the iterator to a read/write instruction, recursing on..\n";
 						for (Instruction::user_iterator ui = inst->user_begin(); ui != inst->user_end(); ui++) {
 							getDependencies(dyn_cast<Instruction>(*ui), phi);
 						}
@@ -128,7 +136,6 @@ namespace {
 				}
 			}
 		}
-				
 	};
 }
 
