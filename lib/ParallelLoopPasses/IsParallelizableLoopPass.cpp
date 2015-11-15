@@ -97,9 +97,24 @@ namespace {
 				}
 				cout << "found potential dependent instructions within the loop:\n";
 				for (set<Instruction *>::iterator si = dependentInstructions->begin(); si != dependentInstructions->end(); si++) {
+					Instruction *i1 = (*si);
+					for (set<Instruction *>::iterator si2 = dependentInstructions->begin(); si2 != dependentInstructions->end(); si2++) {
+						Instruction *i2 = (*si2);
+						unique_ptr<Dependence> d = DA->depends(i1,i2,true);
+						cout << "dependency between\n";
+						i1->dump();
+						i2->dump();
+						cout << "is\n";
+						cout << d->getDirection(0) << " " << d->getDistance(0) << "\n";
+					}
+				}
+
+				for (set<Instruction *>::iterator si = dependentInstructions->begin(); si != dependentInstructions->end(); si++) {
 					(*si)->dump();
 				}
+				delete dependentInstructions;
 			}
+			
 			return false;
 		}
 
