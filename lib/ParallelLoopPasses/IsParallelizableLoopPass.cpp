@@ -106,7 +106,7 @@ namespace {
 						i2->dump();
 						cout << "is\n";
 						if (d != nullptr) {
-							cout << d->getDirection(0) << " " << d->getDistance(0) << "\n";
+							cout << d->getDirection(1) << " " << d->getDistance(1) << "\n";
 						}
 						else {
 							cout << "no dependency\n";
