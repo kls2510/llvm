@@ -100,7 +100,6 @@ namespace {
 						cout << "dependency between\n";
 						i1->dump();
 						i2->dump();
-						cout << "is ";
 						if (d != nullptr) {
 							/*  direction:
 							    NONE = 0,
@@ -111,16 +110,7 @@ namespace {
 							    NE = 5,
 							    GE = 6,
 							    ALL = 7 */
-							cout << "direction code: " << d->getDirection(1) << ", and distance : \n";
 							const SCEV *scev = (d->getDistance(1));
-							if (scev != nullptr) {
-								scev->dump();
-							}
-							else {
-								cout << " NULL \n";
-							}
-							cout << " and consistent?: " << d->isConsistent() << "\n";
-							
 							int direction = d->getDirection(1);
 							int distance;
 							if (scev != nullptr && isa<SCEVConstant>(scev)) {
@@ -130,7 +120,8 @@ namespace {
 							else {
 								distance = 0;
 							}
-							cout << "obtained distance = " << distance << " and direction " << direction << "\n";
+							cout << "obtained distance = " << distance << " and direction =  " << direction << " and consistent?: " << d->isConsistent() << "\n";
+
 							//decide whether this dependency makes the loop not parallelizable
 							if (distance != 0) {
 								if (d->isConsistent()) {
