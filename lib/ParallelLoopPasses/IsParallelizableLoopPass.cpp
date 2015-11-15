@@ -28,23 +28,23 @@ namespace {
 
 		//Set LoopInfo pass to run before this one so we can access its results
 		void getAnalysisUsage(AnalysisUsage &AU) const {
-			//AU.addRequired<LoopInfoWrapperPass>();
-			//AU.addRequired<DependenceAnalysis>();
-			//AU.addRequired<AAResultsWrapperPass>();
+			AU.addRequired<LoopInfoWrapperPass>();
+			AU.addRequired<DependenceAnalysis>();
+			AU.addRequired<AAResultsWrapperPass>();
 			//this pass is just analysis and so does not change any other analysis results
 			AU.setPreservesAll();
 		}
 
 		virtual bool runOnFunction(Function &F) {
 			//get data from the loopInfo analysis
-			//LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-			//DA = &getAnalysis<DependenceAnalysis>();
-			//AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+			LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+			DA = &getAnalysis<DependenceAnalysis>();
+			AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
 			cout << "Running parallelizable loop analysis on function " << (F.getName()).data() << "\n";
 
 			//initialize iterators and loop counter
-			/* LoopInfo::iterator i = LI.begin();
+			LoopInfo::iterator i = LI.begin();
 			LoopInfo::iterator e = LI.end();
 			int LoopCounter = 1;
 
@@ -63,10 +63,10 @@ namespace {
 				}
 				i++;
 			}
-			return false; */
+			return false;
 		}
 
-	/* private:
+	private:
 		//runs the actual analysis
 		bool isParallelizable(Loop *L) {
 			//default for now
@@ -94,7 +94,7 @@ namespace {
 				}
 			}
 			return false;
-		} */
+		}
 	};
 }
 
