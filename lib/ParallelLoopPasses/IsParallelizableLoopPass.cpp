@@ -130,15 +130,15 @@ namespace {
 							else {
 								distance = 0;
 							}
-							cout << "obtained distance = " << distance << "\n";
+							cout << "obtained distance = " << distance << " and direction " << direction << "\n";
 							//decide whether this dependency makes the loop not parallelizable
 							if (distance != 0) {
 								if (d->isConsistent()) {
-									"This is a loop dependency, but they are consistent each loop so might be transformed\n";
+									cout << "This is a loop dependency, but they are consistent each loop so might be transformed\n";
 									parallelizable = false;
 								}
 								else {
-									"Loop dependency differs each iteration, this is not transfomable\n";
+									cout << "Loop dependency differs each iteration, this is not transfomable\n";
 									parallelizable = false;
 								}
 							}
