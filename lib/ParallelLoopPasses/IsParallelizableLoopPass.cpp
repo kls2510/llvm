@@ -125,7 +125,7 @@ namespace {
 							int distance;
 							if (scev != nullptr && isa<SCEVConstant>(scev)) {
 								const SCEVConstant *scevConst = cast<SCEVConstant>(scev);
-								distance = (int)(scevConst->getValue()->getValue()).getRawData();
+								distance = *(int *)(scevConst->getValue()->getValue()).getRawData();
 							}
 							else {
 								distance = 0;
@@ -133,7 +133,7 @@ namespace {
 							cout << "obtained distance = " << distance << "\n";
 							//decide whether this dependency makes the loop not parallelizable
 							if (distance != 0) {
-								if (d->isConsistent) {
+								if (d->isConsistent()) {
 									"This is a loop dependency, but they are consistent each loop so might be transformed\n";
 									parallelizable = false;
 								}
