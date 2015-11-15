@@ -70,31 +70,51 @@ namespace {
 		//runs the actual analysis
 		bool isParallelizable(Loop *L) {
 			//default for now
-			cout << "this loop has " << (L->getSubLoops()).size() <<" subloops\n";
+			cout << "this loop has " << (L->getSubLoops()).size() << " subloops\n";
 			//case: simple loop with no nested loops
 			if ((L->getSubLoops()).size() == 0) {
-				//loop through the loops basic blocks
-				for (Loop::block_iterator bb = L->block_begin(); bb != L->block_end(); bb++) {
+				//look as the phi node and carry out analysis from there
+				PHINode *phi = L->getCanonicalInductionVariable();
+				StringRef inductionVariable = phi->getName();
+				//loop through instructions dependendent on the induction variable and check to see whether
+				//there are interloop dependencies
+				for (Instruction::user_iterator pui = phi->user_begin(); pui != phi->user_end(); pui++) {
+					Instruction *dependency = dyn_cast<Instruction>(*pui);
+					cout << "found instruction dependent on induction variable at:\n";
+					dependency->dump();
+					//check to see whether the instruction manipulates the value of the IV in any way
+
+					//if so, look for instructions dependent on that instruction's value
+					
+				}
+			}
+			return false;
+		}
+
+
+				/* for (Loop::block_iterator bb = L->block_begin(); bb != L->block_end(); bb++) {
 					//loop through the basic blocks instructions to check for aliasing and dependencies
 					for (BasicBlock::iterator inst = ((*bb)->getIterator())->begin(); inst != ((*bb)->getIterator())->end(); inst++) {
 						cout << "Dependencies for instruction: \n";
 						inst->dump();
 						int depCount = 1;
+						
 						for (Instruction::user_iterator ui = inst->user_begin(); ui != inst->user_end(); ui++) {
 							Instruction *dependency = dyn_cast<Instruction>(*ui);
 							if (L->contains(dependency)) {
-								//check for dependencies between instructions
 								cout << "dependency " << depCount << ":\n";
 								dependency->dump();
 								depCount++;
+								//check for dependencies between instructions
+								for (User::op_iterator op = dependency->op_begin(); op != dependency->op_end(); op++) {
+									
 								//also check for aliasing within instructions
 							}
+							cout << "\n";
 						}
 					}
 				}
-			}
-			return false;
-		}
+			}*/
 	};
 }
 
