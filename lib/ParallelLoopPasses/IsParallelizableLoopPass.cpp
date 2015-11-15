@@ -88,7 +88,7 @@ namespace {
 					//if ((dependency->getOperand(0)->getName() == inductionVariable)
 						//&& (string(dependency->getOpcodeName()).compare("trunc") != 0) && (string(dependency->getOpcodeName()).compare("zext") != 0)) {
 						//cout << "and this instruction passes a manipulated version to...\n";
-						set<Instruction> *dependentInstructions;
+						set<Instruction> *dependentInstructions = new set<Instruction>();
 						//if so, look for instructions dependent on that instruction's value
 						for (Instruction::user_iterator ui = dependency->user_begin(); ui != dependency->user_end(); ui++) {
 							Instruction *dependency2 = dyn_cast<Instruction>(*ui);
@@ -127,7 +127,7 @@ namespace {
 					if (inst->getNumUses() > 0) {
 						cout << "could still pass the iterator to a read/write instruction, recursing on..\n";
 						for (Instruction::user_iterator ui = inst->user_begin(); ui != inst->user_end(); ui++) {
-							getDependencies(dyn_cast<Instruction>(*ui), phi);
+							getDependencies(dyn_cast<Instruction>(*ui), phi, dependents);
 						}
 					}
 					else {
