@@ -5,6 +5,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include <iostream>
 #include <string>
 #include <set>
@@ -35,6 +36,7 @@ namespace {
 			AU.addRequired<LoopInfoWrapperPass>();
 			AU.addRequired<DependenceAnalysis>();
 			AU.addRequired<AAResultsWrapperPass>();
+			AU.addRequired<ScalarEvolutionWrapperPass>();
 			//this pass is just analysis and so does not change any other analysis results
 			AU.setPreservesAll();
 		}
@@ -98,24 +100,48 @@ namespace {
 						cout << "dependency between\n";
 						i1->dump();
 						i2->dump();
-						cout << "is\n";
+						cout << "is ";
 						if (d != nullptr) {
-							/*direction:
-							NONE = 0,
-							LT = 1,
-							EQ = 2,
-							LE = 3,
-							GT = 4,
-							NE = 5,
-							GE = 6,
-							ALL = 7 */
-							cout << "direction code: " << d->getDirection(1) << "and distance : \n";
+							/*  direction:
+							    NONE = 0,
+							    LT = 1,
+							    EQ = 2,
+							    LE = 3,
+							    GT = 4,
+							    NE = 5,
+							    GE = 6,
+							    ALL = 7 */
+							cout << "direction code: " << d->getDirection(1) << ", and distance : \n";
 							const SCEV *scev = (d->getDistance(1));
-							scev->dump();
-							cout << "and is loop dependent: " << d->isLoopIndependent() << "and is consistent: " << d->isConsistent() << "\n";
-						}
-						else {
-							cout << "no dependency\n";
+							if (scev != nullptr) {
+								scev->dump();
+							}
+							else {
+								cout << " NULL \n";
+							}
+							cout << " and consistent?: " << d->isConsistent() << "\n";
+							
+							int direction = d->getDirection(1);
+							int distance;
+							if (scev != nullptr && isa<SCEVConstant>(scev)) {
+								const SCEVConstant *scevConst = cast<SCEVConstant>(scev);
+								distance = (int)(scevConst->getValue()->getValue()).getRawData();
+							}
+							else {
+								distance = 0;
+							}
+							cout << "obtained distance = " << distance << "\n";
+							//decide whether this dependency makes the loop not parallelizable
+							if (distance != 0) {
+								if (d->isConsistent) {
+									"This is a loop dependency, but they are consistent each loop so might be transformed\n";
+									parallelizable = false;
+								}
+								else {
+									"Loop dependency differs each iteration, this is not transfomable\n";
+									parallelizable = false;
+								}
+							}
 						}
 					}
 				}
@@ -126,7 +152,6 @@ namespace {
 		}
 
 		void getDependencies(Instruction *inst, PHINode *phi, set<Instruction *> *dependents) {
-			inst->dump();
 			if (inst == phi) {
 			}
 			else {
