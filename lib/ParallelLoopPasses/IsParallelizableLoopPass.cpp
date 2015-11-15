@@ -90,53 +90,40 @@ namespace {
 						//if so, look for instructions dependent on that instruction's value
 						for (Instruction::user_iterator ui = dependency->user_begin(); ui != dependency->user_end(); ui++) {
 							Instruction *dependency2 = dyn_cast<Instruction>(*ui);
-							if (dependency2 == phi) {
-								cout << "The phi node so this is OK\n";
-							}
-							else {
-								if (dependency2->mayReadFromMemory()) {
-									cout << "A read memory instruction so this could be bad\n";
-								}
-								else if (dependency2->mayWriteToMemory()) {
-									cout << "A write memory instruction so this could be bad\n";
-								}
-								else {
-									cout << "Could still pass value to another instruction..\n";
-									dependency2->dump();
-								}
-								//go down just one level for now - will extract into a recursive function
-							}
+							getDependencies(dependency2, phi);
 						}
+					}
+					else {
+						cout << "Instruction not going to cause dependencies\n";
 					}
 				}
 			}
 			return false;
 		}
 
-
-				/* for (Loop::block_iterator bb = L->block_begin(); bb != L->block_end(); bb++) {
-					//loop through the basic blocks instructions to check for aliasing and dependencies
-					for (BasicBlock::iterator inst = ((*bb)->getIterator())->begin(); inst != ((*bb)->getIterator())->end(); inst++) {
-						cout << "Dependencies for instruction: \n";
-						inst->dump();
-						int depCount = 1;
-						
-						for (Instruction::user_iterator ui = inst->user_begin(); ui != inst->user_end(); ui++) {
-							Instruction *dependency = dyn_cast<Instruction>(*ui);
-							if (L->contains(dependency)) {
-								cout << "dependency " << depCount << ":\n";
-								dependency->dump();
-								depCount++;
-								//check for dependencies between instructions
-								for (User::op_iterator op = dependency->op_begin(); op != dependency->op_end(); op++) {
-									
-								//also check for aliasing within instructions
-							}
-							cout << "\n";
-						}
+		void getDependencies(Instruction *inst, PHINode *phi) {
+			cout << "For\n";
+			inst->dump();
+			cout << "we find it...\n";
+			if (inst == phi) {
+				cout << "is the phi node so this is OK\n\n";
+			}
+			else {
+				if (inst->mayReadFromMemory()) {
+					cout << "is a read memory instruction so this could be bad\n\n";
+				}
+				else if (inst->mayWriteToMemory()) {
+					cout << "is a write memory instruction so this could be bad\n\n";
+				}
+				else {
+					cout << "could still pass edited iterator to a read/write instruction, recursing on..\n";
+					for (Instruction::user_iterator ui = inst->user_begin(); ui != inst->user_end(); ui++) {
+						getDependencies(dyn_cast<Instruction>(*ui), phi);
 					}
 				}
-			}*/
+			}
+		}
+				
 	};
 }
 
