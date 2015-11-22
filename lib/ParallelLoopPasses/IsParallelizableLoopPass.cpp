@@ -32,7 +32,7 @@ namespace {
 		static map<StringRef, list<LoopDependencyData *>> results;
 
 		//Constructor
-		IsParallelizableLoopPass() : FunctionPass(ID) {}
+		IsParallelizableLoopPass() : FunctionPass(ID) {	}
 
 		//Set LoopInfo pass to run before this one so we can access its results
 		void getAnalysisUsage(AnalysisUsage &AU) const {
@@ -190,6 +190,9 @@ namespace {
 			return;
 		}
 	};
+
+	//define the static variable member
+	map<StringRef, list<LoopDependencyData *>> IsParallelizableLoopPass::results;
 }
 
 char IsParallelizableLoopPass::ID = 0;

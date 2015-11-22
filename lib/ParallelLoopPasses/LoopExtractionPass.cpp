@@ -45,5 +45,5 @@ namespace {
 }
 
 char LoopExtractionPass::ID = 0;
-static RegisterPass<LoopExtractionPass> reg("LoopExtractionPass",
+static RegisterPass<LoopExtractionPass> reg2("LoopExtractionPass",
 	"Extracts loops into functions that can be called in separate threads for parallelization");
