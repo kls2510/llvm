@@ -3,9 +3,9 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "LoopDependencyData.h"
 #include <iostream>
 #include <string>
 #include <set>
@@ -17,7 +17,7 @@ namespace {
 	/*
 		IsParallelizablePass detects loops in a function's IR and determines whether
 		each is parallelizable (including already or after some transform) or not
-	*/
+		*/
 	struct IsParallelizableLoopPass : public FunctionPass {
 		//ID of the pass
 		static char ID;
@@ -27,6 +27,9 @@ namespace {
 
 		//AliasAnalysis class
 		AliasAnalysis *AA;
+
+		//Map containing all loops and dependencies associated with each function
+		static map<StringRef, list<LoopDependencyData *>> results;
 
 		//Constructor
 		IsParallelizableLoopPass() : FunctionPass(ID) {}
@@ -46,6 +49,8 @@ namespace {
 			LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
 			DA = &getAnalysis<DependenceAnalysis>();
 			AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+			list<LoopDependencyData *> l;
+			results.insert(std::pair<StringRef, list<LoopDependencyData *>>(F.getName(), l));
 
 			cout << "Running parallelizable loop analysis on function " << (F.getName()).data() << "\n";
 
@@ -58,10 +63,8 @@ namespace {
 			while (i != e) {
 				Loop *L = *i;
 				cout << "Found loop " << LoopCounter << "\n";
-				//for now just dump the contents of the loop
-				//L->dump();
 				//call the function that will be implemented to analyse the code
-				if (isParallelizable(L)) {
+				if (isParallelizable(L,F)) {
 					cout << "this loop is parallelizable\n";
 				}
 				else {
@@ -72,16 +75,34 @@ namespace {
 			return false;
 		}
 
+		static list<LoopDependencyData *> getResultsForFunction(Function &F) {
+			StringRef name = F.getName();
+			return (results.find(name))->second;
+		}
+
 	private:
 		//runs the actual analysis
-		bool isParallelizable(Loop *L) {
+		bool isParallelizable(Loop *L, Function &F) {
+			list<Dependence *> dependencies;
+			int noOfPhiNodes = 0;
 			bool parallelizable = true;
-			//default for now
-			cout << "this loop has " << (L->getSubLoops()).size() << " subloops\n";
+		
 			//case: simple loop with no nested loops
 			if ((L->getSubLoops()).size() == 0) {
-				//look as the phi node and carry out analysis from there
+				//look as the primary phi node and carry out analysis from there
 				PHINode *phi = L->getCanonicalInductionVariable();
+				noOfPhiNodes++;
+				Instruction *inst = phi->getNextNode();
+			    //loop through all instructions to check for only one phi node
+				while (L->contains(inst)) {
+					if (isa<PHINode>(inst)) {
+						//finding a second Phi node means the loop is not directly parallelizable
+						noOfPhiNodes++;
+						parallelizable = false;
+					}
+				}
+				cout << "the loop has " << noOfPhiNodes << " phi nodes\n";
+
 				//loop through instructions dependendent on the induction variable and check to see whether
 				//there are interloop dependencies
 				set<Instruction *> *dependentInstructions = new set<Instruction *>();
@@ -96,20 +117,20 @@ namespace {
 					Instruction *i1 = (*si);
 					for (set<Instruction *>::iterator si2 = dependentInstructions->begin(); si2 != dependentInstructions->end(); si2++) {
 						Instruction *i2 = (*si2);
-						unique_ptr<Dependence> d = DA->depends(i1,i2,true);
+						unique_ptr<Dependence> d = DA->depends(i1, i2, true);
 						cout << "dependency between\n";
 						i1->dump();
 						i2->dump();
 						if (d != nullptr) {
 							/*  direction:
-							    NONE = 0,
-							    LT = 1,
-							    EQ = 2,
-							    LE = 3,
-							    GT = 4,
-							    NE = 5,
-							    GE = 6,
-							    ALL = 7 */
+								NONE = 0,
+								LT = 1,
+								EQ = 2,
+								LE = 3,
+								GT = 4,
+								NE = 5,
+								GE = 6,
+								ALL = 7 */
 							const SCEV *scev = (d->getDistance(1));
 							int direction = d->getDirection(1);
 							int distance;
@@ -133,12 +154,18 @@ namespace {
 									parallelizable = false;
 								}
 							}
+							dependencies.push_back(d.get());
 						}
 					}
 				}
 				delete dependentInstructions;
 			}
-			
+			//store results of analysis
+			LoopDependencyData *data = new LoopDependencyData(L, dependencies, noOfPhiNodes);
+			StringRef funName = F.getName();
+			list<LoopDependencyData *> depList = (results.find(funName))->second;
+			depList.push_back(data);
+
 			return parallelizable;
 		}
 
