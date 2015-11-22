@@ -195,6 +195,6 @@ namespace {
 	map<StringRef, list<LoopDependencyData *>> IsParallelizableLoopPass::results;
 }
 
-char IsParallelizableLoopPass::ID = 0;
-static RegisterPass<IsParallelizableLoopPass> reg("IsParallelizableLoopPass",
-	"Categorizes loops into 2 categories per function; is parallelizable and is not parallelizable");
+//char IsParallelizableLoopPass::ID = 0;
+//static RegisterPass<IsParallelizableLoopPass> reg("IsParallelizableLoopPass",
+//	"Categorizes loops into 2 categories per function; is parallelizable and is not parallelizable");
