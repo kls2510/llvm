@@ -5,7 +5,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
-#include "IsParallelizableLoopPass.cpp"
+#include "IsParallelizableLoopPass.h"
 //#include "llvm/Transforms/IPO/LoopExtractor.h"
 #include <iostream>
 #include <string>
