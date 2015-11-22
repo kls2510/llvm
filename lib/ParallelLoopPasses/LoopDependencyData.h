@@ -9,6 +9,7 @@
 #include <list>
 
 using namespace llvm;
+using namespace std;
 
 class LoopDependencyData {
 private:
