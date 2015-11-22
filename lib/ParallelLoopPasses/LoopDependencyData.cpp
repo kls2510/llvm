@@ -8,6 +8,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include <iostream>
+#include <list>
 
 using namespace llvm;
 using namespace std;

@@ -6,6 +6,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include <list>
 
 using namespace llvm;
 
