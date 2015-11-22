@@ -1,14 +1,5 @@
 #include "LoopDependencyData.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/Pass.h"
-#include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/DependenceAnalysis.h"
-#include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include <iostream>
-#include <list>
 
 using namespace llvm;
 using namespace std;

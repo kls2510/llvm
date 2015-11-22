@@ -1,3 +1,6 @@
+#ifndef LOOPDEPENDENCYDATA_H
+#define LOOPDEPENDENCYDATA_H
+
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Pass.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -33,3 +36,5 @@ public:
 	void print();
 
 };
+
+#endif
