@@ -44,6 +44,6 @@ namespace {
 	};
 }
 
-char LoopExtractionPass::ID = 0;
+char LoopExtractionPass::ID = 1;
 static RegisterPass<LoopExtractionPass> reg2("LoopExtractionPass",
 	"Extracts loops into functions that can be called in separate threads for parallelization");
