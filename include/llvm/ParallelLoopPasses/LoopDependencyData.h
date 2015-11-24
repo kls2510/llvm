@@ -17,21 +17,21 @@ using namespace std;
 class LoopDependencyData {
 private:
 	Loop *loop;
-	list<unique_ptr<Dependence>> dependencies;
+	list<Dependence *> dependencies;
 	int noOfPhiNodes;
 
 public:
-	LoopDependencyData(Loop *L, list<unique_ptr<Dependence>> d, int phi) {
+	LoopDependencyData(Loop *L, list<Dependence *> d, int phi) {
 		loop = L, dependencies = d, noOfPhiNodes = phi;
 	}
 
 	Loop *getLoop();
 
-	list<unique_ptr<Dependence>> getDependencies();
+	list<Dependence *> getDependencies();
 
 	int getNoOfPhiNodes();
 
-	int getDistance(unique_ptr<Dependence> d);
+	int getDistance(Dependence *d);
 
 	void print();
 

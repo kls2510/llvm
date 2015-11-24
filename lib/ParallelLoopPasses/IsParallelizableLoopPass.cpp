@@ -67,7 +67,7 @@ list<LoopDependencyData *> IsParallelizableLoopPass::getResultsForFunction(Funct
 
 //runs the actual analysis
 bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
-	list<unique_ptr<Dependence>> dependencies;
+	list<Dependence *> dependencies;
 	int noOfPhiNodes = 0;
 	bool parallelizable = true;
 
@@ -138,7 +138,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 							parallelizable = false;
 						}
 					}
-					dependencies.push_back(d);
+					dependencies.push_back(d.release());
 				}
 			}
 		}

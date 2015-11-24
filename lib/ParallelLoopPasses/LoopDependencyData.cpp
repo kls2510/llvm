@@ -16,7 +16,7 @@ int LoopDependencyData::getNoOfPhiNodes() {
 	return noOfPhiNodes;
 }
 
-int LoopDependencyData::getDistance(unique_ptr<Dependence> d) {
+int LoopDependencyData::getDistance(Dependence *d) {
 	cout << "calculating distance\n";
 	const SCEV *scev = (d->getDistance(1));
 	int distance;
@@ -38,14 +38,14 @@ void LoopDependencyData::print() {
 	cout << "and dependencies:\n";
 	if (dependencies.size() > 0) {
 		cout << "there are " << dependencies.size() << "\n";
-		for (list<unique_ptr<Dependence>>::iterator i = dependencies.begin(); i != dependencies.end(); i++) {
-			//int distance = getDistance(*i);
+		for (list<Dependence *>::iterator i = dependencies.begin(); i != dependencies.end(); i++) {
+			int distance = getDistance(*i);
 			Instruction *inst1 = (*i)->getSrc();
 			Instruction *inst2 = (*i)->getDst();
 			cout << "Dependency between\n";
 			inst1->dump();
 			inst2->dump();
-			//cout << "with distance = " << distance << "\n";
+			cout << "with distance = " << distance << "\n";
 		}
 	}
 	else {
