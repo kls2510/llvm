@@ -38,6 +38,7 @@ namespace {
 			for (list<LoopDependencyData *>::iterator i = loopData.begin(); i != loopData.end(); i++) {
 				(*i)->print();
 			}
+			cout << "Analysis results for function complete\n";
 			return true;
 		}
 
