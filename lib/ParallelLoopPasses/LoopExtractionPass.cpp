@@ -12,6 +12,7 @@
 
 using namespace llvm;
 using namespace std;
+using namespace parallelize;
 
 namespace {
 	/*
