@@ -1,7 +1,20 @@
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/Pass.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/DependenceAnalysis.h"
+#include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/ParallelLoopPasses/LoopDependencyData.h"
+#include <iostream>
 #include "llvm/ParallelLoopPasses/IsParallelizableLoopPass.h"
+#include <string>
+#include <set>
 
 using namespace llvm;
 using namespace std;
+using namespace parallelize;
+
 
 //Set LoopInfo pass to run before this one so we can access its results
 void IsParallelizableLoopPass::getAnalysisUsage(AnalysisUsage &AU) const {

@@ -16,7 +16,7 @@
 using namespace llvm;
 using namespace std;
 
-namespace {
+namespace parallelize {
 	/*
 	IsParallelizablePass detects loops in a function's IR and determines whether
 	each is parallelizable (including already or after some transform) or not
