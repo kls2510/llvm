@@ -34,7 +34,7 @@ bool IsParallelizableLoopPass::runOnFunction(Function &F) {
 	list<LoopDependencyData *> l;
 	results.insert(std::pair<StringRef, list<LoopDependencyData *>>(F.getName(), l));
 	
-	cout << "Running parallelizable loop analysis on function " << (F.getName()).data() << "\n";
+	//cout << "Running parallelizable loop analysis on function " << (F.getName()).data() << "\n";
 	//initialize iterators and loop counter
 	LoopInfo::iterator i = LI.begin();
 	LoopInfo::iterator e = LI.end();
@@ -43,13 +43,13 @@ bool IsParallelizableLoopPass::runOnFunction(Function &F) {
 	//iterate through all the OUTER loops found and run anaysis to see whether they are parallelizable
 	while (i != e) {
 		Loop *L = *i;
-		cout << "Found loop " << LoopCounter << "\n";
+		//cout << "Found loop " << LoopCounter << "\n";
 		//call the function that will be implemented to analyse the code
 		if (isParallelizable(L, F)) {
-			cout << "this loop is parallelizable\n";
+			//cout << "this loop is parallelizable\n";
 		}
 		else {
-			cout << "this loop is not parallelizable\n";
+			//cout << "this loop is not parallelizable\n";
 		}
 		i++;
 	}
@@ -78,12 +78,12 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 			if (isa<PHINode>(inst)) {
 				//finding a second Phi node means the loop is not directly parallelizable
 				noOfPhiNodes++;
-				cout << "found another phi node\n";
+				//cout << "found another phi node\n";
 				parallelizable = false;
 			}
 			inst = inst->getNextNode();
 		}
-		cout << "the loop has " << noOfPhiNodes << " phi nodes\n";
+		//cout << "the loop has " << noOfPhiNodes << " phi nodes\n";
 		//loop through instructions dependendent on the induction variable and check to see whether
 		//there are interloop dependencies
 		set<Instruction *> *dependentInstructions = new set<Instruction *>();
@@ -99,7 +99,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 			for (set<Instruction *>::iterator si2 = dependentInstructions->begin(); si2 != dependentInstructions->end(); si2++) {
 				Instruction *i2 = (*si2);
 				unique_ptr<Dependence> d = DA->depends(i1, i2, true);
-				cout << "dependency between\n";
+				//cout << "dependency between\n";
 				i1->dump();
 				i2->dump();
 				if (d != nullptr) {
@@ -122,15 +122,15 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 					else {
 						distance = 0;
 					}
-					cout << "obtained distance = " << distance << " and direction =  " << direction << " and consistent?: " << d->isConsistent() << "\n";
+					//cout << "obtained distance = " << distance << " and direction =  " << direction << " and consistent?: " << d->isConsistent() << "\n";
 					//decide whether this dependency makes the loop not parallelizable
 					if (distance != 0) {
 						if (d->isConsistent()) {
-							cout << "This is a loop dependency, but they are consistent each loop so might be transformed\n";
+							//cout << "This is a loop dependency, but they are consistent each loop so might be transformed\n";
 							parallelizable = false;
 						}
 						else {
-							cout << "Loop dependency differs each iteration, this is not transfomable\n";
+							//cout << "Loop dependency differs each iteration, this is not transfomable\n";
 							parallelizable = false;
 						}
 					}
