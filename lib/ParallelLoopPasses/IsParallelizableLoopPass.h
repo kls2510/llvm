@@ -21,7 +21,8 @@ namespace {
 	IsParallelizablePass detects loops in a function's IR and determines whether
 	each is parallelizable (including already or after some transform) or not
 	*/
-	struct IsParallelizableLoopPass : public FunctionPass {
+	class IsParallelizableLoopPass : public FunctionPass {
+	public:
 		//ID of the pass
 		static char ID;
 
