@@ -1,4 +1,4 @@
-;===- ./lib/Analysis/LLVMBuild.txt -----------------------------*- Conf -*--===;
+;===- ./lib/ParallelLoopPasses/LLVMBuild.txt -----------------------------*- Conf -*--===;
 ;
 ;                     The LLVM Compiler Infrastructure
 ;

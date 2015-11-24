@@ -153,4 +153,9 @@ void IsParallelizableLoopPass::getDependencies(Instruction *inst, PHINode *phi, 
 	}
 	return;
 }
-	
+
+char IsParallelizableLoopPass::ID = 0;
+//define the static variable member
+map<StringRef, list<LoopDependencyData *>> IsParallelizableLoopPass::results;
+static RegisterPass<IsParallelizableLoopPass> reg("IsParallelizableLoopPass",
+	"Categorizes loops into 2 categories per function; is parallelizable and is not parallelizable");
