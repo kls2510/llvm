@@ -74,14 +74,15 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 		noOfPhiNodes++;
 		Instruction *inst = phi->getNextNode();
 		//loop through all instructions to check for only one phi node
-		/* while (L->contains(inst)) {
+		while (L->contains(inst)) {
 			if (isa<PHINode>(inst)) {
 				//finding a second Phi node means the loop is not directly parallelizable
 				noOfPhiNodes++;
 				cout << "found another phi node\n";
 				parallelizable = false;
 			}
-		} */
+			inst = inst->getNextNode();
+		}
 		cout << "the loop has " << noOfPhiNodes << " phi nodes\n";
 		//loop through instructions dependendent on the induction variable and check to see whether
 		//there are interloop dependencies
