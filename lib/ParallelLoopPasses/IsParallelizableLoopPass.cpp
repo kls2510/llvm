@@ -136,8 +136,8 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 					dependencies.push_back(d.get());
 				}
 			}
-			delete dependentInstructions;
 		}
+		delete dependentInstructions;
 		//store results of analysis
 		LoopDependencyData *data = new LoopDependencyData(L, dependencies, noOfPhiNodes);
 		StringRef funName = F.getName();
