@@ -100,8 +100,8 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 				Instruction *i2 = (*si2);
 				unique_ptr<Dependence> d = DA->depends(i1, i2, true);
 				//cout << "dependency between\n";
-				i1->dump();
-				i2->dump();
+				//i1->dump();
+				//i2->dump();
 				if (d != nullptr) {
 					/*  direction:
 						NONE = 0,
