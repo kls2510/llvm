@@ -142,7 +142,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 				}
 			}
 		}
-		delete dependentInstructions;
+		//delete dependentInstructions;
 		//cout << "No of dependencies found in function loop = " << dependencies.size() << "\n";
 		//store results of analysis
 		LoopDependencyData *data = new LoopDependencyData(L, dependencies, noOfPhiNodes);
