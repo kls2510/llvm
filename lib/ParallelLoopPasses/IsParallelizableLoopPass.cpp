@@ -147,9 +147,9 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 		//store results of analysis
 		LoopDependencyData *data = new LoopDependencyData(L, dependencies, noOfPhiNodes);
 		StringRef funName = F.getName();
-		list<LoopDependencyData *> depList = (results.find(funName))->second;
-		depList.push_back(data);
-		cout << "no of loops found in function = " << depList.size() << "\n";
+		map<StringRef, list<LoopDependencyData *>>::iterator it = (results.find(funName));
+		(it->second).push_back(data);
+		cout << "no of loops found in function = " << ((results.find(funName))->second).size() << "\n";
 	}
 	return parallelizable;
 }
