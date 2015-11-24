@@ -67,7 +67,7 @@ list<LoopDependencyData *> IsParallelizableLoopPass::getResultsForFunction(Funct
 
 //runs the actual analysis
 bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
-	list<Dependence *> dependencies;
+	list<unique_ptr<Dependence>> dependencies;
 	int noOfPhiNodes = 0;
 	bool parallelizable = true;
 
@@ -138,11 +138,11 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 							parallelizable = false;
 						}
 					}
-					dependencies.push_back(d.get());
+					dependencies.push_back(d);
 				}
 			}
 		}
-		//delete dependentInstructions;
+		delete dependentInstructions;
 		//cout << "No of dependencies found in function loop = " << dependencies.size() << "\n";
 		//store results of analysis
 		LoopDependencyData *data = new LoopDependencyData(L, dependencies, noOfPhiNodes);

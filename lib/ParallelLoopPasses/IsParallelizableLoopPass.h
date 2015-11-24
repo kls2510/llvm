@@ -43,7 +43,7 @@ namespace parallelize {
 
 		virtual bool runOnFunction(Function &F);
 
-		static list<LoopDependencyData *> getResultsForFunction(Function F);
+		static list<LoopDependencyData *> getResultsForFunction(Function &F);
 
 	private:
 		//runs the actual analysis
