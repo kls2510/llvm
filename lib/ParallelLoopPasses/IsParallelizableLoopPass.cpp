@@ -61,6 +61,7 @@ list<LoopDependencyData *> IsParallelizableLoopPass::getResultsForFunction(Funct
 	StringRef name = F.getName();
 	cout << "Found request for " << F.getName().data() << "\n";
 	cout << "Map size = " << results.size() << "\n";
+	cout << "Dependency list size = " << ((results.find(name))->second).size() << "\n";
 	return (results.find(name))->second;
 }
 
@@ -142,12 +143,13 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 			}
 		}
 		delete dependentInstructions;
-		cout << "No of dependencies found in function = " << dependencies.size() << "\n";
+		cout << "No of dependencies found in function loop = " << dependencies.size() << "\n";
 		//store results of analysis
 		LoopDependencyData *data = new LoopDependencyData(L, dependencies, noOfPhiNodes);
 		StringRef funName = F.getName();
 		list<LoopDependencyData *> depList = (results.find(funName))->second;
 		depList.push_back(data);
+		cout << "no of loops found in function = " << depList.size() << "\n";
 	}
 	return parallelizable;
 }
