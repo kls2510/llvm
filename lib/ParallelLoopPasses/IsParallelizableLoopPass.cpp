@@ -1,4 +1,4 @@
-#include "IsParallelizableLoopPass.h"
+#include "llvm/ParallelLoopPasses/IsParallelizableLoopPass.h"
 
 using namespace llvm;
 using namespace std;
