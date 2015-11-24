@@ -1,5 +1,5 @@
-#ifndef LOOPDEPENDENCYDATA_H
-#define LOOPDEPENDENCYDATA_H
+#ifndef LOOP_DEPENDENCY_DATA_H
+#define LOOP_DEPENDENCY_DATA_H
 
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Pass.h"

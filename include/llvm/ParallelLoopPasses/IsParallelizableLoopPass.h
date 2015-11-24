@@ -1,5 +1,5 @@
-#ifndef ISPARALLELIZABLE_H
-#define ISPARALLELIZABLE_H
+#ifndef IS_PARALLELIZABLE_LOOP_PASS_H
+#define IS_PARALLELIZABLE_LOOP_PASS_H
 
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Pass.h"
