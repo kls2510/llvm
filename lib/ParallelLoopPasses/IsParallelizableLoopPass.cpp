@@ -33,7 +33,7 @@ bool IsParallelizableLoopPass::runOnFunction(Function &F) {
 	AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 	list<LoopDependencyData *> l;
 	results.insert(std::pair<StringRef, list<LoopDependencyData *>>(F.getName(), l));
-	cout << "Results size = " << results.size() << "\n";
+	//cout << "Results size = " << results.size() << "\n";
 	
 	//cout << "Running parallelizable loop analysis on function " << (F.getName()).data() << "\n";
 	//initialize iterators and loop counter
@@ -59,9 +59,9 @@ bool IsParallelizableLoopPass::runOnFunction(Function &F) {
 
 list<LoopDependencyData *> IsParallelizableLoopPass::getResultsForFunction(Function &F) {
 	StringRef name = F.getName();
-	cout << "Found request for " << F.getName().data() << "\n";
-	cout << "Map size = " << results.size() << "\n";
-	cout << "Dependency list size = " << ((results.find(name))->second).size() << "\n";
+	//cout << "Found request for " << F.getName().data() << "\n";
+	//cout << "Map size = " << results.size() << "\n";
+	//cout << "Dependency list size = " << ((results.find(name))->second).size() << "\n";
 	return (results.find(name))->second;
 }
 
@@ -143,13 +143,13 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 			}
 		}
 		delete dependentInstructions;
-		cout << "No of dependencies found in function loop = " << dependencies.size() << "\n";
+		//cout << "No of dependencies found in function loop = " << dependencies.size() << "\n";
 		//store results of analysis
 		LoopDependencyData *data = new LoopDependencyData(L, dependencies, noOfPhiNodes);
 		StringRef funName = F.getName();
 		map<StringRef, list<LoopDependencyData *>>::iterator it = (results.find(funName));
 		(it->second).push_back(data);
-		cout << "no of loops found in function = " << ((results.find(funName))->second).size() << "\n";
+		//cout << "no of loops found in function = " << ((results.find(funName))->second).size() << "\n";
 	}
 	return parallelizable;
 }

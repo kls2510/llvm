@@ -35,6 +35,7 @@ void LoopDependencyData::print() {
 	cout << "Number of PHI nodes = " << noOfPhiNodes << "\n";
 	cout << "and dependencies:\n";
 	if (dependencies.size() > 0) {
+		cout << "there are " << dependencies.size() << "\n";
 		for (list<Dependence *>::iterator i = dependencies.begin(); i != dependencies.end(); i++) {
 			int distance = getDistance(*i);
 			Instruction *inst1 = (*i)->getSrc();
