@@ -17,7 +17,6 @@ int LoopDependencyData::getNoOfPhiNodes() {
 }
 
 int LoopDependencyData::getDistance(Dependence *d) {
-	cout << "calculating distance\n";
 	const SCEV *scev = (d->getDistance(1));
 	int distance;
 	if (scev != nullptr && isa<SCEVConstant>(scev)) {
@@ -27,7 +26,6 @@ int LoopDependencyData::getDistance(Dependence *d) {
 	else {
 		distance = 0;
 	}
-	cout << "distance calculated\n";
 	return distance;
 }
 

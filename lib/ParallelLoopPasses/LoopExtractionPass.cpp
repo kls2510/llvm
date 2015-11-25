@@ -55,7 +55,7 @@ namespace {
 							inst2->dump();
 							cout << "with distance = " << distance << "\n";
 						}
-						cout << "This loop has interloop dependencies so cannot be parallelized right now";
+						cout << "This loop has interloop dependencies so cannot be parallelized right now\n";
 					}
 					else {
 						cout << "This loop has no dependencies so can be extracted\n";
