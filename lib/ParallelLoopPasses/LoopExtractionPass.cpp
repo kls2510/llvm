@@ -62,12 +62,12 @@ namespace {
 						//begin extraction
 						int noIterations = SE.getSmallConstantTripCount(loopData->getLoop());
 						cout << "No of Iterations = " << noIterations << "\n";
-						//int startIt = 
-						cout << "Start iteration = \n";
-						(((loopData->getLoop())->getCanonicalInductionVariable())->getIncomingValue(0))->dump();
+						ConstantInt * startItConst = dyn_cast<ConstantInt>(((loopData->getLoop())->getCanonicalInductionVariable())->getIncomingValue(0));
+						int start = startItConst->getSExtValue();
+						cout << "Start iteration = " << start << "\n";
 						bool exact = (noIterations % noThreads == 0);
 						for (int i = 0; i < noThreads; i++) {
-						//	cout << "Alloc thread " << (i + 1) << " iterations " << i*(noIterations/noThreads) << " to " << ;
+							//	cout << "Alloc thread " << (i + 1) << " iterations " << i*(noIterations/noThreads) << " to " << ;
 						}
 					}
 				}
@@ -75,6 +75,7 @@ namespace {
 					cout << "loop has multiple PHI nodes, so cannot be parallelized right now\n";
 				}
 			}
+			
 			cout << "Loop extraction for function complete\n";
 			return true;
 		}
