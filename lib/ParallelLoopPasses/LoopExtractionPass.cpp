@@ -30,13 +30,13 @@ namespace {
 		//Set LoopInfo pass to run before this one so we can access its results
 		void getAnalysisUsage(AnalysisUsage &AU) const {
 			AU.addRequired<IsParallelizableLoopPass>();
-			AU.addRequired<ScalarEvolution>();
+			AU.addRequired<ScalarEvolutionWrapperPass>();
 		}
 
 		virtual bool runOnFunction(Function &F) {
 			//get data from the IsParallelizableLoopPass analysis
 			IsParallelizableLoopPass &IP = getAnalysis<IsParallelizableLoopPass>();
-			ScalarEvolution &SE = getAnalysis<ScalarEvolution>();
+			ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
 
 			list<LoopDependencyData *> loopData = IP.getResultsForFunction(F);
 			cout << "In function " << (F.getName()).data() << "\n";
@@ -64,7 +64,7 @@ namespace {
 						cout << "No of Iterations = " << noIterations << "\n";
 						//int startIt = 
 						cout << "Start iteration = \n";
-						(((loopData->getLoop())->getCanonicalInductionVariable())->getIncomingValue(0))->dump;
+						(((loopData->getLoop())->getCanonicalInductionVariable())->getIncomingValue(0))->dump();
 						bool exact = (noIterations % noThreads == 0);
 						for (int i = 0; i < noThreads; i++) {
 						//	cout << "Alloc thread " << (i + 1) << " iterations " << i*(noIterations/noThreads) << " to " << ;
