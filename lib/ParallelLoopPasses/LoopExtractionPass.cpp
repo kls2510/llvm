@@ -19,7 +19,7 @@ namespace {
 
 	*/
 	struct LoopExtractionPass : public FunctionPass {
-		int noThreads = 3;
+		int noThreads = 2;
 
 		//ID of the pass
 		static char ID;
@@ -67,7 +67,12 @@ namespace {
 						cout << "Start iteration = " << start << "\n";
 						bool exact = (noIterations % noThreads == 0);
 						for (int i = 0; i < noThreads; i++) {
-							//	cout << "Alloc thread " << (i + 1) << " iterations " << i*(noIterations/noThreads) << " to " << ;
+							int firstIterNo = start + i*(noIterations / noThreads);
+							int lastIterNo = firstIterNo + ((noIterations / noThreads) - 1);
+							if (i == noThreads - 1 && !exact) {
+								lastIterNo = start + (noIterations - 1);
+							}
+							cout << "Alloc thread " << (i + 1) << " iterations " << firstIterNo << " to " << lastIterNo;
 						}
 					}
 				}
