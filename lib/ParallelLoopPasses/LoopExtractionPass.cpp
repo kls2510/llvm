@@ -78,7 +78,7 @@ namespace {
 						myStruct->setBody(elts);
 
 						//setup for inserting instructions before the loop
-						Instruction *inst = insertPos->end();
+						Instruction *inst = insertPos->begin();
 						IRBuilder<> builder(inst);
 
 						for (int i = 0; i < noThreads; i++) {
