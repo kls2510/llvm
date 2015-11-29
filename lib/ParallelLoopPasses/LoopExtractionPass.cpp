@@ -69,11 +69,12 @@ namespace {
 
 						//get pointer to the basic block we'll insert the new instructions into
 						BasicBlock *insertPos = ((loopData->getLoop())->getLoopPredecessor());
+						LLVMContext &context = insertPos->getContext;
 
 						//create the struct we'll use to pass data to/from the threads
-						StructType *myStruct = StructType::create(LLVMContext(), "ThreadPasser");
+						StructType *myStruct = StructType::create(context, "ThreadPasser");
 						//send the startItvalue, begin offset and end offset to each thread
-						Type *elts[] = { startIt->getType(), Type::getInt64Ty(LLVMContext()), Type::getInt64Ty(LLVMContext()) };
+						Type *elts[] = { startIt->getType(), Type::getInt64Ty(context), Type::getInt64Ty(context) };
 						myStruct->setBody(elts);
 
 						//setup for inserting instructions before the loop
@@ -94,10 +95,10 @@ namespace {
 							builder.CreateStore(startIt,getPTR);
 							//store firstIterOffset
 							getPTR = builder.CreateStructGEP(myStruct, allocateInst, 1);
-							builder.CreateStore(ConstantInt::get(Type::getInt64Ty(LLVMContext()), firstIterNo), getPTR);
+							builder.CreateStore(ConstantInt::get(Type::getInt64Ty(context), firstIterNo), getPTR);
 							//store lastIterOffset
 							getPTR = builder.CreateStructGEP(myStruct, allocateInst, 2);
-							builder.CreateStore(ConstantInt::get(Type::getInt64Ty(LLVMContext()), lastIterNo), getPTR);
+							builder.CreateStore(ConstantInt::get(Type::getInt64Ty(context), lastIterNo), getPTR);
 						}
 					}
 				}
