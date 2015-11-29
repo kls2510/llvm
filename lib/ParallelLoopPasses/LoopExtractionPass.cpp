@@ -101,6 +101,13 @@ namespace {
 							builder.CreateStore(ConstantInt::get(Type::getInt64Ty(context), lastIterNo), getPTR);
 						}
 					}
+					cout << "rewritten to:\n";
+					for (Function::iterator bb = F.begin(); bb != F.end(); ++bb) {
+						for (BasicBlock::iterator i = bb->begin(); i != bb->end(); i++) {
+							i->dump();
+						}
+					}
+					
 				}
 				else {
 					cout << "loop has multiple PHI nodes, so cannot be parallelized right now\n";
