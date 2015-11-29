@@ -1,4 +1,5 @@
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/Pass.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
@@ -43,7 +44,7 @@ namespace {
 			for (list<LoopDependencyData *>::iterator i = loopData.begin(); i != loopData.end(); i++) {
 				cout << "Found a loop\n";
 				LoopDependencyData *loopData = *i;
-				//(*i)->print();
+				
 				if (loopData->getNoOfPhiNodes() <= 1) {
 					if ((loopData->getDependencies()).size() > 0) {
 						for (list<Dependence *>::iterator i = (loopData->getDependencies()).begin(); i != (loopData->getDependencies()).end(); i++) {
@@ -66,6 +67,19 @@ namespace {
 						Value *startIt = ((loopData->getLoop())->getCanonicalInductionVariable())->getIncomingValue(0);
 						bool exact = (noIterations % noThreads == 0);
 
+						//get pointer to the basic block we'll insert the new instructions into
+						BasicBlock *insertPos = ((loopData->getLoop())->getLoopPredecessor());
+
+						//create the struct we'll use to pass data to/from the threads
+						StructType *myStruct = StructType::create(LLVMContext(), "ThreadPasser");
+						//send the startItvalue, begin offset and end offset to each thread
+						Type *elts[] = { startIt->getType(), Type::getInt64Ty(LLVMContext()), Type::getInt64Ty(LLVMContext()) };
+						myStruct->setBody(elts);
+
+						//setup for inserting instructions before the loop
+						Instruction *inst = insertPos->end();
+						IRBuilder<> builder(inst);
+
 						for (int i = 0; i < noThreads; i++) {
 							int firstIterNo = i*(noIterations / noThreads);
 							int lastIterNo = firstIterNo + ((noIterations / noThreads) - 1);
@@ -73,6 +87,17 @@ namespace {
 								lastIterNo = (noIterations - 1);
 							}
 							cout << "Alloc thread " << (i + 1) << " iterations: (startIt + " << firstIterNo << ") to (startIt + " << lastIterNo << ")\n";
+							//initialise struct in a new instruction at the end of the basic block
+							AllocaInst *allocateInst = builder.CreateAlloca(myStruct);
+							//store startIt
+							Value *getPTR = builder.CreateStructGEP(myStruct, allocateInst, 0);
+							builder.CreateStore(startIt,getPTR);
+							//store firstIterOffset
+							getPTR = builder.CreateStructGEP(myStruct, allocateInst, 1);
+							builder.CreateStore(ConstantInt::get(Type::getInt64Ty(LLVMContext()), firstIterNo), getPTR);
+							//store lastIterOffset
+							getPTR = builder.CreateStructGEP(myStruct, allocateInst, 2);
+							builder.CreateStore(ConstantInt::get(Type::getInt64Ty(LLVMContext()), lastIterNo), getPTR);
 						}
 					}
 				}
