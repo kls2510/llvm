@@ -58,21 +58,21 @@ namespace {
 						cout << "This loop has interloop dependencies so cannot be parallelized right now\n";
 					}
 					else {
+						//extract the loop
 						cout << "This loop has no dependencies so can be extracted\n";
-						//begin extraction
+						//find no of iterations and the start iteration value
 						int noIterations = SE.getSmallConstantTripCount(loopData->getLoop());
 						cout << "No of Iterations = " << noIterations << "\n";
-						ConstantInt * startItConst = dyn_cast<ConstantInt>(((loopData->getLoop())->getCanonicalInductionVariable())->getIncomingValue(0));
-						int start = startItConst->getSExtValue();
-						cout << "Start iteration = " << start << "\n";
+						Value *startIt = ((loopData->getLoop())->getCanonicalInductionVariable())->getIncomingValue(0);
 						bool exact = (noIterations % noThreads == 0);
+
 						for (int i = 0; i < noThreads; i++) {
-							int firstIterNo = start + i*(noIterations / noThreads);
+							int firstIterNo = i*(noIterations / noThreads);
 							int lastIterNo = firstIterNo + ((noIterations / noThreads) - 1);
-							if (i == noThreads - 1 && !exact) {
-								lastIterNo = start + (noIterations - 1);
+							if ((i == noThreads - 1) && !exact) {
+								lastIterNo = (noIterations - 1);
 							}
-							cout << "Alloc thread " << (i + 1) << " iterations " << firstIterNo << " to " << lastIterNo << "\n";
+							cout << "Alloc thread " << (i + 1) << " iterations: (startIt + " << firstIterNo << ") to (startIt + " << lastIterNo << ")\n";
 						}
 					}
 				}

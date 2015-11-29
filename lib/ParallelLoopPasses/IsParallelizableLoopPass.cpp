@@ -59,9 +59,6 @@ bool IsParallelizableLoopPass::runOnFunction(Function &F) {
 
 list<LoopDependencyData *> IsParallelizableLoopPass::getResultsForFunction(Function &F) {
 	StringRef name = F.getName();
-	//cout << "Found request for " << F.getName().data() << "\n";
-	//cout << "Map size = " << results.size() << "\n";
-	//cout << "Dependency list size = " << ((results.find(name))->second).size() << "\n";
 	return (results.find(name))->second;
 }
 
@@ -72,11 +69,11 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 	bool parallelizable = true;
 
 	//case: simple loop with no nested loops
+	//TODO: remove this and parallelize outer loops
 	if ((L->getSubLoops()).size() == 0) {
 		//look as the primary phi node and carry out analysis from there
 		PHINode *phi = L->getCanonicalInductionVariable();
 		if (phi == nullptr) {
-			//cannot parallelize loops with no cannonical induction variable
 			return false;
 		}
 		noOfPhiNodes++;
@@ -90,25 +87,22 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 			}
 			inst = inst->getNextNode();
 		}
-		
-		set<Instruction *> *dependentInstructions = new set<Instruction *>();
 
-		//loop through instructions dependent on the induction variable and check to see whether
+		//loop through instructions dependendent on the induction variable and check to see whether
 		//there are interloop dependencies
-		for (auto &pui : phi->user_begin) {
+		set<Instruction *> *dependentInstructions = new set<Instruction *>();
+		for (Instruction::user_iterator pui = phi->user_begin(); pui != phi->user_end(); pui++) {
 			Instruction *dependency = dyn_cast<Instruction>(*pui);
-			for (auto &ui : dependency->user_begin) {
+			for (Instruction::user_iterator ui = dependency->user_begin(); ui != dependency->user_end(); ui++) {
 				Instruction *dependency2 = dyn_cast<Instruction>(*ui);
 				getDependencies(dependency2, phi, dependentInstructions);
 			}
 		}
 
-		//TODO: run alias analysis on the found instructions here and add to data
-
-		//Find distance vectors for the found dependent instructions
-		for (auto &si : dependentInstructions->begin) {
+		//find distance vectors for dependent instructions
+		for (set<Instruction *>::iterator si = dependentInstructions->begin(); si != dependentInstructions->end(); si++) {
 			Instruction *i1 = (*si);
-			for (auto &si2 : dependentInstructions->begin) {
+			for (set<Instruction *>::iterator si2 = dependentInstructions->begin(); si2 != dependentInstructions->end(); si2++) {
 				Instruction *i2 = (*si2);
 				unique_ptr<Dependence> d = DA->depends(i1, i2, true);
 				
@@ -132,7 +126,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 					else {
 						distance = 0;
 					}
-					
+				
 					//decide whether this dependency makes the loop not parallelizable
 					if (distance != 0) {
 						if (d->isConsistent()) {
@@ -169,7 +163,7 @@ void IsParallelizableLoopPass::getDependencies(Instruction *inst, PHINode *phi, 
 		}
 		else {
 			if (inst->getNumUses() > 0) {
-				for (auto &ui : inst->user_begin) {
+				for (Instruction::user_iterator ui = inst->user_begin(); ui != inst->user_end(); ui++) {
 					getDependencies(dyn_cast<Instruction>(*ui), phi, dependents);
 				}
 			}
