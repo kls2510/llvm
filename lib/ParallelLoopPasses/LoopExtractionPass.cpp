@@ -72,7 +72,7 @@ namespace {
 							if (i == noThreads - 1 && !exact) {
 								lastIterNo = start + (noIterations - 1);
 							}
-							cout << "Alloc thread " << (i + 1) << " iterations " << firstIterNo << " to " << lastIterNo;
+							cout << "Alloc thread " << (i + 1) << " iterations " << firstIterNo << " to " << lastIterNo << "\n";
 						}
 					}
 				}

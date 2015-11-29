@@ -75,6 +75,10 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 	if ((L->getSubLoops()).size() == 0) {
 		//look as the primary phi node and carry out analysis from there
 		PHINode *phi = L->getCanonicalInductionVariable();
+		if (phi == nullptr) {
+			//cannot parallelize loops with no cannonical induction variable
+			return false;
+		}
 		noOfPhiNodes++;
 		Instruction *inst = phi->getNextNode();
 		//loop through all instructions to check for only one phi node
@@ -82,30 +86,32 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 			if (isa<PHINode>(inst)) {
 				//finding a second Phi node means the loop is not directly parallelizable
 				noOfPhiNodes++;
-				//cout << "found another phi node\n";
 				parallelizable = false;
 			}
 			inst = inst->getNextNode();
 		}
-		//cout << "the loop has " << noOfPhiNodes << " phi nodes\n";
-		//loop through instructions dependendent on the induction variable and check to see whether
-		//there are interloop dependencies
+		
 		set<Instruction *> *dependentInstructions = new set<Instruction *>();
-		for (Instruction::user_iterator pui = phi->user_begin(); pui != phi->user_end(); pui++) {
+
+		//loop through instructions dependent on the induction variable and check to see whether
+		//there are interloop dependencies
+		for (auto &pui : phi->user_begin) {
 			Instruction *dependency = dyn_cast<Instruction>(*pui);
-			for (Instruction::user_iterator ui = dependency->user_begin(); ui != dependency->user_end(); ui++) {
+			for (auto &ui : dependency->user_begin) {
 				Instruction *dependency2 = dyn_cast<Instruction>(*ui);
 				getDependencies(dependency2, phi, dependentInstructions);
 			}
 		}
-		for (set<Instruction *>::iterator si = dependentInstructions->begin(); si != dependentInstructions->end(); si++) {
+
+		//TODO: run alias analysis on the found instructions here and add to data
+
+		//Find distance vectors for the found dependent instructions
+		for (auto &si : dependentInstructions->begin) {
 			Instruction *i1 = (*si);
-			for (set<Instruction *>::iterator si2 = dependentInstructions->begin(); si2 != dependentInstructions->end(); si2++) {
+			for (auto &si2 : dependentInstructions->begin) {
 				Instruction *i2 = (*si2);
 				unique_ptr<Dependence> d = DA->depends(i1, i2, true);
-				//cout << "dependency between\n";
-				//i1->dump();
-				//i2->dump();
+				
 				if (d != nullptr) {
 					/*  direction:
 						NONE = 0,
@@ -126,15 +132,13 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 					else {
 						distance = 0;
 					}
-					//cout << "obtained distance = " << distance << " and direction =  " << direction << " and consistent?: " << d->isConsistent() << "\n";
+					
 					//decide whether this dependency makes the loop not parallelizable
 					if (distance != 0) {
 						if (d->isConsistent()) {
-							//cout << "This is a loop dependency, but they are consistent each loop so might be transformed\n";
 							parallelizable = false;
 						}
 						else {
-							//cout << "Loop dependency differs each iteration, this is not transfomable\n";
 							parallelizable = false;
 						}
 					}
@@ -143,13 +147,12 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 			}
 		}
 		delete dependentInstructions;
-		//cout << "No of dependencies found in function loop = " << dependencies.size() << "\n";
+		
 		//store results of analysis
 		LoopDependencyData *data = new LoopDependencyData(L, dependencies, noOfPhiNodes);
 		StringRef funName = F.getName();
 		map<StringRef, list<LoopDependencyData *>>::iterator it = (results.find(funName));
 		(it->second).push_back(data);
-		//cout << "no of loops found in function = " << ((results.find(funName))->second).size() << "\n";
 	}
 	return parallelizable;
 }
@@ -166,7 +169,7 @@ void IsParallelizableLoopPass::getDependencies(Instruction *inst, PHINode *phi, 
 		}
 		else {
 			if (inst->getNumUses() > 0) {
-				for (Instruction::user_iterator ui = inst->user_begin(); ui != inst->user_end(); ui++) {
+				for (auto &ui : inst->user_begin) {
 					getDependencies(dyn_cast<Instruction>(*ui), phi, dependents);
 				}
 			}
