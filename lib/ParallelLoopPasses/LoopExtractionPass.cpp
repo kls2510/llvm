@@ -69,7 +69,7 @@ namespace {
 
 						//get pointer to the basic block we'll insert the new instructions into
 						BasicBlock *insertPos = ((loopData->getLoop())->getLoopPredecessor());
-						LLVMContext &context = insertPos->getContext;
+						LLVMContext &context = insertPos->getContext();
 
 						//create the struct we'll use to pass data to/from the threads
 						StructType *myStruct = StructType::create(context, "ThreadPasser");
