@@ -75,6 +75,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 	vector<PHINode*> PhiNodes;
 	if (phi == nullptr) {
 		//can't parallelise a loop with no phi node
+		cerr << "Primary Phi node is null\n";
 		return false;
 	}
 	PhiNodes.push_back(phi);
