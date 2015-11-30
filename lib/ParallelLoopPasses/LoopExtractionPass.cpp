@@ -40,9 +40,9 @@ namespace {
 			ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
 
 			list<LoopDependencyData *> loopData = IP.getResultsForFunction(F);
-			cout << "In function " << (F.getName()).data() << "\n";
+			cerr << "In function " << (F.getName()).data() << "\n";
 			for (list<LoopDependencyData *>::iterator i = loopData.begin(); i != loopData.end(); i++) {
-				cout << "Found a loop\n";
+				cerr << "Found a loop\n";
 				LoopDependencyData *loopData = *i;
 				
 				if (loopData->getNoOfPhiNodes() <= 1) {
@@ -51,19 +51,19 @@ namespace {
 							int distance = loopData->getDistance(*i);
 							Instruction *inst1 = (*i)->getSrc();
 							Instruction *inst2 = (*i)->getDst();
-							cout << "Dependency between\n";
+							cerr << "Dependency between\n";
 							inst1->dump();
 							inst2->dump();
-							cout << "with distance = " << distance << "\n";
+							cerr << "with distance = " << distance << "\n";
 						}
-						cout << "This loop has interloop dependencies so cannot be parallelized right now\n";
+						cerr << "This loop has interloop dependencies so cannot be parallelized right now\n";
 					}
 					else {
 						//extract the loop
-						cout << "This loop has no dependencies so can be extracted\n";
+						cerr << "This loop has no dependencies so can be extracted\n";
 						//find no of iterations and the start iteration value
 						int noIterations = SE.getSmallConstantTripCount(loopData->getLoop());
-						cout << "No of Iterations = " << noIterations << "\n";
+						cerr << "No of Iterations = " << noIterations << "\n";
 						Value *startIt = ((loopData->getLoop())->getCanonicalInductionVariable())->getIncomingValue(0);
 						bool exact = (noIterations % noThreads == 0);
 
@@ -87,7 +87,7 @@ namespace {
 							if ((i == noThreads - 1) && !exact) {
 								lastIterNo = (noIterations - 1);
 							}
-							cout << "Alloc thread " << (i + 1) << " iterations: (startIt + " << firstIterNo << ") to (startIt + " << lastIterNo << ")\n";
+							cerr << "Alloc thread " << (i + 1) << " iterations: (startIt + " << firstIterNo << ") to (startIt + " << lastIterNo << ")\n";
 							//initialise struct in a new instruction at the end of the basic block
 							AllocaInst *allocateInst = builder.CreateAlloca(myStruct);
 							//store startIt
@@ -102,7 +102,7 @@ namespace {
 						}
 
 						//Debug
-						cout << "rewritten to:\n";
+						cerr << "rewritten to:\n";
 						for (Function::iterator bb = F.begin(); bb != F.end(); ++bb) {
 							for (BasicBlock::iterator i = bb->begin(); i != bb->end(); i++) {
 								i->dump();
@@ -112,11 +112,11 @@ namespace {
 					}					
 				}
 				else {
-					cout << "loop has multiple PHI nodes, so cannot be parallelized right now\n";
+					cerr << "loop has multiple PHI nodes, so cannot be parallelized right now\n";
 				}
 			}
 			
-			cout << "Loop extraction for function complete\n";
+			cerr << "Loop extraction for function complete\n";
 			return true;
 		}
 
