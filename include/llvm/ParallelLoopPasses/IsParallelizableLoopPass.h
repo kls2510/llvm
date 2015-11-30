@@ -33,7 +33,8 @@ namespace parallelize {
 		AliasAnalysis *AA;
 
 		//Map containing all loops and dependencies associated with each function
-		static map<Function&, list<LoopDependencyData *>> results;
+		//static map<Function&, list<LoopDependencyData *>> results;
+		static list<LoopDependencyData *> results;
 
 		//Constructor
 		IsParallelizableLoopPass() : FunctionPass(ID) {	}
