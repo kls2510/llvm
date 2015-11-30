@@ -45,20 +45,8 @@ namespace {
 				cerr << "Found a loop\n";
 				LoopDependencyData *loopData = *i;
 				
-				if (loopData->getNoOfPhiNodes() <= 1) {
-					if ((loopData->getDependencies()).size() > 0) {
-						for (list<Dependence *>::iterator i = (loopData->getDependencies()).begin(); i != (loopData->getDependencies()).end(); i++) {
-							int distance = loopData->getDistance(*i);
-							Instruction *inst1 = (*i)->getSrc();
-							Instruction *inst2 = (*i)->getDst();
-							cerr << "Dependency between\n";
-							inst1->dump();
-							inst2->dump();
-							cerr << "with distance = " << distance << "\n";
-						}
-						cerr << "This loop has interloop dependencies so cannot be parallelized right now\n";
-					}
-					else {
+				if ((loopData->getDependencies()).size() == 0) {
+					if (loopData->isParallelizable()) {
 						//extract the loop
 						cerr << "This loop has no dependencies so can be extracted\n";
 						//find no of iterations and the start iteration value
@@ -92,7 +80,7 @@ namespace {
 							AllocaInst *allocateInst = builder.CreateAlloca(myStruct);
 							//store startIt
 							Value *getPTR = builder.CreateStructGEP(myStruct, allocateInst, 0);
-							builder.CreateStore(startIt,getPTR);
+							builder.CreateStore(startIt, getPTR);
 							//store firstIterOffset
 							getPTR = builder.CreateStructGEP(myStruct, allocateInst, 1);
 							builder.CreateStore(ConstantInt::get(Type::getInt32Ty(context), firstIterNo), getPTR);
@@ -108,12 +96,38 @@ namespace {
 								i->dump();
 							}
 						}
+					}
+					else {
+						//must be a problem with Phi nodes
+						cerr << "loop has too many PHI nodes, so cannot be parallelized right now\n";
+					}
+				}
+				//must be a problem with dependencies
+				else {
+					cerr << "This loop has interloop dependencies so cannot be parallelized right now\n";
+				}
+
+				/*if (loopData->getNoOfPhiNodes() <= 1) {
+					if ((loopData->getDependencies()).size() > 0) {
+						for (list<Dependence *>::iterator i = (loopData->getDependencies()).begin(); i != (loopData->getDependencies()).end(); i++) {
+							int distance = loopData->getDistance(*i);
+							Instruction *inst1 = (*i)->getSrc();
+							Instruction *inst2 = (*i)->getDst();
+							cerr << "Dependency between\n";
+							inst1->dump();
+							inst2->dump();
+							cerr << "with distance = " << distance << "\n";
+						}
+						cerr << "This loop has interloop dependencies so cannot be parallelized right now\n";
+					}
+					else {
+						
 
 					}					
 				}
 				else {
-					cerr << "loop has multiple PHI nodes, so cannot be parallelized right now\n";
-				}
+					
+				} */
 			}
 			
 			cerr << "Loop extraction for function complete\n";

@@ -51,3 +51,7 @@ void LoopDependencyData::print() {
 	}
 }
 
+bool LoopDependencyData::isParallelizable() {
+	return parallelizable;
+}
+

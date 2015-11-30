@@ -19,10 +19,11 @@ private:
 	Loop *loop;
 	list<Dependence *> dependencies;
 	int noOfPhiNodes;
+	bool parallelizable;
 
 public:
-	LoopDependencyData(Loop *L, list<Dependence *> d, int phi) {
-		loop = L, dependencies = d, noOfPhiNodes = phi;
+	LoopDependencyData(Loop *L, list<Dependence *> d, int phi, bool parallelizable) {
+		loop = L, dependencies = d, noOfPhiNodes = phi, this->parallelizable = parallelizable;
 	}
 
 	Loop *getLoop();
@@ -34,6 +35,8 @@ public:
 	int getDistance(Dependence *d);
 
 	void print();
+
+	bool isParallelizable();
 
 };
 

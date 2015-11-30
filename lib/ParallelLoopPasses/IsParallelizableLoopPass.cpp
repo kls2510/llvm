@@ -69,86 +69,87 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 	int noOfPhiNodes = 0;
 	bool parallelizable = true;
 
-	//case: simple loop with no nested loops
-	//TODO: remove this and parallelize outer loops
-	if ((L->getSubLoops()).size() == 0) {
-		//look as the primary phi node and carry out analysis from there
-		PHINode *phi = L->getCanonicalInductionVariable();
-		if (phi == nullptr) {
-			return false;
-		}
-		noOfPhiNodes++;
-		Instruction *inst = phi->getNextNode();
-		//loop through all instructions to check for only one phi node
-		while (L->contains(inst)) {
-			if (isa<PHINode>(inst)) {
-				//finding a second Phi node means the loop is not directly parallelizable
-				noOfPhiNodes++;
+	//parallelize just outer loops for now
+	//look at the primary phi node and carry out analysis from there
+	PHINode *phi = L->getCanonicalInductionVariable();
+	if (phi == nullptr) {
+		return false;
+	}
+	noOfPhiNodes++;
+	Instruction *inst = phi->getNextNode();
+	//loop through all instructions to check for only one phi node
+	while (L->contains(inst)) {
+		if (isa<PHINode>(inst)) {
+			//finding a second Phi node means the loop is not directly parallelizable
+			noOfPhiNodes++;
+			if ((L->getSubLoops()).size() + 1 < noOfPhiNodes) {
+				//too many phi nodes
 				parallelizable = false;
 			}
-			inst = inst->getNextNode();
 		}
+		inst = inst->getNextNode();
+	}
 
-		//loop through instructions dependendent on the induction variable and check to see whether
-		//there are interloop dependencies
-		set<Instruction *> *dependentInstructions = new set<Instruction *>();
-		for (Instruction::user_iterator pui = phi->user_begin(); pui != phi->user_end(); pui++) {
-			Instruction *dependency = dyn_cast<Instruction>(*pui);
-			for (Instruction::user_iterator ui = dependency->user_begin(); ui != dependency->user_end(); ui++) {
-				Instruction *dependency2 = dyn_cast<Instruction>(*ui);
-				getDependencies(dependency2, phi, dependentInstructions);
-			}
+	//loop through instructions dependendent on the induction variable and check to see whether
+	//there are interloop dependencies
+	set<Instruction *> *dependentInstructions = new set<Instruction *>();
+	for (Instruction::user_iterator pui = phi->user_begin(); pui != phi->user_end(); pui++) {
+		Instruction *dependency = dyn_cast<Instruction>(*pui);
+		for (Instruction::user_iterator ui = dependency->user_begin(); ui != dependency->user_end(); ui++) {
+			Instruction *dependency2 = dyn_cast<Instruction>(*ui);
+			getDependencies(dependency2, phi, dependentInstructions);
 		}
+	}
 
-		//find distance vectors for dependent instructions
-		for (set<Instruction *>::iterator si = dependentInstructions->begin(); si != dependentInstructions->end(); si++) {
-			Instruction *i1 = (*si);
-			for (set<Instruction *>::iterator si2 = dependentInstructions->begin(); si2 != dependentInstructions->end(); si2++) {
-				Instruction *i2 = (*si2);
-				unique_ptr<Dependence> d = DA->depends(i1, i2, true);
-				
-				if (d != nullptr) {
-					/*  direction:
-						NONE = 0,
-						LT = 1,
-						EQ = 2,
-						LE = 3,
-						GT = 4,
-						NE = 5,
-						GE = 6,
-						ALL = 7 */
-					const SCEV *scev = (d->getDistance(1));
-					int direction = d->getDirection(1);
-					int distance;
-					if (scev != nullptr && isa<SCEVConstant>(scev)) {
-						const SCEVConstant *scevConst = cast<SCEVConstant>(scev);
-						distance = *(int *)(scevConst->getValue()->getValue()).getRawData();
+	//find distance vectors for dependent instructions
+	for (set<Instruction *>::iterator si = dependentInstructions->begin(); si != dependentInstructions->end(); si++) {
+		Instruction *i1 = (*si);
+		for (set<Instruction *>::iterator si2 = dependentInstructions->begin(); si2 != dependentInstructions->end(); si2++) {
+			Instruction *i2 = (*si2);
+			unique_ptr<Dependence> d = DA->depends(i1, i2, true);
+			
+			if (d != nullptr) {
+				/*  direction:
+					NONE = 0,
+					LT = 1,
+					EQ = 2,
+					LE = 3,
+					GT = 4,
+					NE = 5,
+					GE = 6,
+					ALL = 7 */
+				const SCEV *scev = (d->getDistance(1));
+				int direction = d->getDirection(1);
+				int distance;
+				if (scev != nullptr && isa<SCEVConstant>(scev)) {
+					const SCEVConstant *scevConst = cast<SCEVConstant>(scev);
+					distance = *(int *)(scevConst->getValue()->getValue()).getRawData();
+				}
+				else {
+					distance = 0;
+				}
+			
+				//decide whether this dependency makes the loop not parallelizable
+				if (distance != 0) {
+					if (d->isConsistent()) {
+						parallelizable = false;
 					}
 					else {
-						distance = 0;
+						parallelizable = false;
 					}
-				
-					//decide whether this dependency makes the loop not parallelizable
-					if (distance != 0) {
-						if (d->isConsistent()) {
-							parallelizable = false;
-						}
-						else {
-							parallelizable = false;
-						}
-					}
-					dependencies.push_back(d.release());
 				}
+				dependencies.push_back(d.release());
 			}
 		}
-		delete dependentInstructions;
-		
-		//store results of analysis
-		LoopDependencyData *data = new LoopDependencyData(L, dependencies, noOfPhiNodes);
-		//map<Function&, list<LoopDependencyData *>>::iterator it = (results.find(F));
-		//(it->second).push_back(data);
-		results.push_back(data);
 	}
+	delete dependentInstructions;
+		
+	//store results of analysis
+	LoopDependencyData *data = new LoopDependencyData(L, dependencies, noOfPhiNodes, parallelizable);
+	//map<Function&, list<LoopDependencyData *>>::iterator it = (results.find(F));
+	//(it->second).push_back(data);
+	results.push_back(data);
+	
 	return parallelizable;
 }
 
