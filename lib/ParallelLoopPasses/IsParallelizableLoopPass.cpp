@@ -70,21 +70,31 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 	bool parallelizable = true;
 
 	//parallelize just outer loops for now
-	//look at the primary phi node and carry out analysis from there
 	PHINode *phi = L->getCanonicalInductionVariable();
+	vector<Loop*> subloops = L->getSubLoops();
+	vector<PHINode*> PhiNodes;
 	if (phi == nullptr) {
+		//can't parallelise a loop with no phi node
 		return false;
 	}
+	PhiNodes.push_back(phi);
 	noOfPhiNodes++;
+	//store all cannonical induction variables
+	for (vector<Loop*>::iterator sl = subloops.begin(); sl != subloops.end(); ++sl) {
+		if ((*sl)->getCanonicalInductionVariable()) {
+			PhiNodes.push_back((*sl)->getCanonicalInductionVariable());
+			noOfPhiNodes++;
+		}
+	}
 	Instruction *inst = phi->getNextNode();
-	//loop through all instructions to check for only one phi node
+	//loop through all instructions to check for only cannonical induction variable phi nodes
 	while (L->contains(inst)) {
 		if (isa<PHINode>(inst)) {
-			//finding a second Phi node means the loop is not directly parallelizable
-			noOfPhiNodes++;
-			if ((L->getSubLoops()).size() + 1 < noOfPhiNodes) {
-				//too many phi nodes
+			//finding Phi node that isn't a cannonical induction variable means the loop is not directly parallelizable
+			if (find(PhiNodes.begin(), PhiNodes.end(), inst) == PhiNodes.end()) {
+				cerr << "found a Phi node that is not a cannonical induction variable\n";
 				parallelizable = false;
+				noOfPhiNodes++;
 			}
 		}
 		inst = inst->getNextNode();
