@@ -1,5 +1,6 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/Pass.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
@@ -33,14 +34,14 @@ namespace {
 		void getAnalysisUsage(AnalysisUsage &AU) const {
 			AU.addRequired<IsParallelizableLoopPass>();
 			AU.addRequired<ScalarEvolutionWrapperPass>();
-			AU.addRequired<DominatorTree>();
+			AU.addRequired<DominatorTreeWrapperPass>();
 		}
 
 		virtual bool runOnFunction(Function &F) {
 			//get data from the IsParallelizableLoopPass analysis
 			IsParallelizableLoopPass &IP = getAnalysis<IsParallelizableLoopPass>();
 			ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-			DominatorTree &DT = getAnalysis<DominatorTree>()
+			DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
 
 			list<LoopDependencyData *> loopData = IP.getResultsForFunction(F);
 			cerr << "In function " << (F.getName()).data() << "\n";
