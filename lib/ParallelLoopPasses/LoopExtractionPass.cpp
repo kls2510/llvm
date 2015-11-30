@@ -6,6 +6,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Transforms/Utils/CodeExtractor.h"
 #include "llvm/ParallelLoopPasses/IsParallelizableLoopPass.h"
 #include <iostream>
 #include <string>
@@ -32,12 +33,14 @@ namespace {
 		void getAnalysisUsage(AnalysisUsage &AU) const {
 			AU.addRequired<IsParallelizableLoopPass>();
 			AU.addRequired<ScalarEvolutionWrapperPass>();
+			AU.addRequired<DominatorTree>();
 		}
 
 		virtual bool runOnFunction(Function &F) {
 			//get data from the IsParallelizableLoopPass analysis
 			IsParallelizableLoopPass &IP = getAnalysis<IsParallelizableLoopPass>();
 			ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
+			DominatorTree &DT = getAnalysis<DominatorTree>()
 
 			list<LoopDependencyData *> loopData = IP.getResultsForFunction(F);
 			cerr << "In function " << (F.getName()).data() << "\n";
@@ -52,6 +55,9 @@ namespace {
 						//find no of iterations and the start iteration value
 						int noIterations = SE.getSmallConstantTripCount(loopData->getLoop());
 						cerr << "No of Iterations = " << noIterations << "\n";
+						if (noIterations == 0) {
+							//TODO: Need to work out how to do this if maxIter is a variable value
+						}
 						Value *startIt = ((loopData->getLoop())->getCanonicalInductionVariable())->getIncomingValue(0);
 						bool exact = (noIterations % noThreads == 0);
 
@@ -89,6 +95,10 @@ namespace {
 							builder.CreateStore(ConstantInt::get(Type::getInt32Ty(context), lastIterNo), getPTR);
 						}
 
+						//extract the loop into a new function
+						CodeExtractor extractor = CodeExtractor(DT,*(loopData->getLoop()),false);
+						Function *extractedLoop = extractor.extractCodeRegion();
+
 						//Debug
 						cerr << "rewritten to:\n";
 						for (Function::iterator bb = F.begin(); bb != F.end(); ++bb) {
@@ -96,6 +106,16 @@ namespace {
 								i->dump();
 							}
 						}
+
+						if (extractedLoop != 0) {
+							cerr << "with new function:\n";
+							for (Function::iterator bb = extractedLoop->begin(); bb != extractedLoop->end(); ++bb) {
+								for (BasicBlock::iterator i = bb->begin(); i != bb->end(); i++) {
+									i->dump();
+								}
+							}
+						}
+				
 					}
 					else {
 						//must be a problem with Phi nodes
