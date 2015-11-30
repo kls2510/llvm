@@ -74,7 +74,7 @@ namespace {
 						//create the struct we'll use to pass data to/from the threads
 						StructType *myStruct = StructType::create(context, "ThreadPasser");
 						//send the startItvalue, begin offset and end offset to each thread
-						Type *elts[] = { startIt->getType(), Type::getInt64Ty(context), Type::getInt64Ty(context) };
+						Type *elts[] = { startIt->getType(), Type::getInt32Ty(context), Type::getInt32Ty(context) };
 						myStruct->setBody(elts);
 
 						//setup for inserting instructions before the loop
@@ -95,19 +95,21 @@ namespace {
 							builder.CreateStore(startIt,getPTR);
 							//store firstIterOffset
 							getPTR = builder.CreateStructGEP(myStruct, allocateInst, 1);
-							builder.CreateStore(ConstantInt::get(Type::getInt64Ty(context), firstIterNo), getPTR);
+							builder.CreateStore(ConstantInt::get(Type::getInt32Ty(context), firstIterNo), getPTR);
 							//store lastIterOffset
 							getPTR = builder.CreateStructGEP(myStruct, allocateInst, 2);
-							builder.CreateStore(ConstantInt::get(Type::getInt64Ty(context), lastIterNo), getPTR);
+							builder.CreateStore(ConstantInt::get(Type::getInt32Ty(context), lastIterNo), getPTR);
 						}
-					}
-					cout << "rewritten to:\n";
-					for (Function::iterator bb = F.begin(); bb != F.end(); ++bb) {
-						for (BasicBlock::iterator i = bb->begin(); i != bb->end(); i++) {
-							i->dump();
+
+						//Debug
+						cout << "rewritten to:\n";
+						for (Function::iterator bb = F.begin(); bb != F.end(); ++bb) {
+							for (BasicBlock::iterator i = bb->begin(); i != bb->end(); i++) {
+								i->dump();
+							}
 						}
-					}
-					
+
+					}					
 				}
 				else {
 					cout << "loop has multiple PHI nodes, so cannot be parallelized right now\n";

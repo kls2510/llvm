@@ -32,7 +32,7 @@ bool IsParallelizableLoopPass::runOnFunction(Function &F) {
 	DA = &getAnalysis<DependenceAnalysis>();
 	AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 	list<LoopDependencyData *> l;
-	results.insert(std::pair<StringRef, list<LoopDependencyData *>>(F.getName(), l));
+	results.insert(std::pair<Function&, list<LoopDependencyData *>>(F, l));
 	//cout << "Results size = " << results.size() << "\n";
 	
 	//cout << "Running parallelizable loop analysis on function " << (F.getName()).data() << "\n";
@@ -58,8 +58,7 @@ bool IsParallelizableLoopPass::runOnFunction(Function &F) {
 }
 
 list<LoopDependencyData *> IsParallelizableLoopPass::getResultsForFunction(Function &F) {
-	StringRef name = F.getName();
-	return (results.find(name))->second;
+	return (results.find(F))->second;
 }
 
 //runs the actual analysis
@@ -144,8 +143,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 		
 		//store results of analysis
 		LoopDependencyData *data = new LoopDependencyData(L, dependencies, noOfPhiNodes);
-		StringRef funName = F.getName();
-		map<StringRef, list<LoopDependencyData *>>::iterator it = (results.find(funName));
+		map<Function&, list<LoopDependencyData *>>::iterator it = (results.find(F));
 		(it->second).push_back(data);
 	}
 	return parallelizable;
@@ -174,6 +172,6 @@ void IsParallelizableLoopPass::getDependencies(Instruction *inst, PHINode *phi, 
 
 char IsParallelizableLoopPass::ID = 0;
 //define the static variable member
-map<StringRef, list<LoopDependencyData *>> IsParallelizableLoopPass::results;
+map<Function&, list<LoopDependencyData *>> IsParallelizableLoopPass::results;
 static RegisterPass<IsParallelizableLoopPass> reg("IsParallelizableLoopPass",
 	"Categorizes loops into 2 categories per function; is parallelizable and is not parallelizable");
