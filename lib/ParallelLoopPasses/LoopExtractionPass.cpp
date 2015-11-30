@@ -110,13 +110,13 @@ namespace {
 
 						if (extractedLoop != 0) {
 							cerr << "with new function:\n";
-							//to avoid infinite extraction
-							extractedLoop->removeFromParent();
 							for (Function::iterator bb = extractedLoop->begin(); bb != extractedLoop->end(); ++bb) {
 								for (BasicBlock::iterator i = bb->begin(); i != bb->end(); i++) {
 									i->dump();
 								}
 							}
+							//to avoid infinite extraction
+							extractedLoop->removeFromParent();
 						}
 				
 					}
