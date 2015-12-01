@@ -103,6 +103,9 @@ namespace {
 							CodeExtractor extractor = CodeExtractor(DT, *(loopData->getLoop()), false);
 							Function *extractedLoop = extractor.extractCodeRegion();
 
+							//add struct argument to function
+							Argument *newArg = new Argument(myStruct, "iterationHolder", extractedLoop);
+
 							//edit calls to add struct argument
 							CallInst *callInst = dyn_cast<CallInst>(*(extractedLoop->user_begin()));
 							vector<Value *> args(callInst->value_op_begin(), callInst->value_op_end());
@@ -114,9 +117,6 @@ namespace {
 							}
 							//delete the original call instruction
 							callInst->eraseFromParent();
-
-							//add struct argument to function
-							Argument *newArg = new Argument(myStruct, "iterationHolder", extractedLoop);
 
 							//Debug
 							cerr << "rewritten to:\n";
