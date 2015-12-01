@@ -103,6 +103,8 @@ namespace {
 							CodeExtractor extractor = CodeExtractor(DT, *(loopData->getLoop()), false);
 							Function *extractedLoop = extractor.extractCodeRegion();
 
+							CallInst *callInst = dyn_cast<CallInst>(*(extractedLoop->user_begin()));
+
 							//add struct argument to function
 							Argument *newArg = new Argument(myStruct, "iterationHolder", extractedLoop);
 
@@ -116,12 +118,15 @@ namespace {
 							}
 
 							//edit calls to add struct argument
-							CallInst *callInst = dyn_cast<CallInst>(*(extractedLoop->user_begin()));
 							vector<Value *> args(callInst->value_op_begin(), callInst->value_op_end());
 							IRBuilder<> callbuilder(callInst);
 							for (list<Value*>::iterator it = threadStructs.begin(); it != threadStructs.end(); ++it) {
 								vector<Value *> argsForCall = args;
 								argsForCall.push_back(*it);
+								cerr << "Argument values:\n";
+								for (vector<Value *>::iterator i = argsForCall.begin(); i != argsForCall.end(); ++i) {
+									(*i)->dump();
+								}
 								callbuilder.CreateCall(extractedLoop, argsForCall);
 							}
 							//delete the original call instruction
