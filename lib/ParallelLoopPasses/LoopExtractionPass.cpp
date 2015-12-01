@@ -119,7 +119,7 @@ namespace {
 							//add struct argument to function
 							Argument *newArg = new Argument(myStruct, "iterationHolder", extractedLoop);
 
-							cerr << "Function no of Args: " << (extractedLoop->getArgumentList()).size() << "\n";
+							cerr << "Function no of Args: " << (extractedLoop->getFunctionType())->getNumParams() << "\n";
 							cerr << "Types of args:\n";
 							int j = 0;
 							for (Function::ArgumentListType::iterator i = (extractedLoop->getArgumentList()).begin(); i != (extractedLoop->getArgumentList()).end(); ++i) {
