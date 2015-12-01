@@ -1,6 +1,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/Function.h"
 #include "llvm/Pass.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
@@ -76,7 +77,7 @@ namespace {
 							//setup for inserting instructions before the loop
 							Instruction *inst = insertPos->begin();
 							IRBuilder<> builder(inst);
-
+							list<Value *> threadStructs;
 							for (int i = 0; i < noThreads; i++) {
 								int firstIterNo = i*(noIterations / noThreads);
 								int lastIterNo = firstIterNo + ((noIterations / noThreads) - 1);
@@ -95,15 +96,32 @@ namespace {
 								//store lastIterOffset
 								getPTR = builder.CreateStructGEP(myStruct, allocateInst, 2);
 								builder.CreateStore(ConstantInt::get(Type::getInt32Ty(context), lastIterNo), getPTR);
+								threadStructs.push_back(allocateInst);
 							}
 
 							//extract the loop into a new function
 							CodeExtractor extractor = CodeExtractor(DT, *(loopData->getLoop()), false);
 							Function *extractedLoop = extractor.extractCodeRegion();
 
+							//edit calls to add struct argument
+							CallInst *callInst = dyn_cast<CallInst *>(extractedLoop->user_begin());
+							vector<Value *> args(callInst->value_op_begin, callInst->value_op_end);
+							IRBuilder<> builder(callInst);
+							for (list<Value*>::iterator it = threadStructs.begin(); it != threadStructs.end(); ++it) {
+								vector<Value *> argsForCall = args;
+								argsForCall.push_back(*it);
+								builder.CreateCall(extractedLoop, argsForCall);
+							}
+							//delete the original call instruction
+							callInst->eraseFromParent();
+
+							//add struct argument to function
+							Argument *newArg = new Argument(myStruct, "iterationHolder", extractedLoop);
+
 							//Debug
 							cerr << "rewritten to:\n";
 							for (Function::iterator bb = F.begin(); bb != F.end(); ++bb) {
+								bb->dump();
 								for (BasicBlock::iterator i = bb->begin(); i != bb->end(); i++) {
 									i->dump();
 								}
@@ -111,6 +129,7 @@ namespace {
 
 							if (extractedLoop != 0) {
 								cerr << "with new function:\n";
+								extractedLoop->dump();
 								for (Function::iterator bb = extractedLoop->begin(); bb != extractedLoop->end(); ++bb) {
 									for (BasicBlock::iterator i = bb->begin(); i != bb->end(); i++) {
 										i->dump();
