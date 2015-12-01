@@ -118,7 +118,9 @@ namespace {
 
 							//add struct argument to function
 							Argument *newArg = new Argument(myStruct, "iterationHolder", extractedLoop);
-
+							//PROBLEM FOUND - TYPE OF FUNCTION HASN'T CHANGED SO STILL ONLY EXPECTS 1 ARG
+							vector<Type *> typeParams = extractedLoop->getFunctionType()->params();
+							typeParams.push_back(myStruct);
 							cerr << "Function no of Args: " << (extractedLoop->getFunctionType())->getNumParams() << "\n";
 							cerr << "Types of args:\n";
 							int j = 0;
