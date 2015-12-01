@@ -108,8 +108,10 @@ namespace {
 
 							cerr << "Function no of Args: " << (extractedLoop->getArgumentList()).size() << "\n";
 							cerr << "Types of args:\n";
+							int j = 0;
 							for (Function::ArgumentListType::iterator i = (extractedLoop->getArgumentList()).begin(); i != (extractedLoop->getArgumentList()).end(); ++i) {
-								cerr << "[" << i << "] : " << ((*i).getType()) << "\n";
+								cerr << "[" << j << "] : " << (((*i).getType())->getStructName()).data() << "\n";
+								j++;
 							}
 
 							//edit calls to add struct argument
