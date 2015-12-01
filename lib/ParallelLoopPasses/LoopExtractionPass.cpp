@@ -44,14 +44,13 @@ namespace {
 			ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
 			DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
 
-			LLVMContext &context = (F.getContext());
-
 			if (!F.hasFnAttribute("Extracted")) {
 				list<LoopDependencyData *> loopData = IP.getResultsForFunction(F);
 				cerr << "In function " << (F.getName()).data() << "\n";
 				for (list<LoopDependencyData *>::iterator i = loopData.begin(); i != loopData.end(); i++) {
 					cerr << "Found a loop\n";
 					LoopDependencyData *loopData = *i;
+					LLVMContext &context = (loopData->getLoop())->getHeader()->getContext();
 
 					if ((loopData->getDependencies()).size() == 0) {
 						if (loopData->isParallelizable()) {
