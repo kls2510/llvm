@@ -104,13 +104,13 @@ namespace {
 							Function *extractedLoop = extractor.extractCodeRegion();
 
 							//edit calls to add struct argument
-							CallInst *callInst = dyn_cast<CallInst *>(extractedLoop->user_begin());
-							vector<Value *> args(callInst->value_op_begin, callInst->value_op_end);
-							IRBuilder<> builder(callInst);
+							CallInst *callInst = dyn_cast<CallInst>(*(extractedLoop->user_begin()));
+							vector<Value *> args(callInst->value_op_begin(), callInst->value_op_end());
+							IRBuilder<> callbuilder(callInst);
 							for (list<Value*>::iterator it = threadStructs.begin(); it != threadStructs.end(); ++it) {
 								vector<Value *> argsForCall = args;
 								argsForCall.push_back(*it);
-								builder.CreateCall(extractedLoop, argsForCall);
+								callbuilder.CreateCall(extractedLoop, argsForCall);
 							}
 							//delete the original call instruction
 							callInst->eraseFromParent();
