@@ -106,6 +106,12 @@ namespace {
 							//add struct argument to function
 							Argument *newArg = new Argument(myStruct, "iterationHolder", extractedLoop);
 
+							cerr << "Function no of Args: " << (extractedLoop->getArgumentList()).size() << "\n";
+							cerr << "Types of args:\n";
+							for (Function::ArgumentListType::iterator i = (extractedLoop->getArgumentList()).begin(); i != (extractedLoop->getArgumentList()).end(); ++i) {
+								cerr << "[" << i << "] : " << ((*i).getType()) << "\n";
+							}
+
 							//edit calls to add struct argument
 							CallInst *callInst = dyn_cast<CallInst>(*(extractedLoop->user_begin()));
 							vector<Value *> args(callInst->value_op_begin(), callInst->value_op_end());
