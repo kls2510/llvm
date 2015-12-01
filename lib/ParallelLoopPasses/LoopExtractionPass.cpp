@@ -96,7 +96,9 @@ namespace {
 								//store lastIterOffset
 								getPTR = builder.CreateStructGEP(myStruct, allocateInst, 2);
 								builder.CreateStore(ConstantInt::get(Type::getInt32Ty(context), lastIterNo), getPTR);
-								threadStructs.push_back(allocateInst);
+								//load the struct for passing into the function
+								LoadInst *loadInst = builder.CreateLoad(allocateInst);
+								threadStructs.push_back(loadInst);
 							}
 
 							//extract the loop into a new function
