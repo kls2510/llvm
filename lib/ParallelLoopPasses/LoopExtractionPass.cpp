@@ -44,6 +44,8 @@ namespace {
 			ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
 			DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
 
+			LLVMContext &context = (F.getContext());
+
 			if (!F.hasFnAttribute("Extracted")) {
 				list<LoopDependencyData *> loopData = IP.getResultsForFunction(F);
 				cerr << "In function " << (F.getName()).data() << "\n";
@@ -66,7 +68,6 @@ namespace {
 
 							//get pointer to the basic block we'll insert the new instructions into
 							BasicBlock *insertPos = ((loopData->getLoop())->getLoopPredecessor());
-							LLVMContext &context = (F.getParent())->getContext();
 
 							//create the struct we'll use to pass data to/from the threads
 							StructType *myStruct = StructType::create(context, "ThreadPasser");
