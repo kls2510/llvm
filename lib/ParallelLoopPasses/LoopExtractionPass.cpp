@@ -110,7 +110,8 @@ namespace {
 							cerr << "Types of args:\n";
 							int j = 0;
 							for (Function::ArgumentListType::iterator i = (extractedLoop->getArgumentList()).begin(); i != (extractedLoop->getArgumentList()).end(); ++i) {
-								cerr << "[" << j << "] : " << (((*i).getType())->getStructName()).data() << "\n";
+								cerr << "[" << j << "] : " << "\n";
+								(((*i).getType())->dump());
 								j++;
 							}
 
