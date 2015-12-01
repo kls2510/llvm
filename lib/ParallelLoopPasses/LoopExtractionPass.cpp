@@ -106,6 +106,15 @@ namespace {
 							Function *extractedLoop = extractor.extractCodeRegion();
 
 							CallInst *callInst = dyn_cast<CallInst>(*(extractedLoop->user_begin()));
+							int noOps = callInst->getNumArgOperands();
+							cerr << "No of original args = " << noOps << "\n";
+							vector<Value *> args;
+							for (int i = 0; i < noOps; i++) {
+								args.push_back(callInst->getOperand(i));
+							}
+							IRBuilder<> callbuilder(callInst);
+							//delete the original call instruction
+							callInst->eraseFromParent();
 
 							//add struct argument to function
 							Argument *newArg = new Argument(myStruct, "iterationHolder", extractedLoop);
@@ -120,24 +129,15 @@ namespace {
 							}
 
 							//edit calls to add struct argument
-							int noOps = callInst->getNumArgOperands();
-							cerr << "No of original args = " << noOps << "\n";
-							vector<Value *> args;
-							for (int i = 0; i < noOps; i++) {
-								args.push_back(callInst->getOperand(i));
-							}
-							IRBuilder<> callbuilder(callInst);
 							for (list<Value*>::iterator it = threadStructs.begin(); it != threadStructs.end(); ++it) {
 								vector<Value *> argsForCall = args;
 								argsForCall.push_back(*it);
 								cerr << "Argument values:\n";
 								for (vector<Value *>::iterator i = argsForCall.begin(); i != argsForCall.end(); ++i) {
-									(*i)->dump();
+									((*i)->getType())->dump();
 								}
 								callbuilder.CreateCall(extractedLoop, argsForCall);
 							}
-							//delete the original call instruction
-							callInst->eraseFromParent();
 
 							//Debug
 							cerr << "rewritten to:\n";
