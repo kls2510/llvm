@@ -118,7 +118,12 @@ namespace {
 							}
 
 							//edit calls to add struct argument
-							vector<Value *> args(callInst->value_op_begin(), callInst->value_op_end());
+							int noOps = callInst->getNumArgOperands();
+							cerr << "No of original args = " << noOps << "\n";
+							vector<Value *> args;
+							for (int i = 0; i < noOps; i++) {
+								args.push_back(callInst->getOperand(i));
+							}
 							IRBuilder<> callbuilder(callInst);
 							for (list<Value*>::iterator it = threadStructs.begin(); it != threadStructs.end(); ++it) {
 								vector<Value *> argsForCall = args;
