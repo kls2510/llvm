@@ -131,6 +131,7 @@ namespace {
 								Function *newLoopFunc = Function::Create(FT, Function::ExternalLinkage, name, mod);
 								//Constant *c = mod->getOrInsertFunction(name, FT);
 								//Function *newLoopFunc = cast<Function>(c);
+								newLoopFunc->dump();
 
 								//insert calls to this new function
 								for (list<Value*>::iterator it = threadStructs.begin(); it != threadStructs.end(); ++it) {
@@ -140,7 +141,8 @@ namespace {
 									for (vector<Value *>::iterator i = argsForCall.begin(); i != argsForCall.end(); ++i) {
 										((*i)->getType())->dump();
 									}
-									callbuilder.CreateCall(newLoopFunc, argsForCall);
+									ArrayRef<Value *> args(argsForCall);
+									callbuilder.CreateCall(newLoopFunc, args);
 									cerr << "New call created";
 								}
 
