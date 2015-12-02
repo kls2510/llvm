@@ -127,6 +127,7 @@ namespace {
 								FunctionType *FT = FunctionType::get(extractedLoop->getFunctionType()->getReturnType(), types, false);
 								string name = (extractedLoop->getName()).str() + "_";
 								Function *newLoopFunc = Function::Create(FT, Function::ExternalLinkage, name, mod);
+								cerr << "New function created\n";
 								//Constant *c = mod->getOrInsertFunction(name, FT);
 								//Function *newLoopFunc = cast<Function>(c);
 
@@ -136,7 +137,7 @@ namespace {
 									argsForCall.push_back(*it);
 									ArrayRef<Value *> args(argsForCall);
 									callbuilder.CreateCall(newLoopFunc, args);
-									cerr << "New call created";
+									cerr << "New function call created\n";
 								}
 
 								//delete the original call instruction
@@ -144,6 +145,9 @@ namespace {
 
 								//clone old function into this new one that takes the correct amount of arguments
 								ValueToValueMapTy vvmap;
+								for (int i = 0; i < (extractedLoop->getFunctionType())->getNumParams(); i++) {
+									vvmap.insert(pair<Value*, Value*>(extractedLoop->getOperand(i),newLoopFunc->getOperand(i)));
+								}
 								SmallVector<ReturnInst *, 0> returns;
 								CloneFunctionInto(newLoopFunc, extractedLoop, vvmap, false, returns, "");
 
