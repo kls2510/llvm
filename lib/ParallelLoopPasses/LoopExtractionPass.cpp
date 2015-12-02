@@ -115,8 +115,6 @@ namespace {
 									args.push_back(callInst->getOperand(i));
 								}
 								IRBuilder<> callbuilder(callInst);
-								//delete the original call instruction
-								callInst->eraseFromParent();
 
 								//create a new function with added argument types
 								Module * mod = (F.getParent());
@@ -131,20 +129,18 @@ namespace {
 								Function *newLoopFunc = Function::Create(FT, Function::ExternalLinkage, name, mod);
 								//Constant *c = mod->getOrInsertFunction(name, FT);
 								//Function *newLoopFunc = cast<Function>(c);
-								newLoopFunc->dump();
 
 								//insert calls to this new function
 								for (list<Value*>::iterator it = threadStructs.begin(); it != threadStructs.end(); ++it) {
 									vector<Value *> argsForCall = args;
 									argsForCall.push_back(*it);
-									cerr << "Argument values:\n";
-									for (vector<Value *>::iterator i = argsForCall.begin(); i != argsForCall.end(); ++i) {
-										((*i)->getType())->dump();
-									}
 									ArrayRef<Value *> args(argsForCall);
 									callbuilder.CreateCall(newLoopFunc, args);
 									cerr << "New call created";
 								}
+
+								//delete the original call instruction
+								callInst->eraseFromParent();
 
 								//clone old function into this new one that takes the correct amount of arguments
 								ValueToValueMapTy vvmap;
