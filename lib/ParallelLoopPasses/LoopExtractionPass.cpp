@@ -140,6 +140,7 @@ namespace {
 										((*i)->getType())->dump();
 									}
 									callbuilder.CreateCall(newLoopFunc, argsForCall);
+									cerr << "New call created";
 								}
 
 								//clone old function into this new one that takes the correct amount of arguments
