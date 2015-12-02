@@ -9,6 +9,8 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Transforms/Utils/CodeExtractor.h"
+#include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ParallelLoopPasses/IsParallelizableLoopPass.h"
 #include <iostream>
 #include <string>
@@ -105,63 +107,64 @@ namespace {
 							CodeExtractor extractor = CodeExtractor(DT, *(loopData->getLoop()), false);
 							Function *extractedLoop = extractor.extractCodeRegion();
 
-							CallInst *callInst = dyn_cast<CallInst>(*(extractedLoop->user_begin()));
-							int noOps = callInst->getNumArgOperands();
-							cerr << "No of original args = " << noOps << "\n";
-							vector<Value *> args;
-							for (int i = 0; i < noOps; i++) {
-								args.push_back(callInst->getOperand(i));
-							}
-							IRBuilder<> callbuilder(callInst);
-							//delete the original call instruction
-							callInst->eraseFromParent();
-
-							//add struct argument to function
-							Argument *newArg = new Argument(myStruct, "iterationHolder", extractedLoop);
-							//PROBLEM FOUND - TYPE OF FUNCTION HASN'T CHANGED SO STILL ONLY EXPECTS 1 ARG
-							vector<Type *> typeParams = extractedLoop->getFunctionType()->params();
-							typeParams.push_back(myStruct);
-							cerr << "Function no of Args: " << (extractedLoop->getFunctionType())->getNumParams() << "\n";
-							cerr << "Types of args:\n";
-							int j = 0;
-							for (Function::ArgumentListType::iterator i = (extractedLoop->getArgumentList()).begin(); i != (extractedLoop->getArgumentList()).end(); ++i) {
-								cerr << "[" << j << "] : " << "\n";
-								(((*i).getType())->dump());
-								j++;
-							}
-
-							//edit calls to add struct argument
-							for (list<Value*>::iterator it = threadStructs.begin(); it != threadStructs.end(); ++it) {
-								vector<Value *> argsForCall = args;
-								argsForCall.push_back(*it);
-								cerr << "Argument values:\n";
-								for (vector<Value *>::iterator i = argsForCall.begin(); i != argsForCall.end(); ++i) {
-									((*i)->getType())->dump();
-									((*i)->getContext());
-								}
-								callbuilder.CreateCall(extractedLoop, argsForCall);
-							}
-
-							//Debug
-							cerr << "rewritten to:\n";
-							for (Function::iterator bb = F.begin(); bb != F.end(); ++bb) {
-								bb->dump();
-								for (BasicBlock::iterator i = bb->begin(); i != bb->end(); i++) {
-									i->dump();
-								}
-							}
-
 							if (extractedLoop != 0) {
+								CallInst *callInst = dyn_cast<CallInst>(*(extractedLoop->user_begin()));
+								int noOps = callInst->getNumArgOperands();
+								vector<Value *> args;
+								for (int i = 0; i < noOps; i++) {
+									args.push_back(callInst->getOperand(i));
+								}
+								IRBuilder<> callbuilder(callInst);
+								//delete the original call instruction
+								callInst->eraseFromParent();
+
+								//create a new function with added argument types
+								Module * mod = (F.getParent());
+								vector<Type *> paramTypes;
+								for (int i = 0; i < (extractedLoop->getFunctionType())->getNumParams(); i++) {
+									paramTypes.push_back((extractedLoop->getFunctionType())->getParamType(i));
+								}
+								paramTypes.push_back(myStruct);
+								ArrayRef<Type *> types(paramTypes);
+								FunctionType *FT = FunctionType::get(extractedLoop->getFunctionType()->getReturnType(), types, false);
+								Constant *c = mod->getOrInsertFunction(extractedLoop->getName(), FT);
+								Function *newLoopFunc = cast<Function>(c);
+
+								//insert calls to this new function
+								for (list<Value*>::iterator it = threadStructs.begin(); it != threadStructs.end(); ++it) {
+									vector<Value *> argsForCall = args;
+									argsForCall.push_back(*it);
+									cerr << "Argument values:\n";
+									for (vector<Value *>::iterator i = argsForCall.begin(); i != argsForCall.end(); ++i) {
+										((*i)->getType())->dump();
+									}
+									callbuilder.CreateCall(newLoopFunc, argsForCall);
+								}
+
+								//clone old function into this new one that takes the correct amount of arguments
+								ValueToValueMapTy vvmap;
+								SmallVector<ReturnInst *, 0> returns;
+								CloneFunctionInto(newLoopFunc, extractedLoop, vvmap, false, returns, "");
+
+								//Debug
+								cerr << "Original function rewritten to:\n";
+								for (Function::iterator bb = F.begin(); bb != F.end(); ++bb) {
+									bb->dump();
+									for (BasicBlock::iterator i = bb->begin(); i != bb->end(); i++) {
+										i->dump();
+									}
+								}
 								cerr << "with new function:\n";
-								extractedLoop->dump();
-								for (Function::iterator bb = extractedLoop->begin(); bb != extractedLoop->end(); ++bb) {
+								newLoopFunc->dump();
+								for (Function::iterator bb = newLoopFunc->begin(); bb != newLoopFunc->end(); ++bb) {
 									for (BasicBlock::iterator i = bb->begin(); i != bb->end(); i++) {
 										i->dump();
 									}
 								}
 								//Mark the function to avoid infinite extraction
 								//extractedLoop->removeFromParent();
-								extractedLoop->addFnAttr("Extracted", "true");
+								newLoopFunc->addFnAttr("Extracted", "true");
+								extractedLoop->eraseFromParent();
 							}
 
 						}
