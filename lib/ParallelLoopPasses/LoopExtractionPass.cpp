@@ -127,7 +127,8 @@ namespace {
 								paramTypes.push_back(myStruct);
 								ArrayRef<Type *> types(paramTypes);
 								FunctionType *FT = FunctionType::get(extractedLoop->getFunctionType()->getReturnType(), types, false);
-								Constant *c = mod->getOrInsertFunction(extractedLoop->getName(), FT);
+								string name = (extractedLoop->getName()).str() + "_";
+								Constant *c = mod->getOrInsertFunction(name, FT);
 								Function *newLoopFunc = cast<Function>(c);
 
 								//insert calls to this new function
