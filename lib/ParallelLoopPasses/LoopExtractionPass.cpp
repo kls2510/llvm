@@ -128,8 +128,9 @@ namespace {
 								ArrayRef<Type *> types(paramTypes);
 								FunctionType *FT = FunctionType::get(extractedLoop->getFunctionType()->getReturnType(), types, false);
 								string name = (extractedLoop->getName()).str() + "_";
-								Constant *c = mod->getOrInsertFunction(name, FT);
-								Function *newLoopFunc = cast<Function>(c);
+								Function *newLoopFunc = Function::Create(FT, Function::ExternalLinkage, name, mod);
+								//Constant *c = mod->getOrInsertFunction(name, FT);
+								//Function *newLoopFunc = cast<Function>(c);
 
 								//insert calls to this new function
 								for (list<Value*>::iterator it = threadStructs.begin(); it != threadStructs.end(); ++it) {
