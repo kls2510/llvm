@@ -157,14 +157,9 @@ namespace {
 
 								//Debug
 								cerr << "Original function rewritten to:\n";
-								for (Function::iterator bb = F.begin(); bb != F.end(); ++bb) {
-									bb->dump();
-								}
+								F.dump();
 								cerr << "with new function:\n";
 								newLoopFunc->dump();
-								for (Function::iterator bb = newLoopFunc->begin(); bb != newLoopFunc->end(); ++bb) {
-									bb->dump();
-								}
 								//Mark the function to avoid infinite extraction
 								//extractedLoop->removeFromParent();
 								newLoopFunc->addFnAttr("Extracted", "true");
