@@ -145,8 +145,8 @@ namespace {
 
 								//clone old function into this new one that takes the correct amount of arguments
 								ValueToValueMapTy vvmap;
-								Function::ArgumentListType args1 = extractedLoop->getArgumentList();
-								Function::ArgumentListType args2 = newLoopFunc->getArgumentList();
+								Function::ArgumentListType &args1 = extractedLoop->getArgumentList();
+								Function::ArgumentListType &args2 = newLoopFunc->getArgumentList();
 								Argument *arg = (args2.begin());
 								for (SymbolTableList<Argument>::iterator i = args1.begin(); i != args1.end(); ++i) {
 									vvmap.insert(pair<Value*, Value*>(cast<Value>(i), cast<Value>(arg)));
