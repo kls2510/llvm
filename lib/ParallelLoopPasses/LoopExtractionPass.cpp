@@ -159,21 +159,18 @@ namespace {
 								cerr << "Original function rewritten to:\n";
 								for (Function::iterator bb = F.begin(); bb != F.end(); ++bb) {
 									bb->dump();
-									for (BasicBlock::iterator i = bb->begin(); i != bb->end(); i++) {
-										i->dump();
-									}
 								}
 								cerr << "with new function:\n";
 								newLoopFunc->dump();
 								for (Function::iterator bb = newLoopFunc->begin(); bb != newLoopFunc->end(); ++bb) {
-									for (BasicBlock::iterator i = bb->begin(); i != bb->end(); i++) {
-										i->dump();
-									}
+									bb->dump();
 								}
 								//Mark the function to avoid infinite extraction
 								//extractedLoop->removeFromParent();
 								newLoopFunc->addFnAttr("Extracted", "true");
-								extractedLoop->eraseFromParent();
+								extractedLoop->addFnAttr("Extracted", "true");
+								F.addFnAttr("Extracted", "true");
+								//extractedLoop->eraseFromParent();
 							}
 
 						}
