@@ -145,8 +145,12 @@ namespace {
 
 								//clone old function into this new one that takes the correct amount of arguments
 								ValueToValueMapTy vvmap;
-								for (int i = 0; i < (extractedLoop->getFunctionType())->getNumParams(); i++) {
-									vvmap.insert(pair<Value*, Value*>(extractedLoop->getOperand(i),newLoopFunc->getOperand(i)));
+								SymbolTableList<Argument> args1 = extractedLoop->getArgumentList();
+								SymbolTableList<Argument> args2 = newLoopFunc->getArgumentList();
+								Argument *arg = (args2.begin());
+								for (SymbolTableList<Argument>::iterator i = args1.begin(); i != args1.end(); ++i) {
+									vvmap.insert(pair<Value*, Value*>(cast<Value>(i), cast<Value>(arg)));
+									arg = args2.getNext(arg);
 								}
 								SmallVector<ReturnInst *, 0> returns;
 								CloneFunctionInto(newLoopFunc, extractedLoop, vvmap, false, returns, "");
