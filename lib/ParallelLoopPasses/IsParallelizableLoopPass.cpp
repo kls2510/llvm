@@ -36,7 +36,7 @@ bool IsParallelizableLoopPass::runOnFunction(Function &F) {
 	//results.insert(std::pair<Function&, list<LoopDependencyData *>>(F, l));
 	//cout << "Results size = " << results.size() << "\n";
 	
-	cerr << "Running parallelizable loop analysis on function " << (F.getName()).data() << "\n";
+	//cerr << "Running parallelizable loop analysis on function " << (F.getName()).data() << "\n";
 	//initialize iterators and loop counter
 	LoopInfo::iterator i = LI.begin();
 	LoopInfo::iterator e = LI.end();
@@ -45,7 +45,7 @@ bool IsParallelizableLoopPass::runOnFunction(Function &F) {
 	//iterate through all the OUTER loops found and run anaysis to see whether they are parallelizable
 	while (i != e) {
 		Loop *L = *i;
-		cerr << "Found loop " << LoopCounter << "\n";
+		//cerr << "Found loop " << LoopCounter << "\n";
 		//call the function that will be implemented to analyse the code
 		if (isParallelizable(L, F)) {
 			//cout << "this loop is parallelizable\n";
@@ -75,7 +75,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 	vector<PHINode*> PhiNodes;
 	if (phi == nullptr) {
 		//can't parallelise a loop with no phi node
-		cerr << "Primary Phi node is null\n";
+		//cerr << "Primary Phi node is null\n";
 		return false;
 	}
 	PhiNodes.push_back(phi);
@@ -93,7 +93,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 		if (isa<PHINode>(inst)) {
 			//finding Phi node that isn't a cannonical induction variable means the loop is not directly parallelizable
 			if (find(PhiNodes.begin(), PhiNodes.end(), inst) == PhiNodes.end()) {
-				cerr << "found a Phi node that is not a cannonical induction variable\n";
+				//cerr << "found a Phi node that is not a cannonical induction variable\n";
 				parallelizable = false;
 				noOfPhiNodes++;
 			}
