@@ -59,13 +59,13 @@ namespace {
 							//extract the loop
 							cerr << "This loop has no dependencies so can be extracted\n";
 							//find no of iterations and the start iteration value
-							Instruction *inst = (loopData->getLoop())->getHeader()->begin();
+							Instruction *inst2 = (loopData->getLoop())->getHeader()->begin();
 							Value *noIterations;
-							while (loopData->getLoop()->contains(inst)) {
-								cerr << (inst->getValueName())->getKeyData() << "\n";
-								if ((inst->getValueName())->getKeyData() == "%exitcond") {
-									int noOperands = inst->getNumOperands();
-									noIterations = (inst->getOperand(noOperands - 1));
+							while (loopData->getLoop()->contains(inst2)) {
+								cerr << (inst2->getValueName())->getKeyData() << "\n";
+								if ((inst2->getValueName())->getKeyData() == "%exitcond") {
+									int noOperands = inst2->getNumOperands();
+									noIterations = (inst2->getOperand(noOperands - 1));
 								}
 							}
 							Value *startIt = ((loopData->getLoop())->getCanonicalInductionVariable())->getIncomingValue(0);
