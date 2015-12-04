@@ -63,7 +63,7 @@ namespace {
 							Value *noIterations;
 							while (loopData->getLoop()->contains(inst2)) {
 								cerr << (inst2->getValueName())->getKeyData() << "\n";
-								if (strcmp((inst2->getValueName())->getKeyData(),"exitcond")) {
+								if (strcmp((inst2->getValueName())->getKeyData(),"exitcond") == 0) {
 									int noOperands = inst2->getNumOperands();
 									noIterations = (inst2->getOperand(noOperands - 1));
 								}
