@@ -59,21 +59,24 @@ namespace {
 							//extract the loop
 							cerr << "This loop has no dependencies so can be extracted\n";
 							//find no of iterations and the start iteration value
-							int noIterations = SE.getSmallConstantTripCount(loopData->getLoop());
-							cerr << "No of Iterations = " << noIterations << "\n";
-							if (noIterations == 0) {
-								//TODO: Need to work out how to do this if maxIter is a variable value
+							Instruction *inst = (loopData->getLoop())->getHeader()->begin();
+							Value *noIterations;
+							while (loopData->getLoop()->contains(inst)) {
+								cerr << (inst->getValueName())->getKeyData() << "\n";
+								if ((inst->getValueName())->getKeyData() == "%exitcond") {
+									int noOperands = inst->getNumOperands();
+									noIterations = (inst->getOperand(noOperands - 1));
+								}
 							}
 							Value *startIt = ((loopData->getLoop())->getCanonicalInductionVariable())->getIncomingValue(0);
-							bool exact = (noIterations % noThreads == 0);
 
 							//get pointer to the basic block we'll insert the new instructions into
 							BasicBlock *insertPos = ((loopData->getLoop())->getLoopPredecessor());
 
 							//create the struct we'll use to pass data to/from the threads
 							StructType *myStruct = StructType::create(context, "ThreadPasser");
-							//send the startItvalue, begin offset and end offset to each thread
-							Type *elts[] = { startIt->getType(), Type::getInt32Ty(context), Type::getInt32Ty(context) };
+							//send the startItvalue, no of iterations, Total number of threads and thread number
+							Type *elts[] = { startIt->getType(), noIterations->getType(), Type::getInt32Ty(context), Type::getInt32Ty(context) };
 							myStruct->setBody(elts);
 
 							//setup for inserting instructions before the loop
@@ -81,23 +84,20 @@ namespace {
 							IRBuilder<> builder(inst);
 							list<Value *> threadStructs;
 							for (int i = 0; i < noThreads; i++) {
-								int firstIterNo = i*(noIterations / noThreads);
-								int lastIterNo = firstIterNo + ((noIterations / noThreads) - 1);
-								if ((i == noThreads - 1) && !exact) {
-									lastIterNo = (noIterations - 1);
-								}
-								cerr << "Alloc thread " << (i + 1) << " iterations: (startIt + " << firstIterNo << ") to (startIt + " << lastIterNo << ")\n";
 								//initialise struct in a new instruction at the end of the basic block
 								AllocaInst *allocateInst = builder.CreateAlloca(myStruct);
 								//store startIt
 								Value *getPTR = builder.CreateStructGEP(myStruct, allocateInst, 0);
 								builder.CreateStore(startIt, getPTR);
-								//store firstIterOffset
-								getPTR = builder.CreateStructGEP(myStruct, allocateInst, 1);
-								builder.CreateStore(ConstantInt::get(Type::getInt32Ty(context), firstIterNo), getPTR);
-								//store lastIterOffset
+								//store numIt
+								Value *getPTR = builder.CreateStructGEP(myStruct, allocateInst, 1);
+								builder.CreateStore(noIterations, getPTR);
+								//store total num threads
 								getPTR = builder.CreateStructGEP(myStruct, allocateInst, 2);
-								builder.CreateStore(ConstantInt::get(Type::getInt32Ty(context), lastIterNo), getPTR);
+								builder.CreateStore(ConstantInt::get(Type::getInt32Ty(context), noThreads), getPTR);
+								//store this one's thread number
+								getPTR = builder.CreateStructGEP(myStruct, allocateInst, 3);
+								builder.CreateStore(ConstantInt::get(Type::getInt32Ty(context), i), getPTR);
 								//load the struct for passing into the function
 								LoadInst *loadInst = builder.CreateLoad(allocateInst);
 								threadStructs.push_back(loadInst);
