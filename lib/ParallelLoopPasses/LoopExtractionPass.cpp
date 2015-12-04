@@ -63,7 +63,7 @@ namespace {
 							Value *noIterations;
 							while (loopData->getLoop()->contains(inst2)) {
 								cerr << (inst2->getValueName())->getKeyData() << "\n";
-								if ((inst2->getValueName())->getKeyData() == "%exitcond") {
+								if (strcmp((inst2->getValueName())->getKeyData(),"%exitcond")) {
 									int noOperands = inst2->getNumOperands();
 									noIterations = (inst2->getOperand(noOperands - 1));
 								}
@@ -90,7 +90,7 @@ namespace {
 								Value *getPTR = builder.CreateStructGEP(myStruct, allocateInst, 0);
 								builder.CreateStore(startIt, getPTR);
 								//store numIt
-								Value *getPTR = builder.CreateStructGEP(myStruct, allocateInst, 1);
+								getPTR = builder.CreateStructGEP(myStruct, allocateInst, 1);
 								builder.CreateStore(noIterations, getPTR);
 								//store total num threads
 								getPTR = builder.CreateStructGEP(myStruct, allocateInst, 2);
