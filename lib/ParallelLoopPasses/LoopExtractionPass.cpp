@@ -63,10 +63,11 @@ namespace {
 							Value *noIterations;
 							while (loopData->getLoop()->contains(inst2)) {
 								cerr << (inst2->getValueName())->getKeyData() << "\n";
-								if (strcmp((inst2->getValueName())->getKeyData(),"%exitcond")) {
+								if (strcmp((inst2->getValueName())->getKeyData(),"exitcond")) {
 									int noOperands = inst2->getNumOperands();
 									noIterations = (inst2->getOperand(noOperands - 1));
 								}
+								inst2 = inst2->getNextNode();
 							}
 							Value *startIt = ((loopData->getLoop())->getCanonicalInductionVariable())->getIncomingValue(0);
 
