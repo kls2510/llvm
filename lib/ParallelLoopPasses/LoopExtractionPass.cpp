@@ -59,16 +59,19 @@ namespace {
 							//extract the loop
 							cerr << "This loop has no dependencies so can be extracted\n";
 							//find no of iterations and the start iteration value
-							Instruction *inst2 = (loopData->getLoop())->getHeader()->begin();
+							//Code for extension to not being canonicalised
+							/* Instruction *inst2 = (loopData->getLoop())->getHeader()->begin();
 							Value *noIterations;
 							while (loopData->getLoop()->contains(inst2)) {
 								cerr << (inst2->getValueName())->getKeyData() << "\n";
 								if (strcmp((inst2->getValueName())->getKeyData(),"exitcond") == 0) {
+									cout << "found the exit condition value\n";
 									int noOperands = inst2->getNumOperands();
 									noIterations = (inst2->getOperand(noOperands - 1));
 								}
 								inst2 = inst2->getNextNode();
-							}
+							} */
+							int noIterations = SE.getSmallConstantTripCount(loopData->getLoop());
 							Value *startIt = ((loopData->getLoop())->getCanonicalInductionVariable())->getIncomingValue(0);
 
 							//get pointer to the basic block we'll insert the new instructions into
@@ -77,7 +80,8 @@ namespace {
 							//create the struct we'll use to pass data to/from the threads
 							StructType *myStruct = StructType::create(context, "ThreadPasser");
 							//send the startItvalue, no of iterations, Total number of threads and thread number
-							Type *elts[] = { startIt->getType(), noIterations->getType(), Type::getInt32Ty(context), Type::getInt32Ty(context) };
+							//Type *elts[] = { startIt->getType(), noIterations->getType(), Type::getInt32Ty(context), Type::getInt32Ty(context) };
+							Type *elts[] = { startIt->getType(), Type::getInt32Ty(context), Type::getInt32Ty(context), Type::getInt32Ty(context) };
 							myStruct->setBody(elts);
 
 							//setup for inserting instructions before the loop
@@ -92,7 +96,8 @@ namespace {
 								builder.CreateStore(startIt, getPTR);
 								//store numIt
 								getPTR = builder.CreateStructGEP(myStruct, allocateInst, 1);
-								builder.CreateStore(noIterations, getPTR);
+								//builder.CreateStore(noIterations, getPTR);
+								builder.CreateStore(ConstantInt::get(Type::getInt32Ty(context), noIterations), getPTR);
 								//store total num threads
 								getPTR = builder.CreateStructGEP(myStruct, allocateInst, 2);
 								builder.CreateStore(ConstantInt::get(Type::getInt32Ty(context), noThreads), getPTR);
