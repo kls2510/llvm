@@ -217,7 +217,6 @@ namespace {
 								SmallVector<ReturnInst *, 0> returns;
 								cerr << "cloning\n";
 								CloneFunctionInto(newLoopFunc, extractedLoop, vvmap, false, returns, "");
-								noOp->eraseFromParent();
 
 								//Debug
 								cerr << "Original function rewritten to:\n";
