@@ -67,6 +67,7 @@ namespace {
 							Function *extractedLoop = extractor.extractCodeRegion();
 
 							if (extractedLoop != 0) {
+								cerr << "loop extracted successfully\n";
 								//for now - change when we include non-canonicalised loops
 								int noIterations = SE.getSmallConstantTripCount(loopData->getLoop());
 								Value *startIt = ((loopData->getLoop())->getCanonicalInductionVariable())->getIncomingValue(0);
@@ -90,9 +91,10 @@ namespace {
 									elts.push_back(callInst->getOperand(i)->getType());
 								}
 
+								cerr << "setting up threads\n";
 								for (int i = 0; i < noThreads; i++) {
 									Value *startItMult = builder.CreateMul(iterationsEach, ConstantInt::get(Type::getInt32Ty(context), i));
-									Value *threadStartIt = builder.CreateAdd(startIt, startItMult);
+									threadStartIt = builder.CreateAdd(startIt, startItMult);
 									if (i == (noThreads - 1)) {
 										endIt = builder.CreateAdd(threadStartIt, ConstantInt::get(Type::getInt32Ty(context), noIterations));
 									}
@@ -123,9 +125,10 @@ namespace {
 									LoadInst *loadInst = builder.CreateLoad(allocateInst);
 									threadStructs.push_back(loadInst);
 								}
-
+								cerr << "threads setup\n";
 								IRBuilder<> callbuilder(callInst);
 
+								cerr << "creating new function\n";
 								//create a new function with added argument types
 								Module * mod = (F.getParent());
 								SmallVector<Type *, 8> paramTypes;
@@ -134,6 +137,7 @@ namespace {
 								string name = "_" + (extractedLoop->getName()).str() + "_";
 								Function *newLoopFunc = Function::Create(FT, Function::ExternalLinkage, name, mod);
 
+								cerr << "inserting new function calls\n";
 								//insert calls to this new function - for now just call function, add threads later
 								for (list<Value*>::iterator it = threadStructs.begin(); it != threadStructs.end(); ++it) {
 									SmallVector<Value *,8> argsForCall;
@@ -144,6 +148,7 @@ namespace {
 								//delete the original call instruction
 								callInst->eraseFromParent();
 
+								cerr << "cloning function\n";
 								//clone old function into this new one that takes the correct amount of arguments
 								ValueToValueMapTy vvmap;
 								Function::ArgumentListType &args1 = extractedLoop->getArgumentList();
@@ -153,6 +158,7 @@ namespace {
 								SmallVector<LoadInst *, 8> structElements;
 								BasicBlock *writeTo = BasicBlock::Create(context, "loads", newLoopFunc);
 								builder.SetInsertPoint(writeTo);
+								cerr << "creating map\n";
 								for (auto &i : args1) {
 									//load each struct element at the start of the function
 									Value *mapVal = builder.CreateStructGEP(myStruct, structArg, p);
@@ -161,6 +167,7 @@ namespace {
 									vvmap.insert(std::make_pair(cast<Value>(&i), mapVal));
 									p++;
 								}
+								cerr << "loading start and end it too\n";
 								//load start and end it too
 								Value *val = builder.CreateStructGEP(myStruct, structArg, p);
 								LoadInst *loadInst = builder.CreateLoad(val);
@@ -170,6 +177,7 @@ namespace {
 								structElements.push_back(loadInst2);
 								//need to return changed local values but for now return nothing
 								SmallVector<ReturnInst *, 0> returns;
+								cerr << "cloning\n";
 								CloneFunctionInto(newLoopFunc, extractedLoop, vvmap, false, returns, "");
 
 
