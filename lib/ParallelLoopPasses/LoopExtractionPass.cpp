@@ -192,12 +192,16 @@ namespace {
 								BasicBlock *writeTo = BasicBlock::Create(context, "loads", newLoopFunc);
 								builder.SetInsertPoint(writeTo);
 								cerr << "creating map\n";
-								for (iplist<Argument>::iterator i = args1.begin(); i != args1.end(); ++i) {
+								for (auto &i : args1) {
 									//load each struct element at the start of the function
 									Value *mapVal = builder.CreateStructGEP(myStruct, structArg, p);
+									cerr << "here1\n";
 									LoadInst *loadInst = builder.CreateLoad(mapVal);
+									cerr << "here2\n";
 									structElements.push_back(loadInst);
-									vvmap.insert(std::make_pair(cast<Value>(i), mapVal));
+									cerr << "here3\n";
+									vvmap.insert(std::make_pair(cast<Value>(&i), mapVal));
+									cerr << "here4\n";
 									p++;
 								}
 								cerr << "loading start and end it too\n";
