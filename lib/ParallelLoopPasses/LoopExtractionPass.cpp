@@ -71,10 +71,12 @@ namespace {
 										startIt = i.getOperand(0);
 										startFound = true;
 									}
-									if (!endFound && i.getName() != nullptr && strcmp((i.getName()).data(), "exitcond") == 0) {
-										//for now just take the value : TODO : work out whether less than/equal to...
-										finalIt = (i.getOperand(1));
-										endFound = true;
+									if (!endFound && i.getName() != nullptr) {
+										if (strcmp((i.getName()).data(), "exitcond") == 0) {
+											//for now just take the value : TODO : work out whether less than/equal to...
+											finalIt = (i.getOperand(1));
+											endFound = true;
+										}
 									}
 								}
 							}
