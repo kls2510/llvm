@@ -70,7 +70,7 @@ namespace {
 								cerr << "loop extracted successfully\n";
 								//for now - change when we include non-canonicalised loops
 								int noIterations = SE.getSmallConstantTripCount(loopData->getLoop());
-								Value *startIt = ((loopData->getLoop())->getCanonicalInductionVariable())->getIncomingValue(0);
+								Value *startIt = ((loopData->getLoop())->getCanonicalInductionVariable())->getOperand(0);
 
 								//create the struct we'll use to pass data to/from the threads
 								StructType *myStruct = StructType::create(context, "ThreadPasser");
