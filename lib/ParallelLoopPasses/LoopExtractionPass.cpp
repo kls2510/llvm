@@ -185,16 +185,12 @@ namespace {
 								//clone old function into this new one that takes the correct amount of arguments
 								ValueToValueMapTy vvmap;
 								Function::ArgumentListType &args1 = extractedLoop->getArgumentList();
-								Function::ArgumentListType &args2 = newLoopFunc->getArgumentList();
+								Function::arg_iterator args2 = newLoopFunc->arg_begin();
 								unsigned int p = 0;
 								SmallVector<LoadInst *, 8> structElements;
 								BasicBlock *writeTo = BasicBlock::Create(context, "loads", newLoopFunc);
-								BasicBlock::InstListType &insts = writeTo->getInstList();
-								Instruction *noOp = (extractedLoop->begin()->begin())->clone();
-								insts.push_back(noOp);
-								writeTo->begin()->dump();
-								IRBuilder<> loadBuilder(writeTo->begin());
-								Value *structArg = cast<Value>(&args2.front());
+								IRBuilder<> loadBuilder(writeTo);
+								Value *structArg = args2;
 								cerr << "creating map\n";
 								for (auto &i : args1) {
 									//load each struct element at the start of the function
