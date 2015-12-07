@@ -187,6 +187,7 @@ namespace {
 								Function::ArgumentListType &args1 = extractedLoop->getArgumentList();
 								Function::ArgumentListType &args2 = newLoopFunc->getArgumentList();
 								Value *structArg = args2.begin();
+								structArg->getType()->dump();
 								int p = 0;
 								SmallVector<LoadInst *, 8> structElements;
 								BasicBlock *writeTo = BasicBlock::Create(context, "loads", newLoopFunc);
