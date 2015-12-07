@@ -60,21 +60,23 @@ namespace {
 							cerr << "This loop has no dependencies so can be extracted\n";
 
 							//calculate start and length of loop
-							Value *startIt;
-							Value *finalIt;
+							ConstantInt *startIt;
+							ConstantInt *finalIt;
 							bool startFound = false;
 							bool endFound = false;
 							Loop *loop = loopData->getLoop();
 							for (auto bb : loop->getBlocks()) {
 								for (auto &i : bb->getInstList()) {
 									if (isa<PHINode>(i) && !startFound) {
-										startIt = i.getOperand(0);
+										startIt = dynamic_cast<ConstantInt *>(i.getOperand(0));
+										startIt->dump();
 										startFound = true;
 									}
 									if (!endFound) {
 										if (strcmp((i.getName()).data(), "exitcond") == 0) {
 											//for now just take the value : TODO : work out whether less than/equal to...
-											finalIt = (i.getOperand(1));
+											finalIt = dynamic_cast<ConstantInt *>(i.getOperand(1));
+											finalIt->dump();
 											endFound = true;
 										}
 									}
