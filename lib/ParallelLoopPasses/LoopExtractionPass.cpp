@@ -194,6 +194,7 @@ namespace {
 								BasicBlock::InstListType &insts = writeTo->getInstList();
 								Instruction *noOp = (extractedLoop->begin()->begin())->clone();
 								insts.push_back(noOp);
+								writeTo->begin()->dump();
 								IRBuilder<> loadBuilder(writeTo->begin());
 								cerr << "creating map\n";
 								for (auto &i : args1) {
