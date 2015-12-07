@@ -190,14 +190,13 @@ namespace {
 								SmallVector<LoadInst *, 8> structElements;
 								BasicBlock *writeTo = BasicBlock::Create(context, "loads", newLoopFunc);
 								IRBuilder<> loadBuilder(writeTo);
-								Value *structArg = args2;
 								cerr << "creating map\n";
 								for (auto &i : args1) {
 									//load each struct element at the start of the function
 									cerr << "here0\n";
-									Value *mapVal = builder.CreateStructGEP(myStruct, structArg, p, "");
+									Value *mapVal = loadBuilder.CreateStructGEP(args2->getType(), args2, p, "");
 									cerr << "here1\n";
-									LoadInst *loadInst = builder.CreateLoad(mapVal);
+									LoadInst *loadInst = loadBuilder.CreateLoad(mapVal);
 									cerr << "here2\n";
 									structElements.push_back(loadInst);
 									cerr << "here3\n";
@@ -207,10 +206,10 @@ namespace {
 								}
 								cerr << "loading start and end it too\n";
 								//load start and end it too
-								Value *val = builder.CreateStructGEP(myStruct, structArg, p);
+								Value *val = loadBuilder.CreateStructGEP(myStruct, args2, p);
 								LoadInst *loadInst = builder.CreateLoad(val);
 								structElements.push_back(loadInst);
-								val = builder.CreateStructGEP(myStruct, structArg, p + 1);
+								val = loadBuilder.CreateStructGEP(myStruct, args2, p + 1);
 								LoadInst *loadInst2 = builder.CreateLoad(val);
 								structElements.push_back(loadInst2);
 								//need to return changed local values but for now return nothing
