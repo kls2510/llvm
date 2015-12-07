@@ -191,7 +191,7 @@ namespace {
 								int p = 0;
 								SmallVector<LoadInst *, 8> structElements;
 								BasicBlock *writeTo = BasicBlock::Create(context, "loads", newLoopFunc);
-								BasicBlock::InstListType insts = writeTo->getInstList();
+								BasicBlock::InstListType &insts = writeTo->getInstList();
 								Instruction *noOp = (extractedLoop->begin()->begin())->clone();
 								insts.push_back(noOp);
 								IRBuilder<> loadBuilder(writeTo->begin());
