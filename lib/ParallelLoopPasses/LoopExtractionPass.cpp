@@ -195,7 +195,7 @@ namespace {
 								cerr << "creating map\n";
 								for (auto &i : args1) {
 									//load each struct element at the start of the function
-									Value *mapVal = builder.CreateStructGEP(myStruct, structArg, p);
+									Value *mapVal = builder.CreateStructGEP(structArg->getType(), structArg, p);
 									cerr << "here1\n";
 									LoadInst *loadInst = builder.CreateLoad(mapVal);
 									cerr << "here2\n";
