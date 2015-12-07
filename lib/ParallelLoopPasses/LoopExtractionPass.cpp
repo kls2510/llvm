@@ -186,8 +186,6 @@ namespace {
 								ValueToValueMapTy vvmap;
 								Function::ArgumentListType &args1 = extractedLoop->getArgumentList();
 								Function::ArgumentListType &args2 = newLoopFunc->getArgumentList();
-								Value *structArg = cast<Value>(args2.begin());
-								structArg->getType()->dump();
 								unsigned int p = 0;
 								SmallVector<LoadInst *, 8> structElements;
 								BasicBlock *writeTo = BasicBlock::Create(context, "loads", newLoopFunc);
@@ -196,6 +194,8 @@ namespace {
 								insts.push_back(noOp);
 								writeTo->begin()->dump();
 								IRBuilder<> loadBuilder(writeTo->begin());
+								Instruction *structArg = (loadBuilder.CreateLoad(args2.begin()));
+								structArg->dump();
 								cerr << "creating map\n";
 								for (auto &i : args1) {
 									//load each struct element at the start of the function
@@ -223,6 +223,7 @@ namespace {
 								cerr << "cloning\n";
 								CloneFunctionInto(newLoopFunc, extractedLoop, vvmap, false, returns, "");
 								noOp->eraseFromParent();
+								structArg->eraseFromParent();
 
 								//Debug
 								cerr << "Original function rewritten to:\n";
