@@ -186,7 +186,6 @@ namespace {
 								ValueToValueMapTy vvmap;
 								Function::ArgumentListType &args1 = extractedLoop->getArgumentList();
 								Function::arg_iterator args2 = newLoopFunc->arg_begin();
-								Value *structArg = cast<Value>(args2);
 								unsigned int p = 0;
 								SmallVector<LoadInst *, 8> structElements;
 								BasicBlock *writeTo = BasicBlock::Create(context, "loads", newLoopFunc);
@@ -194,7 +193,7 @@ namespace {
 								cerr << "creating map\n";
 								for (auto &i : args1) {
 									//load each struct element at the start of the function
-									Value *mapVal = loadBuilder.CreateStructGEP(args2->getType(), &structArg[0], p);
+									Value *mapVal = loadBuilder.CreateStructGEP(myStruct, args2, p);
 									LoadInst *loadInst = loadBuilder.CreateLoad(mapVal);
 									structElements.push_back(loadInst);
 									vvmap.insert(std::make_pair(cast<Value>(&i), mapVal));
@@ -202,10 +201,10 @@ namespace {
 								}
 								cerr << "loading start and end it too\n";
 								//load start and end it too
-								Value *val = loadBuilder.CreateStructGEP(myStruct, &structArg[0], p);
+								Value *val = loadBuilder.CreateStructGEP(myStruct, args2, p);
 								LoadInst *loadInst = builder.CreateLoad(val);
 								structElements.push_back(loadInst);
-								val = loadBuilder.CreateStructGEP(myStruct, &structArg[0], p + 1);
+								val = loadBuilder.CreateStructGEP(myStruct, args2, p + 1);
 								LoadInst *loadInst2 = builder.CreateLoad(val);
 								structElements.push_back(loadInst2);
 								//need to return changed local values but for now return nothing
