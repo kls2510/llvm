@@ -125,7 +125,7 @@ namespace {
 									Value *endIt;
 									Value *startItMult = builder.CreateMul(iterationsEach, ConstantInt::get(Type::getInt32Ty(context), i));
 									cerr << "here\n";
-									threadStartIt = builder.CreateAdd(startIt, startItMult);
+									threadStartIt = builder.CreateAdd(ConstantInt::get(Type::getInt32Ty(context), startIt->getSExtValue()), startItMult);
 									if (i == (noThreads - 1)) {
 										endIt = builder.CreateAdd(threadStartIt, noIterations);
 										cerr << "here1\n";
