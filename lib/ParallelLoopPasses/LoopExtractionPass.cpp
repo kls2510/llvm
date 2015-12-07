@@ -186,9 +186,9 @@ namespace {
 								ValueToValueMapTy vvmap;
 								Function::ArgumentListType &args1 = extractedLoop->getArgumentList();
 								Function::ArgumentListType &args2 = newLoopFunc->getArgumentList();
-								Value *structArg = args2.begin();
+								Value *structArg = cast<Value>(args2.begin());
 								structArg->getType()->dump();
-								int p = 0;
+								unsigned int p = 0;
 								SmallVector<LoadInst *, 8> structElements;
 								BasicBlock *writeTo = BasicBlock::Create(context, "loads", newLoopFunc);
 								BasicBlock::InstListType &insts = writeTo->getInstList();
@@ -200,7 +200,7 @@ namespace {
 								for (auto &i : args1) {
 									//load each struct element at the start of the function
 									cerr << "here0\n";
-									Value *mapVal = builder.CreateStructGEP(structArg->getType(), structArg, p);
+									Value *mapVal = builder.CreateStructGEP(myStruct, structArg, p, "");
 									cerr << "here1\n";
 									LoadInst *loadInst = builder.CreateLoad(mapVal);
 									cerr << "here2\n";
