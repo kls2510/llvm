@@ -81,9 +81,7 @@ namespace {
 								Instruction *inst = insertPos->begin();
 								IRBuilder<> builder(inst);
 								list<Value *> threadStructs;
-								Value *iterationsEach = builder.CreateExactSDiv(ConstantInt::get(Type::getInt32Ty(context), noIterations), ConstantInt::get(Type::getInt32Ty(context), noThreads));
-								Value *threadStartIt;
-								Value *endIt;
+		
 								//setup struct type
 								CallInst *callInst = dyn_cast<CallInst>(*(extractedLoop->user_begin()));
 								int noOps = callInst->getNumArgOperands();
@@ -93,8 +91,10 @@ namespace {
 
 								cerr << "setting up threads\n";
 								for (int i = 0; i < noThreads; i++) {
+									Value *iterationsEach = builder.CreateExactSDiv(ConstantInt::get(Type::getInt32Ty(context), noIterations), ConstantInt::get(Type::getInt32Ty(context), noThreads));
+									Value *threadStartIt;
+									Value *endIt;
 									Value *startItMult = builder.CreateMul(iterationsEach, ConstantInt::get(Type::getInt32Ty(context), i));
-									cerr << (startIt->getType() == startItMult->getType()) << "\n";
 									cerr << "here\n";
 									threadStartIt = builder.CreateAdd(startIt, startItMult);
 									if (i == (noThreads - 1)) {
