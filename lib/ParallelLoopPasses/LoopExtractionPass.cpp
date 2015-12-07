@@ -89,9 +89,6 @@ namespace {
 								for (int i = 0; i < noOps; i++) {
 									elts.push_back(callInst->getOperand(i)->getType());
 								}
-								elts.push_back(threadStartIt->getType());
-								elts.push_back(endIt->getType());
-								myStruct->setBody(elts);
 
 								for (int i = 0; i < noThreads; i++) {
 									Value *startItMult = builder.CreateMul(iterationsEach, ConstantInt::get(Type::getInt32Ty(context), i));
@@ -101,6 +98,13 @@ namespace {
 									}
 									else {
 										endIt = builder.CreateAdd(threadStartIt, iterationsEach);
+									}
+
+									//add final types to struct
+									if (i == 0) {
+										elts.push_back(threadStartIt->getType());
+										elts.push_back(endIt->getType());
+										myStruct->setBody(elts);
 									}
 
 									AllocaInst *allocateInst = builder.CreateAlloca(myStruct);
@@ -144,13 +148,26 @@ namespace {
 								ValueToValueMapTy vvmap;
 								Function::ArgumentListType &args1 = extractedLoop->getArgumentList();
 								Function::ArgumentListType &args2 = newLoopFunc->getArgumentList();
-								StructType *structArg = dyn_cast<StructType *>(args2);
-								vector<Type *> body = structArg->elements();
-								vector<Type *>::iterator it = body.begin();
+								Value *structArg = args2.begin();
+								int p = 0;
+								SmallVector<LoadInst *, 8> structElements;
+								BasicBlock *writeTo = BasicBlock::Create(context, "loads", newLoopFunc);
+								builder.SetInsertPoint(writeTo);
 								for (auto &i : args1) {
-									vvmap.insert(std::make_pair(cast<Value>(&i), cast<Value>((*it))));
-									it++;
+									//load each struct element at the start of the function
+									Value *mapVal = builder.CreateStructGEP(myStruct, structArg, p);
+									LoadInst *loadInst = builder.CreateLoad(mapVal);
+									structElements.push_back(loadInst);
+									vvmap.insert(std::make_pair(cast<Value>(&i), mapVal));
+									p++;
 								}
+								//load start and end it too
+								Value *val = builder.CreateStructGEP(myStruct, structArg, p);
+								LoadInst *loadInst = builder.CreateLoad(val);
+								structElements.push_back(loadInst);
+								val = builder.CreateStructGEP(myStruct, structArg, p + 1);
+								LoadInst *loadInst2 = builder.CreateLoad(val);
+								structElements.push_back(loadInst2);
 								//need to return changed local values but for now return nothing
 								SmallVector<ReturnInst *, 0> returns;
 								CloneFunctionInto(newLoopFunc, extractedLoop, vvmap, false, returns, "");
