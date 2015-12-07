@@ -194,7 +194,7 @@ namespace {
 								insts.push_back(noOp);
 								writeTo->begin()->dump();
 								IRBuilder<> loadBuilder(writeTo->begin());
-								Value *structArg = cast<Value *>(args2.front());
+								Value *structArg = cast<Value>(&args2.front());
 								cerr << "creating map\n";
 								for (auto &i : args1) {
 									//load each struct element at the start of the function
