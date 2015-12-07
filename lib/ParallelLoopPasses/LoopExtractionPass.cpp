@@ -117,7 +117,7 @@ namespace {
 								}
 
 								//TODO: fix for it the loop has a decreasing index
-								Value *noIterations = builder.CreateSub(finalIt, startIt);
+								Value *noIterations = builder.CreateSub(ConstantInt::get(Type::getInt32Ty(context), finalIt->getSExtValue()), ConstantInt::get(Type::getInt32Ty(context), startIt->getSExtValue()));
 								Value *iterationsEach = builder.CreateExactSDiv(noIterations, ConstantInt::get(Type::getInt32Ty(context), noThreads));
 								cerr << "setting up threads\n";
 								for (int i = 0; i < noThreads; i++) {
