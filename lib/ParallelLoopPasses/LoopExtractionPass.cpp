@@ -192,7 +192,7 @@ namespace {
 								BasicBlock *writeTo = BasicBlock::Create(context, "loads", newLoopFunc);
 								builder.SetInsertPoint(writeTo);
 								cerr << "creating map\n";
-								for (iplist<Argument>::iterator i = args2.begin(); i != args2.end(); ++i) {
+								for (iplist<Argument>::iterator i = args1.begin(); i != args1.end(); ++i) {
 									//load each struct element at the start of the function
 									Value *mapVal = builder.CreateStructGEP(myStruct, structArg, p);
 									LoadInst *loadInst = builder.CreateLoad(mapVal);
