@@ -94,6 +94,7 @@ namespace {
 								cerr << "setting up threads\n";
 								for (int i = 0; i < noThreads; i++) {
 									Value *startItMult = builder.CreateMul(iterationsEach, ConstantInt::get(Type::getInt32Ty(context), i));
+									cerr << (startIt->getType() == startItMult->getType()) << "\n";
 									cerr << "here\n";
 									threadStartIt = builder.CreateAdd(startIt, startItMult);
 									if (i == (noThreads - 1)) {
