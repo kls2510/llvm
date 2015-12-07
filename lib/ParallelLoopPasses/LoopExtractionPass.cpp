@@ -194,8 +194,7 @@ namespace {
 								insts.push_back(noOp);
 								writeTo->begin()->dump();
 								IRBuilder<> loadBuilder(writeTo->begin());
-								Instruction *structArg = (loadBuilder.CreateLoad(args2.begin()));
-								structArg->dump();
+								Value *structArg = cast<Value *>(args2.front());
 								cerr << "creating map\n";
 								for (auto &i : args1) {
 									//load each struct element at the start of the function
@@ -223,7 +222,6 @@ namespace {
 								cerr << "cloning\n";
 								CloneFunctionInto(newLoopFunc, extractedLoop, vvmap, false, returns, "");
 								noOp->eraseFromParent();
-								structArg->eraseFromParent();
 
 								//Debug
 								cerr << "Original function rewritten to:\n";
