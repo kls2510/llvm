@@ -52,12 +52,38 @@ namespace {
 				for (list<LoopDependencyData *>::iterator i = loopData.begin(); i != loopData.end(); i++) {
 					cerr << "Found a loop\n";
 					LoopDependencyData *loopData = *i;
-					LLVMContext &context = (loopData->getLoop())->getHeader()->getContext();
+					//LLVMContext &context = (loopData->getLoop())->getHeader()->getContext();
 
 					if ((loopData->getDependencies()).size() == 0) {
 						if (loopData->isParallelizable()) {
 							//extract the loop
 							cerr << "This loop has no dependencies so can be extracted\n";
+
+							//calculate start and length of loop
+							Value *startIt;
+							Value *finalIt;
+							bool startFound = false;
+							bool endFound = false;
+							Loop *loop = loopData->getLoop();
+							for (auto bb : loop->getBlocks()) {
+								for (auto &i : bb->getInstList()) {
+									if (isa<PHINode>(i) && !startFound) {
+										startIt = i.getOperand(0);
+										startFound = true;
+									}
+									if (!endFound && i.getName != nullptr && strcmp((i.getName()).data(), "exitcond") == 0) {
+										//for now just take the value : TODO : work out whether less than/equal to...
+										finalIt = (i.getOperand(1));
+										endFound = true;
+									}
+								}
+							}
+							if (!(startFound && endFound)) {
+								cerr << "full loop bounds aren't available, can't extract\n";
+								return false;
+							}
+							//temporary - might not work
+							LLVMContext &context = startIt->getContext();
 
 							//get pointer to the basic block we'll insert the new instructions into
 							BasicBlock *insertPos = ((loopData->getLoop())->getLoopPredecessor());
@@ -68,9 +94,6 @@ namespace {
 
 							if (extractedLoop != 0) {
 								cerr << "loop extracted successfully\n";
-								//for now - change when we include non-canonicalised loops
-								int noIterations = SE.getSmallConstantTripCount(loopData->getLoop());
-								Value *startIt = ((loopData->getLoop())->getCanonicalInductionVariable())->getOperand(0);
 
 								//create the struct we'll use to pass data to/from the threads
 								StructType *myStruct = StructType::create(context, "ThreadPasser");
@@ -89,16 +112,18 @@ namespace {
 									elts.push_back(callInst->getOperand(i)->getType());
 								}
 
+								//TODO: fix for it the loop has a decreasing index
+								Value *noIterations = builder.CreateSub(finalIt, startIt);
+								Value *iterationsEach = builder.CreateExactSDiv(noIterations, ConstantInt::get(Type::getInt32Ty(context), noThreads));
 								cerr << "setting up threads\n";
 								for (int i = 0; i < noThreads; i++) {
-									Value *iterationsEach = builder.CreateExactSDiv(ConstantInt::get(Type::getInt32Ty(context), noIterations), ConstantInt::get(Type::getInt32Ty(context), noThreads));
 									Value *threadStartIt;
 									Value *endIt;
 									Value *startItMult = builder.CreateMul(iterationsEach, ConstantInt::get(Type::getInt32Ty(context), i));
 									cerr << "here\n";
 									threadStartIt = builder.CreateAdd(startIt, startItMult);
 									if (i == (noThreads - 1)) {
-										endIt = builder.CreateAdd(threadStartIt, ConstantInt::get(Type::getInt32Ty(context), noIterations));
+										endIt = builder.CreateAdd(threadStartIt, noIterations);
 										cerr << "here1\n";
 									}
 									else {
