@@ -216,11 +216,13 @@ namespace {
 								cerr << "replacing old function values\n";
 								for (int index = 0; index < noOps; index++) {
 									const char *oldName = (to_string(index + 1)).data();
+									cerr << "old name = " << oldName << "\n";
 									while (loopBlock != newLoopFunc->end()) {
 										//replace all arg value with new ones in struct
 										for (auto &i : loopBlock->getInstList()) {
 											int index = 0;
 											for (auto &op : i.operands()) {
+												cerr << "operand name = " << op.getUser()->getName().data() << "\n";
 												if (strcmp(op.getUser()->getName().data(), oldName) == 0) {
 													cerr << "found old operand use\n";
 													i.getOperandList()[index] = *element;
