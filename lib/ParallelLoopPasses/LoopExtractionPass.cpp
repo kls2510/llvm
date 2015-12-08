@@ -225,8 +225,8 @@ namespace {
 												i.dump();
 												for (auto &arg : extractedLoop->args()) {
 													Value *argVal = cast<Value>(&arg);
-													const char *argName = argVal->getName().data();
-													cerr << argName << "\n";
+													int id = argVal->getValueID();
+													cerr << id << "\n";
 													if (cast<Value>(&arg) == cast<Value>(op)) {
 														cerr << "found old operand use\n";
 														//i.dump();
