@@ -155,8 +155,9 @@ namespace {
 									getPTR = builder.CreateStructGEP(myStruct, allocateInst, noOps + 1);
 									builder.CreateStore(endIt, getPTR);
 									//load the struct for passing into the function
-									LoadInst *loadInst = builder.CreateLoad(allocateInst);
-									threadStructs.push_back(loadInst);
+									//LoadInst *loadInst = builder.CreateLoad(allocateInst);
+									//threadStructs.push_back(loadInst);
+									threadStructs.push_back(allocateInst);
 								}
 								cerr << "threads setup\n";
 								IRBuilder<> callbuilder(callInst);
@@ -165,7 +166,7 @@ namespace {
 								//create a new function with added argument types
 								Module * mod = (F.getParent());
 								SmallVector<Type *, 8> paramTypes;
-								paramTypes.push_back(myStruct);
+								paramTypes.push_back((threadStructs.front())->getType());
 								FunctionType *FT = FunctionType::get(extractedLoop->getFunctionType()->getReturnType(), paramTypes, false);
 								string name = "_" + (extractedLoop->getName()).str() + "_";
 								Function *newLoopFunc = Function::Create(FT, Function::ExternalLinkage, name, mod);
