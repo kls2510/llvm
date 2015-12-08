@@ -222,8 +222,8 @@ namespace {
 										for (auto &i : loopBlock->getInstList()) {
 											int index = 0;
 											for (auto &op : i.operands()) {
-												cerr << "operand name = " << op.getUser()->getName().data() << "\n";
-												if (strcmp(op.getUser()->getName().data(), oldName) == 0) {
+												cerr << "operand name = " << cast<Value>(&op)->getName().data() << "\n";
+												if (strcmp(cast<Value>(&op)->getName().data(), oldName) == 0) {
 													cerr << "found old operand use\n";
 													i.getOperandList()[index] = *element;
 												}
