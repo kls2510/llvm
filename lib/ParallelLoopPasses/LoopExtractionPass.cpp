@@ -98,7 +98,7 @@ namespace {
 
 								int num = 0;
 								for (auto &arg : extractedLoop->args()) {
-									arg.setName("arg" + num);
+									arg.setName("arg" + to_string(num));
 									num++;
 								}
 
