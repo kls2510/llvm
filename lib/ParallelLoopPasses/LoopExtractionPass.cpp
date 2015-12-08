@@ -225,7 +225,8 @@ namespace {
 												cerr << "operand number = " << op->getValueID() << "\n";
 												if (op->getValueID() == (index + 1)) {
 													cerr << "found old operand use\n";
-													i.getOperandList()[index] = *element;
+													i->dump();
+													//i.getOperandList()[index] = *element;
 												}
 												index++;
 											}
