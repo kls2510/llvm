@@ -112,15 +112,15 @@ namespace {
 								list<Value *> threadStructs;
 
 								//TODO: fix for it the loop has a decreasing index
-								Value *noIterations = builder.CreateSub(ConstantInt::get(Type::getInt32Ty(context), finalIt->getSExtValue()), ConstantInt::get(Type::getInt32Ty(context), startIt->getSExtValue()));
-								Value *iterationsEach = builder.CreateExactSDiv(noIterations, ConstantInt::get(Type::getInt32Ty(context), noThreads));
+								Value *noIterations = builder.CreateSub(ConstantInt::get(Type::getInt64Ty(context), finalIt->getSExtValue()), ConstantInt::get(Type::getInt64Ty(context), startIt->getSExtValue()));
+								Value *iterationsEach = builder.CreateExactSDiv(noIterations, ConstantInt::get(Type::getInt64Ty(context), noThreads));
 								cerr << "setting up threads\n";
 								for (int i = 0; i < noThreads; i++) {
 									Value *threadStartIt;
 									Value *endIt;
-									Value *startItMult = builder.CreateMul(iterationsEach, ConstantInt::get(Type::getInt32Ty(context), i));
+									Value *startItMult = builder.CreateMul(iterationsEach, ConstantInt::get(Type::getInt64Ty(context), i));
 									cerr << "here\n";
-									threadStartIt = builder.CreateAdd(ConstantInt::get(Type::getInt32Ty(context), startIt->getSExtValue()), startItMult);
+									threadStartIt = builder.CreateAdd(ConstantInt::get(Type::getInt64Ty(context), startIt->getSExtValue()), startItMult);
 									if (i == (noThreads - 1)) {
 										endIt = noIterations;
 										cerr << "here1\n";
@@ -214,13 +214,15 @@ namespace {
 								Function::iterator loopBlock = (newLoopFunc->begin())++;
 								SmallVector<LoadInst *, 8>::iterator element = structElements.begin();
 								cerr << "replacing old function values\n";
-								for (auto &old : extractedLoop->args()) {
+								for (int index = 0; index < noOps; index++) {
+									const char *oldName = (to_string(index + 1)).data();
 									while (loopBlock != newLoopFunc->end()) {
 										//replace all arg value with new ones in struct
 										for (auto &i : loopBlock->getInstList()) {
 											int index = 0;
 											for (auto &op : i.operands()) {
-												if (cast<Value>(op) == cast<Value>(&old)) {
+												if (strcmp(op.getUser()->getName().data(), oldName) == 0) {
+													cerr << "found old operand use\n";
 													i.getOperandList()[index] = *element;
 												}
 												index++;
