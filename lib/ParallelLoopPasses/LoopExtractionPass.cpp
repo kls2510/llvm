@@ -215,20 +215,20 @@ namespace {
 								SmallVector<LoadInst *, 8>::iterator element = structElements.begin();
 								cerr << "replacing old function values\n";
 								for (int index = 0; index < noOps; index++) {
-									const char *oldName = (to_string(index + 1)).data();
-									cerr << "old name = " << oldName << "\n";
+									unsigned int old = index + 1;
+									cerr << "old name = " << old << "\n";
 									while (loopBlock != newLoopFunc->end()) {
 										//replace all arg value with new ones in struct
 										for (auto &i : loopBlock->getInstList()) {
-											int index = 0;
 											for (auto &op : i.operands()) {
 												cerr << "operand number = " << op->getValueID() << "\n";
-												if (op->getValueID() == (index + 1)) {
+												cerr << "operand name = " << op->getValueName() << "\n";
+												i.dump();
+												if (op->getValueID() == old) {
 													cerr << "found old operand use\n";
 													i.dump();
 													//i.getOperandList()[index] = *element;
-												}
-												index++;
+												} 
 											}
 										}
 										loopBlock++;
