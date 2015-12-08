@@ -89,9 +89,6 @@ namespace {
 							//temporary - might not work
 							LLVMContext &context = startIt->getContext();
 
-							//get pointer to the basic block we'll insert the new instructions into
-							BasicBlock *insertPos = ((loopData->getLoop())->getLoopPredecessor());
-
 							//extract the loop into a new function
 							CodeExtractor extractor = CodeExtractor(DT, *(loopData->getLoop()), false);
 							Function *extractedLoop = extractor.extractCodeRegion();
@@ -103,11 +100,6 @@ namespace {
 								StructType *myStruct = StructType::create(context, "ThreadPasser");
 								//send the: data required, startItvalue and endIt value
 								vector<Type *> elts;
-
-								//setup for inserting instructions before the loop
-								Instruction *inst = insertPos->begin();
-								IRBuilder<> builder(inst);
-								list<Value *> threadStructs;
 		
 								//setup struct type
 								CallInst *callInst = dyn_cast<CallInst>(*(extractedLoop->user_begin()));
@@ -115,6 +107,9 @@ namespace {
 								for (int i = 0; i < noOps; i++) {
 									elts.push_back(callInst->getOperand(i)->getType());
 								}
+
+								IRBuilder<> builder(callInst);
+								list<Value *> threadStructs;
 
 								//TODO: fix for it the loop has a decreasing index
 								Value *noIterations = builder.CreateSub(ConstantInt::get(Type::getInt32Ty(context), finalIt->getSExtValue()), ConstantInt::get(Type::getInt32Ty(context), startIt->getSExtValue()));
@@ -127,7 +122,7 @@ namespace {
 									cerr << "here\n";
 									threadStartIt = builder.CreateAdd(ConstantInt::get(Type::getInt32Ty(context), startIt->getSExtValue()), startItMult);
 									if (i == (noThreads - 1)) {
-										endIt = builder.CreateAdd(threadStartIt, noIterations);
+										endIt = noIterations;
 										cerr << "here1\n";
 									}
 									else {
@@ -154,9 +149,7 @@ namespace {
 									//store endIt
 									getPTR = builder.CreateStructGEP(myStruct, allocateInst, noOps + 1);
 									builder.CreateStore(endIt, getPTR);
-									//load the struct for passing into the function
-									//LoadInst *loadInst = builder.CreateLoad(allocateInst);
-									//threadStructs.push_back(loadInst);
+									//store the struct pointer for passing into the function
 									threadStructs.push_back(allocateInst);
 								}
 								cerr << "threads setup\n";
@@ -205,15 +198,17 @@ namespace {
 								cerr << "loading start and end it too\n";
 								//load start and end it too
 								Value *val = loadBuilder.CreateStructGEP(myStruct, args2, p);
-								LoadInst *loadInst = builder.CreateLoad(val);
+								LoadInst *loadInst = loadBuilder.CreateLoad(val);
 								structElements.push_back(loadInst);
 								val = loadBuilder.CreateStructGEP(myStruct, args2, p + 1);
-								LoadInst *loadInst2 = builder.CreateLoad(val);
+								LoadInst *loadInst2 = loadBuilder.CreateLoad(val);
 								structElements.push_back(loadInst2);
 								//need to return changed local values but for now return nothing
 								SmallVector<ReturnInst *, 0> returns;
 								cerr << "cloning\n";
 								CloneFunctionInto(newLoopFunc, extractedLoop, vvmap, false, returns, "");
+								//bridge first bb to cloned bbs
+								loadBuilder.CreateBr(extractedLoop->begin());
 
 								//Debug
 								cerr << "Original function rewritten to:\n";
