@@ -211,7 +211,7 @@ namespace {
 								loadBuilder.CreateBr((newLoopFunc->begin())->getNextNode());
 
 								//Replace values with new values in function
-								Function::iterator loopBlock = (newLoopFunc->begin())++;
+								Function::iterator loopBlock = ++(newLoopFunc->begin());
 								SmallVector<LoadInst *, 8>::iterator element = structElements.begin();
 								cerr << "replacing old function values\n";
 								for (int index = 0; index < noOps; index++) {
@@ -221,20 +221,22 @@ namespace {
 										//replace all arg value with new ones in struct
 										for (auto &i : loopBlock->getInstList()) {
 											for (auto &op : i.operands()) {
-												cerr << "operand number = " << op->getValueID() << "\n";
-												cerr << "operand name = " << op->getValueName() << "\n";
+												cerr << "new inst\n";
 												i.dump();
-												if (op->getValueID() == old) {
-													cerr << "found old operand use\n";
-													i.dump();
-													//i.getOperandList()[index] = *element;
-												} 
+												for (auto &arg : extractedLoop->args()) {
+													arg.dump();
+													if (cast<Value>(&arg) == cast<Value>(op)) {
+														cerr << "found old operand use\n";
+														//i.dump();
+														//i.getOperandList()[index] = *element;
+													}
+												}
 											}
 										}
 										loopBlock++;
 									}
 									element++;
-									loopBlock = (newLoopFunc->begin())++;
+									loopBlock = ++(newLoopFunc->begin());
 								}
 								startFound = false;
 								endFound = false;
