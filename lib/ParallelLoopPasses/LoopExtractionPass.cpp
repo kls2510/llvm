@@ -213,6 +213,7 @@ namespace {
 								//Replace values with new values in function
 								Function::iterator loopBlock = (newLoopFunc->begin())++;
 								SmallVector<LoadInst *, 8>::iterator element = structElements.begin();
+								cerr << "replacing old function values\n";
 								for (int i = 0; i < noOps; i++) {
 									Value *old = extractedLoop->getOperand(i);
 									while (loopBlock != newLoopFunc->end()) {
@@ -234,6 +235,7 @@ namespace {
 								startFound = false;
 								endFound = false;
 								//change start and end iter values
+								cerr << "changing iteration bounds\n";
 								for (auto &bb : newLoopFunc->getBasicBlockList()) {
 									for (auto &i : bb.getInstList()) {
 										if (isa<PHINode>(i) && !startFound) {
