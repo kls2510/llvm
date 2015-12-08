@@ -214,13 +214,13 @@ namespace {
 								Function::iterator loopBlock = (newLoopFunc->begin())++;
 								SmallVector<LoadInst *, 8>::iterator element = structElements.begin();
 								cerr << "replacing old function values\n";
-								for (auto old : extractedLoop->args()) {
+								for (auto &old : extractedLoop->args()) {
 									while (loopBlock != newLoopFunc->end()) {
 										//replace all arg value with new ones in struct
 										for (auto &i : loopBlock->getInstList()) {
 											int index = 0;
 											for (auto &op : i.operands()) {
-												if (cast<Value>(op) == cast<Value>(old)) {
+												if (cast<Value>(op) == cast<Value>(&old)) {
 													i.getOperandList()[index] = *element;
 												}
 												index++;
