@@ -197,8 +197,8 @@ namespace {
 									Value *mapVal = loadBuilder.CreateStructGEP(myStruct, args2, p);
 									cerr << "here\n";
 									LoadInst *loadInst = loadBuilder.CreateLoad(mapVal);
-									structElements.push_back(loadInst);
-									vvmap.insert(std::make_pair(cast<Value>(&i), mapVal));
+									//structElements.push_back(loadInst);
+									vvmap.insert(std::make_pair(cast<Value>(&i), loadInst));
 									p++;
 								}
 								cerr << "loading start and end it too\n";
@@ -213,28 +213,6 @@ namespace {
 								SmallVector<ReturnInst *, 0> returns;
 								cerr << "cloning\n";
 
-								SmallVector<LoadInst *, 8>::iterator element = structElements.begin();
-
-								//mark uses in function body
-								Function::iterator loopBlock = (extractedLoop->begin());
-								while (loopBlock != extractedLoop->end()) {
-									for (auto &arg : extractedLoop->args()) {
-										cerr << "new arg\n";
-										arg.dump();
-										for (auto &i : loopBlock->getInstList()) {
-											cerr << "new inst\n";
-											i.dump();
-											for (auto &op : i.operands()) {
-												op->dump();
-												if (cast<Value>(op) == cast<Value>(&arg)) {
-													cerr << "need to replace\n";
-												}
-											}
-										}
-									}
-									loopBlock++;
-								}
-
 								CloneFunctionInto(newLoopFunc, extractedLoop, vvmap, false, returns, "");
 								//bridge first bb to cloned bbs
 								loadBuilder.CreateBr((newLoopFunc->begin())->getNextNode());
@@ -243,38 +221,9 @@ namespace {
 								
 								cerr << "replacing old function values\n";
 								
-								/* for (int index = 0; index < noOps; index++) {
-									unsigned int old = index + 1;
-									cerr << "old name = " << old << "\n";
-									while (loopBlock != newLoopFunc->end()) {
-										//replace all arg value with new ones in struct
-										for (auto &i : loopBlock->getInstList()) {
-											for (auto &op : i.operands()) {
-												cerr << "new inst\n";
-												i.dump();
-												for (auto &arg : extractedLoop->args()) {
-													Value *argVal = cast<Value>(&arg);
-													const char *argName = argVal->getName().data();
-													for (auto &u : argVal->) {
-													
-													}
-													
-													cerr << argName << "\n";
-													if (cast<Value>(&arg) == cast<Value>(op)) {
-														cerr << "found old operand use\n";
-														//i.dump();
-														//i.getOperandList()[index] = *element;
-													}
-												}
-											}
-										}
-										loopBlock++;
-									}
-									element++;
-									loopBlock = ++(newLoopFunc->begin());
-								} */
 								startFound = false;
 								endFound = false;
+								SmallVector<LoadInst *, 8>::iterator element = structElements.begin();
 								//change start and end iter values
 								cerr << "changing iteration bounds\n";
 								for (auto &bb : newLoopFunc->getBasicBlockList()) {
