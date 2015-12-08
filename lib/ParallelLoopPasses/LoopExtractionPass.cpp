@@ -213,11 +213,26 @@ namespace {
 								SmallVector<ReturnInst *, 0> returns;
 								cerr << "cloning\n";
 
-								//swap uses in function body
 								SmallVector<LoadInst *, 8>::iterator element = structElements.begin();
-								for (auto &arg : extractedLoop->args()) {
-									LLVMReplaceAllUsesWith(LLVMValueRef(&arg), LLVMValueRef(*element));
-									element++;
+
+								//mark uses in function body
+								Function::iterator loopBlock = (extractedLoop->begin());
+								while (loopBlock != extractedLoop->end()) {
+									for (auto &arg : extractedLoop->args()) {
+										cerr << "new arg\n";
+										arg.dump();
+										for (auto &i : loopBlock->getInstList()) {
+											cerr << "new inst\n";
+											i.dump();
+											for (auto &op : i.operands()) {
+												op->dump();
+												if (cast<Value>(op) == cast<Value>(&arg)) {
+													cerr << "need to replace\n";
+												}
+											}
+										}
+									}
+									loopBlock++;
 								}
 
 								CloneFunctionInto(newLoopFunc, extractedLoop, vvmap, false, returns, "");
@@ -225,7 +240,7 @@ namespace {
 								loadBuilder.CreateBr((newLoopFunc->begin())->getNextNode());
 
 								//Replace values with new values in function
-								Function::iterator loopBlock = ++(newLoopFunc->begin());
+								
 								cerr << "replacing old function values\n";
 								
 								/* for (int index = 0; index < noOps; index++) {
