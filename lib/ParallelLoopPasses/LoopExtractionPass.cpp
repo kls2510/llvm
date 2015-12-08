@@ -208,7 +208,7 @@ namespace {
 								cerr << "cloning\n";
 								CloneFunctionInto(newLoopFunc, extractedLoop, vvmap, false, returns, "");
 								//bridge first bb to cloned bbs
-								loadBuilder.CreateBr(extractedLoop->begin());
+								loadBuilder.CreateBr((newLoopFunc->begin())->getNextNode());
 
 								//Debug
 								cerr << "Original function rewritten to:\n";
