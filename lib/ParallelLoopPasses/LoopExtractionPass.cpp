@@ -220,7 +220,11 @@ namespace {
 								Function::iterator loopBlock = ++(newLoopFunc->begin());
 								SmallVector<LoadInst *, 8>::iterator element = structElements.begin();
 								cerr << "replacing old function values\n";
-								for (int index = 0; index < noOps; index++) {
+								for (auto &arg : extractedLoop->args()) {
+									LLVMReplaceAllUsesWith(LLVMValueRef(&arg),LLVMValueRef(*element));
+									element++;
+								}
+								/* for (int index = 0; index < noOps; index++) {
 									unsigned int old = index + 1;
 									cerr << "old name = " << old << "\n";
 									while (loopBlock != newLoopFunc->end()) {
@@ -232,6 +236,10 @@ namespace {
 												for (auto &arg : extractedLoop->args()) {
 													Value *argVal = cast<Value>(&arg);
 													const char *argName = argVal->getName().data();
+													for (auto &u : argVal->) {
+													
+													}
+													
 													cerr << argName << "\n";
 													if (cast<Value>(&arg) == cast<Value>(op)) {
 														cerr << "found old operand use\n";
@@ -245,7 +253,7 @@ namespace {
 									}
 									element++;
 									loopBlock = ++(newLoopFunc->begin());
-								}
+								} */
 								startFound = false;
 								endFound = false;
 								//change start and end iter values
