@@ -210,6 +210,47 @@ namespace {
 								//bridge first bb to cloned bbs
 								loadBuilder.CreateBr((newLoopFunc->begin())->getNextNode());
 
+								//Replace values with new values in function
+								Function::iterator loopBlock = (newLoopFunc->begin())++;
+								SmallVector<LoadInst *, 8>::iterator element = structElements.begin();
+								for (int i = 0; i < noOps; i++) {
+									Value *old = extractedLoop->getOperand(i);
+									while (loopBlock != newLoopFunc->end()) {
+										//replace all arg value with new ones in struct
+										for (auto &i : loopBlock->getInstList()) {
+											int index = 0;
+											for (auto &op : i.operands()) {
+												if (op == old) {
+													i.getOperandList()[index] = *element;
+												}
+												index++;
+											}
+										}
+										loopBlock++;
+									}
+									element++;
+									loopBlock = (newLoopFunc->begin())++;
+								}
+								startFound = false;
+								endFound = false;
+								//change start and end iter values
+								for (auto &bb : newLoopFunc->getBasicBlockList()) {
+									for (auto &i : bb.getInstList()) {
+										if (isa<PHINode>(i) && !startFound) {
+											User::op_iterator operands = i.op_begin();
+											operands[0] = *element++;
+											startFound = true;
+										}
+										if (!endFound) {
+											if (strcmp((i.getName()).data(), "exitcond") == 0) {
+												User::op_iterator operands = i.op_begin();
+												operands[1] = *element++;
+												endFound = true;
+											}
+										}
+									}
+								}
+
 								//Debug
 								cerr << "Original function rewritten to:\n";
 								F.dump();
