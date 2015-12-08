@@ -96,6 +96,12 @@ namespace {
 							if (extractedLoop != 0) {
 								cerr << "loop extracted successfully\n";
 
+								int num = 0;
+								for (auto &arg : extractedLoop->args()) {
+									arg.setName("arg" + num);
+									num++;
+								}
+
 								//create the struct we'll use to pass data to/from the threads
 								StructType *myStruct = StructType::create(context, "ThreadPasser");
 								//send the: data required, startItvalue and endIt value
@@ -225,8 +231,8 @@ namespace {
 												i.dump();
 												for (auto &arg : extractedLoop->args()) {
 													Value *argVal = cast<Value>(&arg);
-													int id = argVal->getValueID();
-													cerr << id << "\n";
+													const char *argName = argVal->getName().data();
+													cerr << argName << "\n";
 													if (cast<Value>(&arg) == cast<Value>(op)) {
 														cerr << "found old operand use\n";
 														//i.dump();
