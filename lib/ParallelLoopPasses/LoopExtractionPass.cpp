@@ -52,7 +52,7 @@ namespace {
 				for (list<LoopDependencyData *>::iterator i = loopData.begin(); i != loopData.end(); i++) {
 					cerr << "Found a loop\n";
 					LoopDependencyData *loopData = *i;
-					//LLVMContext &context = (loopData->getLoop())->getHeader()->getContext();
+					LLVMContext &context = (loopData->getLoop())->getHeader()->getContext();
 
 					if ((loopData->getDependencies()).size() == 0) {
 						if (loopData->isParallelizable()) {
@@ -87,7 +87,7 @@ namespace {
 								return false;
 							}
 							//temporary - might not work
-							LLVMContext &context = startIt->getContext();
+							//LLVMContext &context = startIt->getContext();
 
 							//extract the loop into a new function
 							CodeExtractor extractor = CodeExtractor(DT, *(loopData->getLoop()), false);
@@ -95,12 +95,6 @@ namespace {
 
 							if (extractedLoop != 0) {
 								cerr << "loop extracted successfully\n";
-
-								int num = 0;
-								for (auto &arg : extractedLoop->args()) {
-									arg.setName("arg" + to_string(num));
-									num++;
-								}
 
 								//create the struct we'll use to pass data to/from the threads
 								StructType *myStruct = StructType::create(context, "ThreadPasser");
@@ -115,10 +109,29 @@ namespace {
 								}
 
 								IRBuilder<> builder(callInst);
+								Value *start = builder.CreateAlloca(startIt->getType());
+								Value *end = builder.CreateAlloca(finalIt->getType());
+								builder.CreateStore(startIt, start);
+								builder.CreateStore(finalIt, end);
+
 								list<Value *> threadStructs;
 
-								//TODO: fix for it the loop has a decreasing index
-								Value *noIterations = builder.CreateSub(ConstantInt::get(Type::getInt64Ty(context), finalIt->getSExtValue()), ConstantInt::get(Type::getInt64Ty(context), startIt->getSExtValue()));
+								//fix for if the loop has a decreasing index
+								BasicBlock *swapper = BasicBlock::Create(context, "swap", &F, nullptr);
+								BasicBlock *structSetter = callInst->getParent();
+								IRBuilder<> swapBuilder(swapper);
+								Value *tmp = swapBuilder.CreateLoad(start);
+								Value *tmp2 = swapBuilder.CreateLoad(end);
+								swapBuilder.CreateStore(tmp, end);
+								swapBuilder.CreateStore(tmp2, start);
+								swapBuilder.CreateBr(structSetter);
+
+
+								Value *startEndCmp = builder.CreateICmpSGT(startIt, finalIt);
+								Value *branch = builder.CreateCondBr(startEndCmp, swapper, structSetter);
+								ConstantInt *newStartIt = (cast<ConstantInt>(builder.CreateLoad(start)));
+								ConstantInt *newEndIt = (cast<ConstantInt>(builder.CreateLoad(end)));
+								Value *noIterations = builder.CreateSub(ConstantInt::get(Type::getInt64Ty(context), newEndIt->getSExtValue()), ConstantInt::get(Type::getInt64Ty(context), newStartIt->getSExtValue()));
 								Value *iterationsEach = builder.CreateExactSDiv(noIterations, ConstantInt::get(Type::getInt64Ty(context), noThreads));
 								cerr << "setting up threads\n";
 								for (int i = 0; i < noThreads; i++) {
@@ -126,7 +139,7 @@ namespace {
 									Value *endIt;
 									Value *startItMult = builder.CreateMul(iterationsEach, ConstantInt::get(Type::getInt64Ty(context), i));
 									cerr << "here\n";
-									threadStartIt = builder.CreateAdd(ConstantInt::get(Type::getInt64Ty(context), startIt->getSExtValue()), startItMult);
+									threadStartIt = builder.CreateAdd(ConstantInt::get(Type::getInt64Ty(context), newStartIt->getSExtValue()), startItMult);
 									if (i == (noThreads - 1)) {
 										endIt = noIterations;
 										cerr << "here1\n";
