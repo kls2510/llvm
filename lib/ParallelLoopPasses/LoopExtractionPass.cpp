@@ -115,7 +115,7 @@ namespace {
 								list<Value *> threadStructs;
 
 								//fix for if the loop has a decreasing index
-								BasicBlock *swapper = BasicBlock::Create(context, "swap", &F, nullptr);
+								BasicBlock *swapper = BasicBlock::Create(context, "swap", &F, (F.getBasicBlockList()).end());
 								BasicBlock *structSetter = callInst->getParent();
 								IRBuilder<> swapBuilder(swapper);
 								Value *tmp = swapBuilder.CreateLoad(start);
