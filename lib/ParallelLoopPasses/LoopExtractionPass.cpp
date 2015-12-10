@@ -69,14 +69,12 @@ namespace {
 								for (auto &i : bb->getInstList()) {
 									if (isa<PHINode>(i) && !startFound) {
 										startIt = dynamic_cast<ConstantInt *>(i.getOperand(0));
-										startIt->dump();
 										startFound = true;
 									}
 									if (!endFound) {
 										if (strcmp((i.getName()).data(), "exitcond") == 0) {
 											//for now just take the value : TODO : work out whether less than/equal to...
 											finalIt = dynamic_cast<ConstantInt *>(i.getOperand(1));
-											finalIt->dump();
 											endFound = true;
 										}
 									}
@@ -127,7 +125,7 @@ namespace {
 								swapBuilder.CreateBr(structSetter);
 
 
-								Value *startEndCmp = builder.CreateICmpSGT(startIt, finalIt);
+								Value *startEndCmp = builder.CreateICmpSGT(ConstantInt::get(Type::getInt64Ty(context), startIt->getSExtValue()), ConstantInt::get(Type::getInt64Ty(context), finalIt->getSExtValue()));
 								Value *branch = builder.CreateCondBr(startEndCmp, swapper, structSetter);
 								ConstantInt *newStartIt = (cast<ConstantInt>(builder.CreateLoad(start)));
 								ConstantInt *newEndIt = (cast<ConstantInt>(builder.CreateLoad(end)));
