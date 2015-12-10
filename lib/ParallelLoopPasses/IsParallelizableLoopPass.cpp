@@ -36,7 +36,7 @@ bool IsParallelizableLoopPass::runOnFunction(Function &F) {
 	//results.insert(std::pair<Function&, list<LoopDependencyData *>>(F, l));
 	//cout << "Results size = " << results.size() << "\n";
 	
-	//cerr << "Running parallelizable loop analysis on function " << (F.getName()).data() << "\n";
+	cerr << "Running parallelizable loop analysis on function " << (F.getName()).data() << "\n";
 	//initialize iterators and loop counter
 	LoopInfo::iterator i = LI.begin();
 	LoopInfo::iterator e = LI.end();
@@ -48,10 +48,10 @@ bool IsParallelizableLoopPass::runOnFunction(Function &F) {
 		//cerr << "Found loop " << LoopCounter << "\n";
 		//call the function that will be implemented to analyse the code
 		if (isParallelizable(L, F)) {
-			//cout << "this loop is parallelizable\n";
+			cerr << "this loop is parallelizable\n";
 		}
 		else {
-			//cout << "this loop is not parallelizable\n";
+			cerr << "this loop is not parallelizable\n";
 		}
 		i++;
 	}
@@ -59,7 +59,6 @@ bool IsParallelizableLoopPass::runOnFunction(Function &F) {
 }
 
 list<LoopDependencyData *> IsParallelizableLoopPass::getResultsForFunction(Function &F) {
-	//return (results.find(F))->second;
 	return results;
 }
 
@@ -122,6 +121,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 		}
 	}
 
+	bool dependent = false;
 	//find distance vectors for dependent instructions
 	for (set<Instruction *>::iterator si = dependentInstructions->begin(); si != dependentInstructions->end(); si++) {
 		Instruction *i1 = (*si);
@@ -152,6 +152,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 			
 				//decide whether this dependency makes the loop not parallelizable
 				if (distance != 0) {
+					dependent = true;
 					if (d->isConsistent()) {
 						parallelizable = false;
 					}
@@ -163,7 +164,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 			}
 		}
 	}
-	if (!parallelizable) {
+	if (dependent) {
 		cerr << "Has dependencies so not parallelizable\n";
 	}
 	delete dependentInstructions;
