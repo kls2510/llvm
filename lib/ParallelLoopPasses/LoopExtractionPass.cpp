@@ -113,13 +113,14 @@ namespace {
 								//fix for if the loop has a decreasing index
 								BasicBlock *swapper = BasicBlock::Create(context, "swap", &F, (F.getBasicBlockList()).end());
 								BasicBlock *structSetter = callInst->getParent();
+								((F.begin())->rbegin())->eraseFromParent();
 								IRBuilder<> setupBuilder(F.begin());
 								Value *start = setupBuilder.CreateAlloca(startIt->getType());
 								Value *end = setupBuilder.CreateAlloca(finalIt->getType());
 								setupBuilder.CreateStore(startIt, start);
 								setupBuilder.CreateStore(finalIt, end);
 								Value *startEndCmp = setupBuilder.CreateICmpSGT(startIt, finalIt);
-								Value *branch = setupBuilder.CreateCondBr(startEndCmp, swapper, structSetter);
+								setupBuilder.CreateCondBr(startEndCmp, swapper, structSetter);
 								IRBuilder<> swapBuilder(swapper);
 								Value *tmp = swapBuilder.CreateLoad(start);
 								Value *tmp2 = swapBuilder.CreateLoad(end);
