@@ -129,8 +129,8 @@ namespace {
 								Value *branch = builder.CreateCondBr(startEndCmp, swapper, structSetter);
 								Value *loadedStartIt = builder.CreateLoad(start);
 								Value *loadedEndIt = builder.CreateLoad(end);
-								ConstantInt *newStartIt = cast<ConstantInt>(loadedStartIt);
-								ConstantInt *newEndIt = cast<ConstantInt>(loadedEndIt);
+								ConstantInt *newStartIt = cast<ConstantInt *>(*loadedStartIt);
+								ConstantInt *newEndIt = cast<ConstantInt *>(*loadedEndIt);
 								Value *noIterations = builder.CreateSub(ConstantInt::get(Type::getInt64Ty(context), newEndIt->getSExtValue()), ConstantInt::get(Type::getInt64Ty(context), newStartIt->getSExtValue()));
 								Value *iterationsEach = builder.CreateExactSDiv(noIterations, ConstantInt::get(Type::getInt64Ty(context), noThreads));
 								cerr << "setting up threads\n";
