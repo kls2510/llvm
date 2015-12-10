@@ -177,6 +177,9 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 					if (isa<PointerType>(op->getType())){
 						for (auto other : readwriteinstructions) {
 							if (!(other == op)) {
+								cerr << "looking for alias between:\n";
+								op->dump();
+								other->dump();
 								//found an alias so can't parallelize
 								if (!(AA->isNoAlias(op, other))) {
 									parallelizable = false;
