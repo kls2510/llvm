@@ -127,8 +127,10 @@ namespace {
 
 								Value *startEndCmp = builder.CreateICmpSGT(ConstantInt::get(Type::getInt64Ty(context), startIt->getSExtValue()), ConstantInt::get(Type::getInt64Ty(context), finalIt->getSExtValue()));
 								Value *branch = builder.CreateCondBr(startEndCmp, swapper, structSetter);
-								ConstantInt *newStartIt = (cast<ConstantInt>(builder.CreateLoad(start)));
-								ConstantInt *newEndIt = (cast<ConstantInt>(builder.CreateLoad(end)));
+								Value *loadedStartIt = builder.CreateLoad(start);
+								Value *loadedEndIt = builder.CreateLoad(end);
+								ConstantInt *newStartIt = cast<ConstantInt>(loadedStartIt);
+								ConstantInt *newEndIt = cast<ConstantInt>(loadedEndIt);
 								Value *noIterations = builder.CreateSub(ConstantInt::get(Type::getInt64Ty(context), newEndIt->getSExtValue()), ConstantInt::get(Type::getInt64Ty(context), newStartIt->getSExtValue()));
 								Value *iterationsEach = builder.CreateExactSDiv(noIterations, ConstantInt::get(Type::getInt64Ty(context), noThreads));
 								cerr << "setting up threads\n";
