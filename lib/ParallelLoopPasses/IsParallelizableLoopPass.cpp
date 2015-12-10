@@ -74,31 +74,39 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 	vector<Loop*> subloops = L->getSubLoops();
 	vector<PHINode*> PhiNodes;
 	if (phi == nullptr) {
-		//can't parallelise a loop with no phi node
-		//cerr << "Primary Phi node is null\n";
-		return false;
+		//loop has no cannonical induction variable but may have a normal phi node
+		for (auto bb : L->getBlocks()) {
+			for (auto &i : bb->getInstList()) {
+				if (isa<PHINode>(i)) {
+					phi = cast<PHINode>(&i);
+					break;
+				}
+			}
+			if (phi != nullptr) {
+				break;
+			}
+		}
+		if (phi == nullptr) {
+			return false;
+		}
 	}
 	PhiNodes.push_back(phi);
 	noOfPhiNodes++;
-	//store all cannonical induction variables
-	for (vector<Loop*>::iterator sl = subloops.begin(); sl != subloops.end(); ++sl) {
-		if ((*sl)->getCanonicalInductionVariable()) {
-			PhiNodes.push_back((*sl)->getCanonicalInductionVariable());
-			noOfPhiNodes++;
-		}
-	}
+
+	//TODO: see if I can use a pass to cannonicalise more loops
+
 	Instruction *inst = phi->getNextNode();
-	//loop through all instructions to check for only cannonical induction variable phi nodes
+	//loop through all instructions to check for only one phi node per inner loop
 	while (L->contains(inst)) {
 		if (isa<PHINode>(inst)) {
+			noOfPhiNodes++;
 			//finding Phi node that isn't a cannonical induction variable means the loop is not directly parallelizable
-			if (find(PhiNodes.begin(), PhiNodes.end(), inst) == PhiNodes.end()) {
-				//cerr << "found a Phi node that is not a cannonical induction variable\n";
-				parallelizable = false;
-				noOfPhiNodes++;
-			}
 		}
 		inst = inst->getNextNode();
+	}
+
+	if (noOfPhiNodes > (L->getSubLoops().size() + 1)) {
+		parallelizable = false;
 	}
 
 	//loop through instructions dependendent on the induction variable and check to see whether
@@ -155,6 +163,8 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 	}
 	delete dependentInstructions;
 	
+	//TODO: check if load/store operands alias
+
 	//find loop boundaries
 	bool startFound;
 	bool endFound;
