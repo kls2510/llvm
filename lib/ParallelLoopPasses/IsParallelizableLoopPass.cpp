@@ -166,30 +166,25 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 	//TODO: check if load/store operands alias
 
 	//find loop boundaries
-	bool startFound = false;
 	bool endFound = false;
-	Value *startIt;
+	Value *startIt = phi->getOperand(0);
 	Value *finalIt;
 	//find start and end iteration values
 	for (auto bb : L->getBlocks()) {
 		for (auto &i : bb->getInstList()) {
-			if (isa<PHINode>(i) && !startFound) {
-				startIt = (i.getOperand(0));
-				startFound = true;
-			}
 			if (!endFound) {
-				if (strcmp((i.getName()).data(), "exitcond") == 0) {
+				if (strcmp((i.getName()).data(), "exitcond") == 0 || strcmp((i.getName()).data(), "cmp") == 0) {
 					finalIt = (i.getOperand(1));
-					i.dump();
-					(i.getOperand(1))->dump();
 					endFound = true;
+					cerr << "end found\n";
 				}
 			}
 		}
 	}
 
 	//not parallelizable if proper boundaries can't be found
-	if (!startFound || !endFound) {
+	if (!endFound) {
+		cerr << "boundaries can't be established\n";
 		parallelizable = false;
 	}
 
