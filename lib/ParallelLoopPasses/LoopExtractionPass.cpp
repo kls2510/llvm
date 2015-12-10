@@ -60,21 +60,21 @@ namespace {
 							cerr << "This loop has no dependencies so can be extracted\n";
 
 							//calculate start and length of loop
-							ConstantInt *startIt;
-							ConstantInt *finalIt;
+							Value *startIt;
+							Value *finalIt;
 							bool startFound = false;
 							bool endFound = false;
 							Loop *loop = loopData->getLoop();
 							for (auto bb : loop->getBlocks()) {
 								for (auto &i : bb->getInstList()) {
 									if (isa<PHINode>(i) && !startFound) {
-										startIt = dynamic_cast<ConstantInt *>(i.getOperand(0));
+										startIt = (i.getOperand(0));
 										startFound = true;
 									}
 									if (!endFound) {
 										if (strcmp((i.getName()).data(), "exitcond") == 0) {
 											//for now just take the value : TODO : work out whether less than/equal to...
-											finalIt = dynamic_cast<ConstantInt *>(i.getOperand(1));
+											finalIt = (i.getOperand(1));
 											endFound = true;
 										}
 									}
@@ -107,45 +107,45 @@ namespace {
 								}
 
 								IRBuilder<> builder(callInst);
-								Value *start = builder.CreateAlloca(startIt->getType());
+								/* Value *start = builder.CreateAlloca(startIt->getType());
 								Value *end = builder.CreateAlloca(finalIt->getType());
 								builder.CreateStore(startIt, start);
-								builder.CreateStore(finalIt, end);
+								builder.CreateStore(finalIt, end); */
 
 								list<Value *> threadStructs;
 
 								//fix for if the loop has a decreasing index
-								BasicBlock *swapper = BasicBlock::Create(context, "swap", &F, nullptr);
+								/* BasicBlock *swapper = BasicBlock::Create(context, "swap", &F, nullptr);
 								BasicBlock *structSetter = callInst->getParent();
 								IRBuilder<> swapBuilder(swapper);
 								Value *tmp = swapBuilder.CreateLoad(start);
 								Value *tmp2 = swapBuilder.CreateLoad(end);
 								swapBuilder.CreateStore(tmp, end);
 								swapBuilder.CreateStore(tmp2, start);
-								swapBuilder.CreateBr(structSetter);
+								swapBuilder.CreateBr(structSetter); */
 
 
-								Value *startEndCmp = builder.CreateICmpSGT(ConstantInt::get(Type::getInt64Ty(context), startIt->getSExtValue()), ConstantInt::get(Type::getInt64Ty(context), finalIt->getSExtValue()));
+								/* Value *startEndCmp = builder.CreateICmpSGT(ConstantInt::get(Type::getInt64Ty(context), startIt->getSExtValue()), ConstantInt::get(Type::getInt64Ty(context), finalIt->getSExtValue()));
 								Value *branch = builder.CreateCondBr(startEndCmp, swapper, structSetter);
 								Value *loadedStartIt = builder.CreateLoad(start);
 								Value *loadedEndIt = builder.CreateLoad(end);
 								ConstantInt *newStartIt = cast<ConstantInt *>(*loadedStartIt);
-								ConstantInt *newEndIt = cast<ConstantInt *>(*loadedEndIt);
-								Value *noIterations = builder.CreateSub(ConstantInt::get(Type::getInt64Ty(context), newEndIt->getSExtValue()), ConstantInt::get(Type::getInt64Ty(context), newStartIt->getSExtValue()));
+								ConstantInt *newEndIt = cast<ConstantInt *>(*loadedEndIt); */
+								Value *noIterations = builder.CreateBinOp(Instruction::Sub, finalIt, startIt);
 								Value *iterationsEach = builder.CreateExactSDiv(noIterations, ConstantInt::get(Type::getInt64Ty(context), noThreads));
 								cerr << "setting up threads\n";
 								for (int i = 0; i < noThreads; i++) {
 									Value *threadStartIt;
 									Value *endIt;
-									Value *startItMult = builder.CreateMul(iterationsEach, ConstantInt::get(Type::getInt64Ty(context), i));
+									Value *startItMult = builder.CreateBinOp(Instruction::Mul, iterationsEach, ConstantInt::get(Type::getInt64Ty(context), i));
 									cerr << "here\n";
-									threadStartIt = builder.CreateAdd(ConstantInt::get(Type::getInt64Ty(context), newStartIt->getSExtValue()), startItMult);
+									threadStartIt = builder.CreateBinOp(Instruction::Add, startIt, startItMult);
 									if (i == (noThreads - 1)) {
 										endIt = noIterations;
 										cerr << "here1\n";
 									}
 									else {
-										endIt = builder.CreateAdd(threadStartIt, iterationsEach);
+										endIt = builder.CreateBinOp(Instruction::Add, threadStartIt, iterationsEach);
 										cerr << "here2\n";
 									}
 
