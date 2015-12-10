@@ -172,7 +172,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 	vector<Value *> readwriteinstructions;
 	for (auto bb : L->getBlocks()) {
 		for (auto &i : bb->getInstList()) {
-			if (i.mayReadOrWriteMemory) {
+			if (i.mayReadOrWriteMemory()) {
 				for (auto &op : i.operands()) {
 					if (isa<PointerType>(op->getType())){
 						for (auto other : readwriteinstructions) {
