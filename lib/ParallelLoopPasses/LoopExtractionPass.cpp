@@ -57,7 +57,7 @@ namespace {
 					if ((loopData->getDependencies()).size() == 0) {
 						if (loopData->isParallelizable()) {
 							//extract the loop
-							cerr << "This loop has no dependencies so can be extracted\n";
+							//cerr << "This loop has no dependencies so can be extracted\n";
 
 							//get start and end of loop
 							Value *startIt = loopData->getStartIt();
@@ -68,7 +68,7 @@ namespace {
 							Function *extractedLoop = extractor.extractCodeRegion();
 
 							if (extractedLoop != 0) {
-								cerr << "loop extracted successfully\n";
+								//cerr << "loop extracted successfully\n";
 
 								//create the struct we'll use to pass data to/from the threads
 								StructType *myStruct = StructType::create(context, "ThreadPasser");
@@ -95,20 +95,20 @@ namespace {
 								Value *loadedEndIt = setupBuilder.CreateLoad(end);
 								Value *noIterations = setupBuilder.CreateBinOp(Instruction::Sub, loadedEndIt, loadedStartIt);
 								Value *iterationsEach = setupBuilder.CreateExactSDiv(noIterations, ConstantInt::get(Type::getInt64Ty(context), noThreads));
-								cerr << "setting up threads\n";
+								//cerr << "setting up threads\n";
 								for (int i = 0; i < noThreads; i++) {
 									Value *threadStartIt;
 									Value *endIt;
 									Value *startItMult = builder.CreateBinOp(Instruction::Mul, iterationsEach, ConstantInt::get(Type::getInt64Ty(context), i));
-									cerr << "here\n";
+									//cerr << "here\n";
 									threadStartIt = builder.CreateBinOp(Instruction::Add, loadedStartIt, startItMult);
 									if (i == (noThreads - 1)) {
 										endIt = builder.CreateLoad(end);
-										cerr << "here1\n";
+										//cerr << "here1\n";
 									}
 									else {
 										endIt = builder.CreateBinOp(Instruction::Add, threadStartIt, iterationsEach);
-										cerr << "here2\n";
+										//cerr << "here2\n";
 									}
 
 									//add final types to struct
@@ -133,9 +133,9 @@ namespace {
 									//store the struct pointer for passing into the function
 									threadStructs.push_back(allocateInst);
 								}
-								cerr << "threads setup\n";
+								//cerr << "threads setup\n";
 
-								cerr << "creating new function\n";
+								//cerr << "creating new function\n";
 								//create a new function with added argument types
 								Module * mod = (F.getParent());
 								SmallVector<Type *, 8> paramTypes;
@@ -144,7 +144,7 @@ namespace {
 								string name = "_" + (extractedLoop->getName()).str() + "_";
 								Function *newLoopFunc = Function::Create(FT, Function::ExternalLinkage, name, mod);
 
-								cerr << "inserting new function calls\n";
+								//cerr << "inserting new function calls\n";
 								//insert calls to this new function - for now just call function, add threads later
 								for (list<Value*>::iterator it = threadStructs.begin(); it != threadStructs.end(); ++it) {
 									SmallVector<Value *,8> argsForCall;
@@ -155,7 +155,7 @@ namespace {
 								//delete the original call instruction
 								callInst->eraseFromParent();
 
-								cerr << "cloning function\n";
+								//cerr << "cloning function\n";
 								//clone old function into this new one that takes the correct amount of arguments
 								ValueToValueMapTy vvmap;
 								Function::ArgumentListType &args1 = extractedLoop->getArgumentList();
@@ -164,18 +164,18 @@ namespace {
 								SmallVector<LoadInst *, 8> structElements;
 								BasicBlock *writeTo = BasicBlock::Create(context, "loads", newLoopFunc);
 								IRBuilder<> loadBuilder(writeTo);
-								cerr << "creating map\n";
+								//cerr << "creating map\n";
 								for (auto &i : args1) {
 									//load each struct element at the start of the function
-									cerr << "here\n";
+									//cerr << "here\n";
 									Value *mapVal = loadBuilder.CreateStructGEP(myStruct, args2, p);
-									cerr << "here\n";
+									//cerr << "here\n";
 									LoadInst *loadInst = loadBuilder.CreateLoad(mapVal);
 									//structElements.push_back(loadInst);
 									vvmap.insert(std::make_pair(cast<Value>(&i), loadInst));
 									p++;
 								}
-								cerr << "loading start and end it too\n";
+								//cerr << "loading start and end it too\n";
 								//load start and end it too
 								Value *val = loadBuilder.CreateStructGEP(myStruct, args2, p);
 								LoadInst *loadInst = loadBuilder.CreateLoad(val);
@@ -185,7 +185,7 @@ namespace {
 								structElements.push_back(loadInst2);
 								//need to return changed local values but for now return nothing
 								SmallVector<ReturnInst *, 0> returns;
-								cerr << "cloning\n";
+								//cerr << "cloning\n";
 
 								CloneFunctionInto(newLoopFunc, extractedLoop, vvmap, false, returns, "");
 								//bridge first bb to cloned bbs
@@ -193,13 +193,13 @@ namespace {
 
 								//Replace values with new values in function
 								
-								cerr << "replacing old function values\n";
+								//cerr << "replacing old function values\n";
 								
 								bool startFound = false;
 								bool endFound = false;
 								SmallVector<LoadInst *, 8>::iterator element = structElements.begin();
 								//change start and end iter values
-								cerr << "changing iteration bounds\n";
+								//cerr << "changing iteration bounds\n";
 								for (auto &bb : newLoopFunc->getBasicBlockList()) {
 									for (auto &i : bb.getInstList()) {
 										if (isa<PHINode>(i) && !startFound) {
@@ -231,12 +231,12 @@ namespace {
 						}
 						else {
 							//must be a problem with Phi nodes
-							cerr << "loop has too many PHI nodes, so cannot be parallelized right now\n";
+							//cerr << "loop has too many PHI nodes, so cannot be parallelized right now\n";
 						}
 					}
 					//must be a problem with dependencies
 					else {
-						cerr << "This loop has interloop dependencies so cannot be parallelized right now\n";
+						//cerr << "This loop has interloop dependencies so cannot be parallelized right now\n";
 					}
 				}
 

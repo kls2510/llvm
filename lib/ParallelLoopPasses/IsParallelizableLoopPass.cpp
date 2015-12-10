@@ -87,6 +87,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 			}
 		}
 		if (phi == nullptr) {
+			cerr << "no induction variable exists\n";
 			return false;
 		}
 	}
@@ -107,6 +108,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 
 	if (noOfPhiNodes > (L->getSubLoops().size() + 1)) {
 		parallelizable = false;
+		cerr << "Too many phi nodes\n";
 	}
 
 	//loop through instructions dependendent on the induction variable and check to see whether
@@ -176,7 +178,6 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 				if (strcmp((i.getName()).data(), "exitcond") == 0 || strcmp((i.getName()).data(), "cmp") == 0) {
 					finalIt = (i.getOperand(1));
 					endFound = true;
-					cerr << "end found\n";
 				}
 			}
 		}
