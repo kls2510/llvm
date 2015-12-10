@@ -59,33 +59,9 @@ namespace {
 							//extract the loop
 							cerr << "This loop has no dependencies so can be extracted\n";
 
-							//calculate start and length of loop
-							Value *startIt;
-							Value *finalIt;
-							bool startFound = false;
-							bool endFound = false;
-							Loop *loop = loopData->getLoop();
-							for (auto bb : loop->getBlocks()) {
-								for (auto &i : bb->getInstList()) {
-									if (isa<PHINode>(i) && !startFound) {
-										startIt = (i.getOperand(0));
-										startFound = true;
-									}
-									if (!endFound) {
-										if (strcmp((i.getName()).data(), "exitcond") == 0) {
-											//for now just take the value : TODO : work out whether less than/equal to...
-											finalIt = (i.getOperand(1));
-											endFound = true;
-										}
-									}
-								}
-							}
-							if (!(startFound && endFound)) {
-								cerr << "full loop bounds aren't available, can't extract\n";
-								return false;
-							}
-							//temporary - might not work
-							//LLVMContext &context = startIt->getContext();
+							//get start and end of loop
+							Value *startIt = loopData->getStartIt();
+							Value *finalIt = loopData->getFinalIt();
 
 							//extract the loop into a new function
 							CodeExtractor extractor = CodeExtractor(DT, *(loopData->getLoop()), false);
@@ -110,28 +86,15 @@ namespace {
 
 								list<Value *> threadStructs;
 
-								//fix for if the loop has a decreasing index
-								BasicBlock *swapper = BasicBlock::Create(context, "swap", &F, (F.getBasicBlockList()).end());
-								BasicBlock *structSetter = callInst->getParent();
-								((F.begin())->rbegin())->eraseFromParent();
-								IRBuilder<> setupBuilder(F.begin());
+								IRBuilder<> setupBuilder(F.begin()->begin());
 								Value *start = setupBuilder.CreateAlloca(startIt->getType());
 								Value *end = setupBuilder.CreateAlloca(finalIt->getType());
 								setupBuilder.CreateStore(startIt, start);
 								setupBuilder.CreateStore(finalIt, end);
-								Value *startEndCmp = setupBuilder.CreateICmpSGT(startIt, finalIt);
-								setupBuilder.CreateCondBr(startEndCmp, swapper, structSetter);
-								IRBuilder<> swapBuilder(swapper);
-								Value *tmp = swapBuilder.CreateLoad(start);
-								Value *tmp2 = swapBuilder.CreateLoad(end);
-								swapBuilder.CreateStore(tmp, end);
-								swapBuilder.CreateStore(tmp2, start);
-								swapBuilder.CreateBr(structSetter);
-
-								Value *loadedStartIt = builder.CreateLoad(start);
-								Value *loadedEndIt = builder.CreateLoad(end);
-								Value *noIterations = builder.CreateBinOp(Instruction::Sub, loadedEndIt, loadedStartIt);
-								Value *iterationsEach = builder.CreateExactSDiv(noIterations, ConstantInt::get(Type::getInt64Ty(context), noThreads));
+								Value *loadedStartIt = setupBuilder.CreateLoad(start);
+								Value *loadedEndIt = setupBuilder.CreateLoad(end);
+								Value *noIterations = setupBuilder.CreateBinOp(Instruction::Sub, loadedEndIt, loadedStartIt);
+								Value *iterationsEach = setupBuilder.CreateExactSDiv(noIterations, ConstantInt::get(Type::getInt64Ty(context), noThreads));
 								cerr << "setting up threads\n";
 								for (int i = 0; i < noThreads; i++) {
 									Value *threadStartIt;
@@ -140,7 +103,7 @@ namespace {
 									cerr << "here\n";
 									threadStartIt = builder.CreateBinOp(Instruction::Add, loadedStartIt, startItMult);
 									if (i == (noThreads - 1)) {
-										endIt = noIterations;
+										endIt = builder.CreateLoad(end);
 										cerr << "here1\n";
 									}
 									else {
@@ -232,8 +195,8 @@ namespace {
 								
 								cerr << "replacing old function values\n";
 								
-								startFound = false;
-								endFound = false;
+								bool startFound = false;
+								bool endFound = false;
 								SmallVector<LoadInst *, 8>::iterator element = structElements.begin();
 								//change start and end iter values
 								cerr << "changing iteration bounds\n";

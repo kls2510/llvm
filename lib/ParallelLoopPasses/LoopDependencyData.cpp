@@ -55,3 +55,11 @@ bool LoopDependencyData::isParallelizable() {
 	return parallelizable;
 }
 
+Value *LoopDependencyData::getStartIt() {
+	return startIt;
+}
+
+Value *LoopDependencyData::getFinalIt() {
+	return finalIt;
+}
+

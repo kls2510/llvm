@@ -16,14 +16,16 @@ using namespace std;
 
 class LoopDependencyData {
 private:
+	Value *startIt;
+	Value *finalIt;
 	Loop *loop;
 	list<Dependence *> dependencies;
 	int noOfPhiNodes;
 	bool parallelizable;
 
 public:
-	LoopDependencyData(Loop *L, list<Dependence *> d, int phi, bool parallelizable) {
-		loop = L, dependencies = d, noOfPhiNodes = phi, this->parallelizable = parallelizable;
+	LoopDependencyData(Loop *L, list<Dependence *> d, int phi, Value *startIt, Value *finalIt, bool parallelizable) {
+		loop = L, dependencies = d, noOfPhiNodes = phi, this->parallelizable = parallelizable, this->startIt = startIt, this->finalIt = finalIt;
 	}
 
 	Loop *getLoop();
@@ -37,6 +39,10 @@ public:
 	void print();
 
 	bool isParallelizable();
+
+	Value *getStartIt();
+
+	Value *getFinalIt();
 
 };
 

@@ -154,11 +154,35 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 		}
 	}
 	delete dependentInstructions;
-		
+	
+	//find loop boundaries
+	bool startFound;
+	bool endFound;
+	Value *startIt;
+	Value *finalIt;
+	//find start and end iteration values
+	for (auto bb : L->getBlocks()) {
+		for (auto &i : bb->getInstList()) {
+			if (isa<PHINode>(i) && !startFound) {
+				startIt = (i.getOperand(0));
+				startFound = true;
+			}
+			if (!endFound) {
+				if (strcmp((i.getName()).data(), "exitcond") == 0) {
+					finalIt = (i.getOperand(1));
+					endFound = true;
+				}
+			}
+		}
+	}
+
+	//not parallelizable if proper boundaries can't be found
+	if (startIt == nullptr || finalIt == nullptr) {
+		parallelizable = false;
+	}
+
 	//store results of analysis
-	LoopDependencyData *data = new LoopDependencyData(L, dependencies, noOfPhiNodes, parallelizable);
-	//map<Function&, list<LoopDependencyData *>>::iterator it = (results.find(F));
-	//(it->second).push_back(data);
+	LoopDependencyData *data = new LoopDependencyData(L, dependencies, noOfPhiNodes, startIt, finalIt, parallelizable);
 	results.push_back(data);
 	
 	return parallelizable;
