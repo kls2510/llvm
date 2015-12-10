@@ -189,7 +189,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 	}
 
 	//not parallelizable if proper boundaries can't be found
-	if (startIt == nullptr || finalIt == nullptr) {
+	if (!startFound || !endFound) {
 		parallelizable = false;
 	}
 	finalIt->dump();
