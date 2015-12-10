@@ -107,16 +107,19 @@ namespace {
 								}
 
 								IRBuilder<> builder(callInst);
-								Value *start = builder.CreateAlloca(startIt->getType());
-								Value *end = builder.CreateAlloca(finalIt->getType());
-								builder.CreateStore(startIt, start);
-								builder.CreateStore(finalIt, end);
 
 								list<Value *> threadStructs;
 
 								//fix for if the loop has a decreasing index
 								BasicBlock *swapper = BasicBlock::Create(context, "swap", &F, (F.getBasicBlockList()).end());
 								BasicBlock *structSetter = callInst->getParent();
+								IRBuilder<> setupBuilder(F.begin());
+								Value *start = setupBuilder.CreateAlloca(startIt->getType());
+								Value *end = setupBuilder.CreateAlloca(finalIt->getType());
+								setupBuilder.CreateStore(startIt, start);
+								setupBuilder.CreateStore(finalIt, end);
+								Value *startEndCmp = setupBuilder.CreateICmpSGT(startIt, finalIt);
+								Value *branch = setupBuilder.CreateCondBr(startEndCmp, swapper, structSetter);
 								IRBuilder<> swapBuilder(swapper);
 								Value *tmp = swapBuilder.CreateLoad(start);
 								Value *tmp2 = swapBuilder.CreateLoad(end);
@@ -124,9 +127,6 @@ namespace {
 								swapBuilder.CreateStore(tmp2, start);
 								swapBuilder.CreateBr(structSetter);
 
-
-								Value *startEndCmp = builder.CreateICmpSGT(startIt, finalIt);
-								Value *branch = builder.CreateCondBr(startEndCmp, swapper, structSetter);
 								Value *loadedStartIt = builder.CreateLoad(start);
 								Value *loadedEndIt = builder.CreateLoad(end);
 								Value *noIterations = builder.CreateBinOp(Instruction::Sub, loadedEndIt, loadedStartIt);
@@ -170,7 +170,6 @@ namespace {
 									threadStructs.push_back(allocateInst);
 								}
 								cerr << "threads setup\n";
-								IRBuilder<> callbuilder(callInst);
 
 								cerr << "creating new function\n";
 								//create a new function with added argument types
@@ -186,7 +185,7 @@ namespace {
 								for (list<Value*>::iterator it = threadStructs.begin(); it != threadStructs.end(); ++it) {
 									SmallVector<Value *,8> argsForCall;
 									argsForCall.push_back(*it);
-									callbuilder.CreateCall(newLoopFunc, argsForCall);
+									builder.CreateCall(newLoopFunc, argsForCall);
 								}
 
 								//delete the original call instruction
