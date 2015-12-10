@@ -192,7 +192,6 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 	if (!startFound || !endFound) {
 		parallelizable = false;
 	}
-	finalIt->dump();
 
 	//store results of analysis
 	LoopDependencyData *data = new LoopDependencyData(L, dependencies, noOfPhiNodes, startIt, finalIt, parallelizable);
