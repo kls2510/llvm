@@ -107,31 +107,29 @@ namespace {
 								}
 
 								IRBuilder<> builder(callInst);
-								/* Value *start = builder.CreateAlloca(startIt->getType());
+								Value *start = builder.CreateAlloca(startIt->getType());
 								Value *end = builder.CreateAlloca(finalIt->getType());
 								builder.CreateStore(startIt, start);
-								builder.CreateStore(finalIt, end); */
+								builder.CreateStore(finalIt, end);
 
 								list<Value *> threadStructs;
 
 								//fix for if the loop has a decreasing index
-								/* BasicBlock *swapper = BasicBlock::Create(context, "swap", &F, nullptr);
+								BasicBlock *swapper = BasicBlock::Create(context, "swap", &F, nullptr);
 								BasicBlock *structSetter = callInst->getParent();
 								IRBuilder<> swapBuilder(swapper);
 								Value *tmp = swapBuilder.CreateLoad(start);
 								Value *tmp2 = swapBuilder.CreateLoad(end);
 								swapBuilder.CreateStore(tmp, end);
 								swapBuilder.CreateStore(tmp2, start);
-								swapBuilder.CreateBr(structSetter); */
+								swapBuilder.CreateBr(structSetter);
 
 
-								/* Value *startEndCmp = builder.CreateICmpSGT(ConstantInt::get(Type::getInt64Ty(context), startIt->getSExtValue()), ConstantInt::get(Type::getInt64Ty(context), finalIt->getSExtValue()));
+								Value *startEndCmp = builder.CreateICmpSGT(startIt, finalIt);
 								Value *branch = builder.CreateCondBr(startEndCmp, swapper, structSetter);
 								Value *loadedStartIt = builder.CreateLoad(start);
 								Value *loadedEndIt = builder.CreateLoad(end);
-								ConstantInt *newStartIt = cast<ConstantInt *>(*loadedStartIt);
-								ConstantInt *newEndIt = cast<ConstantInt *>(*loadedEndIt); */
-								Value *noIterations = builder.CreateBinOp(Instruction::Sub, finalIt, startIt);
+								Value *noIterations = builder.CreateBinOp(Instruction::Sub, loadedEndIt, loadedStartIt);
 								Value *iterationsEach = builder.CreateExactSDiv(noIterations, ConstantInt::get(Type::getInt64Ty(context), noThreads));
 								cerr << "setting up threads\n";
 								for (int i = 0; i < noThreads; i++) {
@@ -139,7 +137,7 @@ namespace {
 									Value *endIt;
 									Value *startItMult = builder.CreateBinOp(Instruction::Mul, iterationsEach, ConstantInt::get(Type::getInt64Ty(context), i));
 									cerr << "here\n";
-									threadStartIt = builder.CreateBinOp(Instruction::Add, startIt, startItMult);
+									threadStartIt = builder.CreateBinOp(Instruction::Add, loadedStartIt, startItMult);
 									if (i == (noThreads - 1)) {
 										endIt = noIterations;
 										cerr << "here1\n";
