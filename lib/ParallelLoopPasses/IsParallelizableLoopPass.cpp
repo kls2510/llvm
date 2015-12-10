@@ -166,8 +166,8 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 	//TODO: check if load/store operands alias
 
 	//find loop boundaries
-	bool startFound;
-	bool endFound;
+	bool startFound = false;
+	bool endFound = false;
 	Value *startIt;
 	Value *finalIt;
 	//find start and end iteration values
@@ -180,6 +180,8 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 			if (!endFound) {
 				if (strcmp((i.getName()).data(), "exitcond") == 0) {
 					finalIt = (i.getOperand(1));
+					i.dump();
+					(i.getOperand(1))->dump();
 					endFound = true;
 				}
 			}
@@ -190,6 +192,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 	if (startIt == nullptr || finalIt == nullptr) {
 		parallelizable = false;
 	}
+	finalIt->dump();
 
 	//store results of analysis
 	LoopDependencyData *data = new LoopDependencyData(L, dependencies, noOfPhiNodes, startIt, finalIt, parallelizable);
