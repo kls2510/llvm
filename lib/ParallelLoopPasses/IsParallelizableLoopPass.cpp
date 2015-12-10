@@ -163,9 +163,35 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 			}
 		}
 	}
+	if (!parallelizable) {
+		cerr << "Has dependencies so not parallelizable\n";
+	}
 	delete dependentInstructions;
 	
 	//TODO: check if load/store operands alias
+	vector<Value *> readwriteinstructions;
+	for (auto bb : L->getBlocks()) {
+		for (auto &i : bb->getInstList()) {
+			if (i.mayReadOrWriteMemory) {
+				for (auto &op : i.operands()) {
+					if (isa<PointerType>(op->getType())){
+						for (auto other : readwriteinstructions) {
+							if (!(other == op)) {
+								//found an alias so can't parallelize
+								if (!(AA->isNoAlias(op, other))) {
+									parallelizable = false;
+									cerr << "alias found between:\n";
+									op->dump();
+									other->dump();
+								}
+							}
+						}
+						readwriteinstructions.push_back(op);
+					}
+				}
+			}
+		}
+	}
 
 	//find loop boundaries
 	bool endFound = false;
