@@ -153,7 +153,7 @@ namespace {
 								LLVMTypeRef queueAttrType = LLVMGetTypeByName(LLVMModuleRef(mod), "dispatch_queue_attr_t");
 								SmallVector<Type *, 2> queueParamTypes;
 								queueParamTypes.push_back(Type::getInt8PtrTy(context));
-								queueParamTypes.push_back(cast<Type>(queueAttrType));
+								queueParamTypes.push_back(cast<Type>(&queueAttrType));
 								FunctionType *queueCreateType = FunctionType::get(cast<Type>(queueType), queueParamTypes, false);
 								Constant *queueCreate = mod->getOrInsertFunction("dispatch_queue_create", queueCreateType);
 								Function *queueCreateFunction = cast<Function>(queueCreate);
