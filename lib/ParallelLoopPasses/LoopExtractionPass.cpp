@@ -3,6 +3,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Pass.h"
+#include "llvm/TableGen/Record.h"
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
@@ -184,7 +185,8 @@ namespace {
 
 								Value *group = builder.CreateCall(groupCreateFunction, nullptr);
 								SmallVector<Value *, 2> queueArgTypes;
-								queueArgTypes.push_back(cast<Value *>(StringRef("concQueue")));
+								Value *arr = ConstantDataArray::getString(context, StringRef("concQueue"));
+								queueArgTypes.push_back(arr);
 								ValueSymbolTable &symTab = mod->getValueSymbolTable();
 								Value *queueValue = symTab.lookup(StringRef("DISPATCH_QUEUE_CONCURRENT"));
 								queueArgTypes.push_back(queueValue);
