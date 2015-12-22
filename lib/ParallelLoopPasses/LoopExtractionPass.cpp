@@ -3,6 +3,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Pass.h"
+#include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -146,11 +147,65 @@ namespace {
 
 								//cerr << "inserting new function calls\n";
 								//insert calls to this new function - for now just call function, add threads later
+								//TODO: may need to find the name of the thread module
+								LLVMTypeRef queueType = LLVMGetTypeByName(LLVMModuleRef(mod), "dispatch_queue_t");
+								LLVMTypeRef queueAttrType = LLVMGetTypeByName(LLVMModuleRef(mod), "dispatch_queue_attr_t");
+								SmallVector<Type *, 2> queueParamTypes;
+								queueParamTypes.push_back(Type::getInt8PtrTy(context));
+								queueParamTypes.push_back(cast<Type>(queueAttrType));
+								FunctionType *queueCreateType = FunctionType::get(cast<Type>(queueType), queueParamTypes, false);
+								Constant *queueCreate = mod->getOrInsertFunction("dispatch_queue_create", queueCreateType);
+								Function *queueCreateFunction = cast<Function>(queueCreate);
+
+								LLVMTypeRef groupType = LLVMGetTypeByName(LLVMModuleRef(mod), "dispatch_group_t");
+								SmallVector<Type *, 1> groupParamTypes;
+								queueParamTypes.push_back(Type::getVoidTy(context));
+								FunctionType *groupCreateType = FunctionType::get(cast<Type>(groupType), groupParamTypes, false);
+								Constant *groupCreate = mod->getOrInsertFunction("dispatch_group_create", groupCreateType);
+								Function *groupCreateFunction = cast<Function>(groupCreate);
+
+								LLVMTypeRef functionType = LLVMGetTypeByName(LLVMModuleRef(mod), "dispatch_function_t");
+								SmallVector<Type *, 4> dispatchParamTypes;
+								dispatchParamTypes.push_back(cast<Type>(groupType));
+								dispatchParamTypes.push_back(cast<Type>(queueType));
+								dispatchParamTypes.push_back(ArrayType::get(Type::getVoidTy(context),1));
+								dispatchParamTypes.push_back(cast<Type>(functionType));
+								FunctionType *dispatchCallType = FunctionType::get(Type::getVoidTy(context), dispatchParamTypes, false);
+								Constant *dispatchCall = mod->getOrInsertFunction("dispatch_group_async_f", dispatchCallType);
+								Function *dispatchCallFunction = cast<Function>(dispatchCall);
+
+								LLVMTypeRef timerType = LLVMGetTypeByName(LLVMModuleRef(mod), "dispatch_time_t");
+								SmallVector<Type *, 2> waitParamTypes;
+								dispatchParamTypes.push_back(cast<Type>(groupType));
+								dispatchParamTypes.push_back(cast<Type>(timerType));
+								FunctionType *waitType = FunctionType::get(Type::getInt64Ty(context), waitParamTypes, false);
+								Constant *wait = mod->getOrInsertFunction("dispatch_group_wait", waitType);
+								Function *waitFunction = cast<Function>(wait);
+
+								Value *group = builder.CreateCall(groupCreateFunction, nullptr);
+								SmallVector<Value *, 2> queueArgTypes;
+								queueArgTypes.push_back(cast<Value *>(StringRef("concQueue")));
+								ValueSymbolTable &symTab = mod->getValueSymbolTable();
+								Value *queueValue = symTab.lookup(StringRef("DISPATCH_QUEUE_CONCURRENT"));
+								queueArgTypes.push_back(queueValue);
+								Value *queue = builder.CreateCall(queueCreateFunction, queueArgTypes);
 								for (list<Value*>::iterator it = threadStructs.begin(); it != threadStructs.end(); ++it) {
-									SmallVector<Value *,8> argsForCall;
-									argsForCall.push_back(*it);
-									builder.CreateCall(newLoopFunc, argsForCall);
+									//SmallVector<Value *,8> argsForCall;
+									//argsForCall.push_back(*it);
+									SmallVector<Value *, 4> argsForDispatch;
+									argsForDispatch.push_back(group);
+									argsForDispatch.push_back(queue);
+									argsForDispatch.push_back(*it);
+									argsForDispatch.push_back(newLoopFunc);
+									//builder.CreateCall(newLoopFunc, argsForCall);
+									builder.CreateCall(dispatchCallFunction, argsForDispatch);
 								}
+								SmallVector<Value *, 2> waitArgTypes;
+								waitArgTypes.push_back(group);
+								Value *timeValue = symTab.lookup(StringRef("DISPATCH_TIME_FOREVER"));
+								waitArgTypes.push_back(timeValue);
+								//will hang if a thread infinitely loops
+								builder.CreateCall(waitFunction, waitArgTypes);
 
 								//delete the original call instruction
 								callInst->eraseFromParent();
