@@ -154,31 +154,31 @@ namespace {
 								SmallVector<Type *, 2> queueParamTypes;
 								queueParamTypes.push_back(Type::getInt8PtrTy(context));
 								queueParamTypes.push_back(cast<Type>(&queueAttrType));
-								FunctionType *queueCreateType = FunctionType::get(cast<Type>(queueType), queueParamTypes, false);
+								FunctionType *queueCreateType = FunctionType::get(cast<Type>(&queueType), queueParamTypes, false);
 								Constant *queueCreate = mod->getOrInsertFunction("dispatch_queue_create", queueCreateType);
 								Function *queueCreateFunction = cast<Function>(queueCreate);
 
 								LLVMTypeRef groupType = LLVMGetTypeByName(LLVMModuleRef(mod), "dispatch_group_t");
 								SmallVector<Type *, 1> groupParamTypes;
 								queueParamTypes.push_back(Type::getVoidTy(context));
-								FunctionType *groupCreateType = FunctionType::get(cast<Type>(groupType), groupParamTypes, false);
+								FunctionType *groupCreateType = FunctionType::get(cast<Type>(&groupType), groupParamTypes, false);
 								Constant *groupCreate = mod->getOrInsertFunction("dispatch_group_create", groupCreateType);
 								Function *groupCreateFunction = cast<Function>(groupCreate);
 
 								LLVMTypeRef functionType = LLVMGetTypeByName(LLVMModuleRef(mod), "dispatch_function_t");
 								SmallVector<Type *, 4> dispatchParamTypes;
-								dispatchParamTypes.push_back(cast<Type>(groupType));
-								dispatchParamTypes.push_back(cast<Type>(queueType));
+								dispatchParamTypes.push_back(cast<Type>(&groupType));
+								dispatchParamTypes.push_back(cast<Type>(&queueType));
 								dispatchParamTypes.push_back(ArrayType::get(Type::getVoidTy(context),1));
-								dispatchParamTypes.push_back(cast<Type>(functionType));
+								dispatchParamTypes.push_back(cast<Type>(&functionType));
 								FunctionType *dispatchCallType = FunctionType::get(Type::getVoidTy(context), dispatchParamTypes, false);
 								Constant *dispatchCall = mod->getOrInsertFunction("dispatch_group_async_f", dispatchCallType);
 								Function *dispatchCallFunction = cast<Function>(dispatchCall);
 
 								LLVMTypeRef timerType = LLVMGetTypeByName(LLVMModuleRef(mod), "dispatch_time_t");
 								SmallVector<Type *, 2> waitParamTypes;
-								dispatchParamTypes.push_back(cast<Type>(groupType));
-								dispatchParamTypes.push_back(cast<Type>(timerType));
+								dispatchParamTypes.push_back(cast<Type>(&groupType));
+								dispatchParamTypes.push_back(cast<Type>(&timerType));
 								FunctionType *waitType = FunctionType::get(Type::getInt64Ty(context), waitParamTypes, false);
 								Constant *wait = mod->getOrInsertFunction("dispatch_group_wait", waitType);
 								Function *waitFunction = cast<Function>(wait);
