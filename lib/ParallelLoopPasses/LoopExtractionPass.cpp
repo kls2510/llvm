@@ -149,13 +149,13 @@ namespace {
 								//cerr << "inserting new function calls\n";
 								//insert calls to this new function - for now just call function, add threads later
 								//TODO: may need to find the name of the thread module
+								ValueSymbolTable &symTab = mod->getValueSymbolTable();
+								Value *queueValue = symTab.lookup(StringRef("DISPATCH_QUEUE_CONCURRENT"));
 								GlobalVariable *queue = mod->getGlobalVariable(StringRef("dispatch_queue_t"));
 								Type *queueType = (queue->getInitializer())->getType();
-								GlobalVariable *queueAttr = mod->getGlobalVariable(StringRef("dispatch_queue_attr_t"));
-								Type *queueAttrType = (queueAttr->getInitializer())->getType();
 								SmallVector<Type *, 2> queueParamTypes;
 								queueParamTypes.push_back(Type::getInt8PtrTy(context));
-								queueParamTypes.push_back(queueAttrType);
+								queueParamTypes.push_back(queueValue->getType());
 								FunctionType *queueCreateType = FunctionType::get(queueType, queueParamTypes, false);
 								Constant *queueCreate = mod->getOrInsertFunction("dispatch_queue_create", queueCreateType);
 								Function *queueCreateFunction = cast<Function>(queueCreate);
@@ -179,37 +179,33 @@ namespace {
 								Constant *dispatchCall = mod->getOrInsertFunction("dispatch_group_async_f", dispatchCallType);
 								Function *dispatchCallFunction = cast<Function>(dispatchCall);
 
-								GlobalVariable *time = mod->getGlobalVariable(StringRef("dispatch_time_t"));
-								Type *timeType = (time->getInitializer())->getType();
+								Value *timeValue = symTab.lookup(StringRef("DISPATCH_TIME_FOREVER"));
 								SmallVector<Type *, 2> waitParamTypes;
 								waitParamTypes.push_back(groupType);
-								waitParamTypes.push_back(timeType);
+								waitParamTypes.push_back(timeValue->getType());
 								FunctionType *waitType = FunctionType::get(Type::getInt64Ty(context), waitParamTypes, false);
 								Constant *wait = mod->getOrInsertFunction("dispatch_group_wait", waitType);
 								Function *waitFunction = cast<Function>(wait);
 
-								Value *group = builder.CreateCall(groupCreateFunction, nullptr);
+								Value *groupCall = builder.CreateCall(groupCreateFunction, nullptr);
 								SmallVector<Value *, 2> queueArgTypes;
 								Value *arr = ConstantDataArray::getString(context, StringRef("concQueue"));
 								queueArgTypes.push_back(arr);
-								ValueSymbolTable &symTab = mod->getValueSymbolTable();
-								Value *queueValue = symTab.lookup(StringRef("DISPATCH_QUEUE_CONCURRENT"));
 								queueArgTypes.push_back(queueValue);
-								Value *queue = builder.CreateCall(queueCreateFunction, queueArgTypes);
+								Value *queueCall = builder.CreateCall(queueCreateFunction, queueArgTypes);
 								for (list<Value*>::iterator it = threadStructs.begin(); it != threadStructs.end(); ++it) {
 									//SmallVector<Value *,8> argsForCall;
 									//argsForCall.push_back(*it);
 									SmallVector<Value *, 4> argsForDispatch;
-									argsForDispatch.push_back(group);
-									argsForDispatch.push_back(queue);
+									argsForDispatch.push_back(groupCall);
+									argsForDispatch.push_back(queueCall);
 									argsForDispatch.push_back(*it);
 									argsForDispatch.push_back(newLoopFunc);
 									//builder.CreateCall(newLoopFunc, argsForCall);
 									builder.CreateCall(dispatchCallFunction, argsForDispatch);
 								}
 								SmallVector<Value *, 2> waitArgTypes;
-								waitArgTypes.push_back(group);
-								Value *timeValue = symTab.lookup(StringRef("DISPATCH_TIME_FOREVER"));
+								waitArgTypes.push_back(groupCall);
 								waitArgTypes.push_back(timeValue);
 								//will hang if a thread infinitely loops
 								builder.CreateCall(waitFunction, waitArgTypes);
