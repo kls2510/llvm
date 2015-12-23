@@ -231,7 +231,7 @@ namespace {
 								SmallVector<LoadInst *, 8> structElements;
 								BasicBlock *writeTo = BasicBlock::Create(context, "loads", newLoopFunc);
 								IRBuilder<> loadBuilder(writeTo);
-								Value *castVal = loadBuilder.CreateCast(Instruction::CastOps::BitCast, args2, myStruct);
+								Value *castVal = loadBuilder.CreateCast(Instruction::CastOps::BitCast, args2, myStruct->getPointerElementType());
 								//cerr << "creating map\n";
 								for (auto &i : args1) {
 									//load each struct element at the start of the function
