@@ -133,8 +133,9 @@ namespace {
 									//store endIt
 									getPTR = builder.CreateStructGEP(myStruct, allocateInst, noOps + 1);
 									builder.CreateStore(endIt, getPTR);
-									//store the struct pointer for passing into the function
-									threadStructs.push_back(allocateInst);
+									//store the struct pointer for passing into the function - as type void *
+									Value *structInst = builder.CreateCast(Instruction::CastOps::BitCast, allocateInst, Type::getInt8PtrTy(context));
+									threadStructs.push_back(structInst);
 								}
 								//cerr << "threads setup\n";
 
@@ -194,9 +195,6 @@ namespace {
 								Function *waitFunction = cast<Function>(wait); */
 
 								Value *groupCall = builder.CreateCall(createGroup, SmallVector<Value *, 0>());
-								SmallVector<Type *, 1> funArgs;
-								funArgs.push_back(Type::getInt8PtrTy(context));
-								Value *functionToSchedule = builder.CreateCast(Instruction::CastOps::BitCast, newLoopFunc, FunctionType::get(Type::getVoidTy(context), funArgs, false));
 								/* SmallVector<Value *, 2> queueArgTypes;
 								Value *arr = ConstantDataArray::getString(context, StringRef("concQueue"));
 								queueArgTypes.push_back(arr);
@@ -207,9 +205,8 @@ namespace {
 									//argsForCall.push_back(*it);
 									SmallVector<Value *, 3> argsForDispatch;
 									argsForDispatch.push_back(groupCall);
-									Value *arg = builder.CreateCast(Instruction::CastOps::BitCast, *it, Type::getInt8PtrTy(context));
-									argsForDispatch.push_back(arg);
-									argsForDispatch.push_back(functionToSchedule);
+									argsForDispatch.push_back(*it);
+									argsForDispatch.push_back(newLoopFunc);
 									//builder.CreateCall(newLoopFunc, argsForCall);
 									builder.CreateCall(asyncDispatch, argsForDispatch);
 								}
