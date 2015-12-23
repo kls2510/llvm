@@ -246,10 +246,10 @@ namespace {
 								}
 								//cerr << "loading start and end it too\n";
 								//load start and end it too
-								Value *val = loadBuilder.CreateStructGEP(myStruct, args2, p);
+								Value *val = loadBuilder.CreateStructGEP(myStruct, castArgVal, p);
 								LoadInst *loadInst = loadBuilder.CreateLoad(val);
 								structElements.push_back(loadInst);
-								val = loadBuilder.CreateStructGEP(myStruct, args2, p + 1);
+								val = loadBuilder.CreateStructGEP(myStruct, castArgVal, p + 1);
 								LoadInst *loadInst2 = loadBuilder.CreateLoad(val);
 								structElements.push_back(loadInst2);
 								//need to return changed local values but for now return nothing
