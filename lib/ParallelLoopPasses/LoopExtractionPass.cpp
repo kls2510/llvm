@@ -150,7 +150,12 @@ namespace {
 								//insert calls to this new function - for now just call function, add threads later
 								//TODO: may need to find the name of the thread module
 								ValueSymbolTable &symTab = mod->getValueSymbolTable();
-								Value *queueValue = symTab.lookup(StringRef("DISPATCH_QUEUE_CONCURRENT"));
+								Function *createGroup = cast<Function>(symTab.lookup(StringRef("createGroup")));
+								Function *asyncDispatch = cast<Function>(symTab.lookup(StringRef("asyncDispatch")));
+								Function *wait = cast<Function>(symTab.lookup(StringRef("wait")));
+								Function *release = cast<Function>(symTab.lookup(StringRef("release")));
+
+								/*Value *queueValue = symTab.lookup(StringRef("DISPATCH_QUEUE_CONCURRENT"));
 								GlobalVariable *queue = mod->getGlobalVariable(StringRef("dispatch_queue_t"));
 								Type *queueType = (queue->getInitializer())->getType();
 								SmallVector<Type *, 2> queueParamTypes;
@@ -185,30 +190,32 @@ namespace {
 								waitParamTypes.push_back(timeValue->getType());
 								FunctionType *waitType = FunctionType::get(Type::getInt64Ty(context), waitParamTypes, false);
 								Constant *wait = mod->getOrInsertFunction("dispatch_group_wait", waitType);
-								Function *waitFunction = cast<Function>(wait);
+								Function *waitFunction = cast<Function>(wait); */
 
-								Value *groupCall = builder.CreateCall(groupCreateFunction, nullptr);
-								SmallVector<Value *, 2> queueArgTypes;
+								Value *groupCall = builder.CreateCall(createGroup, nullptr);
+								/* SmallVector<Value *, 2> queueArgTypes;
 								Value *arr = ConstantDataArray::getString(context, StringRef("concQueue"));
 								queueArgTypes.push_back(arr);
 								queueArgTypes.push_back(queueValue);
-								Value *queueCall = builder.CreateCall(queueCreateFunction, queueArgTypes);
+								Value *queueCall = builder.CreateCall(queueCreateFunction, queueArgTypes); */
 								for (list<Value*>::iterator it = threadStructs.begin(); it != threadStructs.end(); ++it) {
 									//SmallVector<Value *,8> argsForCall;
 									//argsForCall.push_back(*it);
 									SmallVector<Value *, 4> argsForDispatch;
 									argsForDispatch.push_back(groupCall);
-									argsForDispatch.push_back(queueCall);
 									argsForDispatch.push_back(*it);
 									argsForDispatch.push_back(newLoopFunc);
 									//builder.CreateCall(newLoopFunc, argsForCall);
-									builder.CreateCall(dispatchCallFunction, argsForDispatch);
+									builder.CreateCall(asyncDispatch, argsForDispatch);
 								}
 								SmallVector<Value *, 2> waitArgTypes;
 								waitArgTypes.push_back(groupCall);
-								waitArgTypes.push_back(timeValue);
-								//will hang if a thread infinitely loops
-								builder.CreateCall(waitFunction, waitArgTypes);
+								waitArgTypes.push_back(ConstantInt::get(Type::getInt64Ty(context), 10000));
+								Value *complete = builder.CreateCall(wait, waitArgTypes);
+								//TODO: add condition on complete; if 0 OK, if non zero than force stop
+								SmallVector<Value *, 1> releaseArgs;
+								waitArgTypes.push_back(groupCall);
+								builder.CreateCall(release, releaseArgs);
 
 								//delete the original call instruction
 								callInst->eraseFromParent();
