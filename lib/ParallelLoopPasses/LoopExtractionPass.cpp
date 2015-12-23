@@ -192,7 +192,7 @@ namespace {
 								Constant *wait = mod->getOrInsertFunction("dispatch_group_wait", waitType);
 								Function *waitFunction = cast<Function>(wait); */
 
-								Value *groupCall = builder.CreateCall(createGroup, nullptr);
+								Value *groupCall = builder.CreateCall(createGroup, SmallVector<Value *, 0>());
 								/* SmallVector<Value *, 2> queueArgTypes;
 								Value *arr = ConstantDataArray::getString(context, StringRef("concQueue"));
 								queueArgTypes.push_back(arr);
