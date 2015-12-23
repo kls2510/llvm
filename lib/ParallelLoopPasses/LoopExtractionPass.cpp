@@ -194,7 +194,6 @@ namespace {
 								Function *waitFunction = cast<Function>(wait); */
 
 								Value *groupCall = builder.CreateCall(createGroup, SmallVector<Value *, 0>());
-								Value *functionpointer = builder.CreateGEP(newLoopFunc, 0);
 								/* SmallVector<Value *, 2> queueArgTypes;
 								Value *arr = ConstantDataArray::getString(context, StringRef("concQueue"));
 								queueArgTypes.push_back(arr);
@@ -206,7 +205,7 @@ namespace {
 									SmallVector<Value *, 3> argsForDispatch;
 									argsForDispatch.push_back(groupCall);
 									argsForDispatch.push_back(*it);
-									argsForDispatch.push_back(functionpointer);
+									argsForDispatch.push_back(newLoopFunc);
 									//builder.CreateCall(newLoopFunc, argsForCall);
 									builder.CreateCall(asyncDispatch, argsForDispatch);
 								}
