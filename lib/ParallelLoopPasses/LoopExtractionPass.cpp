@@ -216,7 +216,7 @@ namespace {
 								Value *complete = builder.CreateCall(wait, waitArgTypes);
 								//TODO: add condition on complete; if 0 OK, if non zero than force stop
 								SmallVector<Value *, 1> releaseArgs;
-								waitArgTypes.push_back(groupCall);
+								releaseArgs.push_back(groupCall);
 								builder.CreateCall(release, releaseArgs);
 
 								//delete the original call instruction
