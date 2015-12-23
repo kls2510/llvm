@@ -201,7 +201,7 @@ namespace {
 								for (list<Value*>::iterator it = threadStructs.begin(); it != threadStructs.end(); ++it) {
 									//SmallVector<Value *,8> argsForCall;
 									//argsForCall.push_back(*it);
-									SmallVector<Value *, 4> argsForDispatch;
+									SmallVector<Value *, 3> argsForDispatch;
 									argsForDispatch.push_back(groupCall);
 									argsForDispatch.push_back(*it);
 									argsForDispatch.push_back(newLoopFunc);
