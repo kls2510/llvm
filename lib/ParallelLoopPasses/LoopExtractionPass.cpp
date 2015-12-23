@@ -194,6 +194,9 @@ namespace {
 								Function *waitFunction = cast<Function>(wait); */
 
 								Value *groupCall = builder.CreateCall(createGroup, SmallVector<Value *, 0>());
+								SmallVector<Type *, 1> funArgs;
+								funArgs.push_back(Type::getInt8PtrTy(context));
+								Value *functionToSchedule = builder.CreateCast(Instruction::CastOps::BitCast, newLoopFunc, FunctionType::get(Type::getVoidTy(context), funArgs, false));
 								/* SmallVector<Value *, 2> queueArgTypes;
 								Value *arr = ConstantDataArray::getString(context, StringRef("concQueue"));
 								queueArgTypes.push_back(arr);
@@ -204,8 +207,9 @@ namespace {
 									//argsForCall.push_back(*it);
 									SmallVector<Value *, 3> argsForDispatch;
 									argsForDispatch.push_back(groupCall);
-									argsForDispatch.push_back(*it);
-									argsForDispatch.push_back(newLoopFunc);
+									Value *arg = builder.CreateCast(Instruction::CastOps::BitCast, *it, Type::getInt8PtrTy(context));
+									argsForDispatch.push_back(arg);
+									argsForDispatch.push_back(functionToSchedule);
 									//builder.CreateCall(newLoopFunc, argsForCall);
 									builder.CreateCall(asyncDispatch, argsForDispatch);
 								}
