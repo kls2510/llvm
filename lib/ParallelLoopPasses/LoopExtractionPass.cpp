@@ -3,6 +3,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Pass.h"
+#include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -193,6 +194,7 @@ namespace {
 								Function *waitFunction = cast<Function>(wait); */
 
 								Value *groupCall = builder.CreateCall(createGroup, SmallVector<Value *, 0>());
+								Value *functionpointer = builder.CreateGEP(newLoopFunc, 0);
 								/* SmallVector<Value *, 2> queueArgTypes;
 								Value *arr = ConstantDataArray::getString(context, StringRef("concQueue"));
 								queueArgTypes.push_back(arr);
@@ -204,7 +206,7 @@ namespace {
 									SmallVector<Value *, 3> argsForDispatch;
 									argsForDispatch.push_back(groupCall);
 									argsForDispatch.push_back(*it);
-									argsForDispatch.push_back(newLoopFunc);
+									argsForDispatch.push_back(functionpointer);
 									//builder.CreateCall(newLoopFunc, argsForCall);
 									builder.CreateCall(asyncDispatch, argsForDispatch);
 								}
