@@ -231,7 +231,7 @@ namespace {
 								SmallVector<LoadInst *, 8> structElements;
 								BasicBlock *writeTo = BasicBlock::Create(context, "loads", newLoopFunc);
 								IRBuilder<> loadBuilder(writeTo);
-								Value *argVal = loadBuilder.CreateGEP(Type::getInt8PtrTy(context), args2, 0);
+								Value *argVal = loadBuilder.CreateGEP(Type::getInt8Ty(context), args2, 0);
 								Value *castArgVal = loadBuilder.CreateCast(Instruction::CastOps::BitCast, argVal, myStruct);
 								//cerr << "creating map\n";
 								for (auto &i : args1) {
