@@ -46,7 +46,6 @@ namespace {
 		virtual bool runOnFunction(Function &F) {
 			//get data from the IsParallelizableLoopPass analysis
 			IsParallelizableLoopPass &IP = getAnalysis<IsParallelizableLoopPass>();
-			ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
 			DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
 
 			if (!F.hasFnAttribute("Extracted")) {
@@ -149,75 +148,36 @@ namespace {
 								Function *newLoopFunc = Function::Create(FT, Function::ExternalLinkage, name, mod);
 
 								//cerr << "inserting new function calls\n";
-								//insert calls to this new function - for now just call function, add threads later
-								//TODO: may need to find the name of the thread module
+								//insert calls to this new function
 								ValueSymbolTable &symTab = mod->getValueSymbolTable();
 								Function *createGroup = cast<Function>(symTab.lookup(StringRef("createGroup")));
 								Function *asyncDispatch = cast<Function>(symTab.lookup(StringRef("asyncDispatch")));
 								Function *wait = cast<Function>(symTab.lookup(StringRef("wait")));
 								Function *release = cast<Function>(symTab.lookup(StringRef("release")));
 
-								/*Value *queueValue = symTab.lookup(StringRef("DISPATCH_QUEUE_CONCURRENT"));
-								GlobalVariable *queue = mod->getGlobalVariable(StringRef("dispatch_queue_t"));
-								Type *queueType = (queue->getInitializer())->getType();
-								SmallVector<Type *, 2> queueParamTypes;
-								queueParamTypes.push_back(Type::getInt8PtrTy(context));
-								queueParamTypes.push_back(queueValue->getType());
-								FunctionType *queueCreateType = FunctionType::get(queueType, queueParamTypes, false);
-								Constant *queueCreate = mod->getOrInsertFunction("dispatch_queue_create", queueCreateType);
-								Function *queueCreateFunction = cast<Function>(queueCreate);
-
-								GlobalVariable *group = mod->getGlobalVariable(StringRef("dispatch_group_t"));
-								Type *groupType = (group->getInitializer())->getType();
-								SmallVector<Type *, 1> groupParamTypes;
-								groupParamTypes.push_back(Type::getVoidTy(context));
-								FunctionType *groupCreateType = FunctionType::get(groupType, groupParamTypes, false);
-								Constant *groupCreate = mod->getOrInsertFunction("dispatch_group_create", groupCreateType);
-								Function *groupCreateFunction = cast<Function>(groupCreate);
-
-								GlobalVariable *func = mod->getGlobalVariable(StringRef("dispatch_function_t"));
-								Type *funcType = (func->getInitializer())->getType();
-								SmallVector<Type *, 4> dispatchParamTypes;
-								dispatchParamTypes.push_back(cast<Type>(groupType));
-								dispatchParamTypes.push_back(cast<Type>(queueType));
-								dispatchParamTypes.push_back(ArrayType::get(Type::getVoidTy(context),1));
-								dispatchParamTypes.push_back(cast<Type>(funcType));
-								FunctionType *dispatchCallType = FunctionType::get(Type::getVoidTy(context), dispatchParamTypes, false);
-								Constant *dispatchCall = mod->getOrInsertFunction("dispatch_group_async_f", dispatchCallType);
-								Function *dispatchCallFunction = cast<Function>(dispatchCall);
-
-								Value *timeValue = symTab.lookup(StringRef("DISPATCH_TIME_FOREVER"));
-								SmallVector<Type *, 2> waitParamTypes;
-								waitParamTypes.push_back(groupType);
-								waitParamTypes.push_back(timeValue->getType());
-								FunctionType *waitType = FunctionType::get(Type::getInt64Ty(context), waitParamTypes, false);
-								Constant *wait = mod->getOrInsertFunction("dispatch_group_wait", waitType);
-								Function *waitFunction = cast<Function>(wait); */
 
 								Value *groupCall = builder.CreateCall(createGroup, SmallVector<Value *, 0>());
-								/* SmallVector<Value *, 2> queueArgTypes;
-								Value *arr = ConstantDataArray::getString(context, StringRef("concQueue"));
-								queueArgTypes.push_back(arr);
-								queueArgTypes.push_back(queueValue);
-								Value *queueCall = builder.CreateCall(queueCreateFunction, queueArgTypes); */
 								for (list<Value*>::iterator it = threadStructs.begin(); it != threadStructs.end(); ++it) {
-									//SmallVector<Value *,8> argsForCall;
-									//argsForCall.push_back(*it);
 									SmallVector<Value *, 3> argsForDispatch;
 									argsForDispatch.push_back(groupCall);
 									argsForDispatch.push_back(*it);
 									argsForDispatch.push_back(newLoopFunc);
-									//builder.CreateCall(newLoopFunc, argsForCall);
 									builder.CreateCall(asyncDispatch, argsForDispatch);
 								}
 								SmallVector<Value *, 2> waitArgTypes;
 								waitArgTypes.push_back(groupCall);
 								waitArgTypes.push_back(ConstantInt::get(Type::getInt64Ty(context), 10000));
 								Value *complete = builder.CreateCall(wait, waitArgTypes);
-								//TODO: add condition on complete; if 0 OK, if non zero than force stop
+								//condition on complete; if 0 OK, if non zero than force stop
+								Value *completeCond = builder.CreateICmpEQ(complete, ConstantInt::get(Type::getInt64Ty(context), 0));
+								BasicBlock *terminate = BasicBlock::Create(context, "terminate", newLoopFunc, newLoopFunc->end());
+								Instruction *startInst = builder.GetInsertPoint();
+								BasicBlock *cont = startInst->getParent()->splitBasicBlock(startInst->getNextNode(), "continue");
+								builder.CreateCondBr(completeCond, cont, terminate);
 								SmallVector<Value *, 1> releaseArgs;
 								releaseArgs.push_back(groupCall);
-								builder.CreateCall(release, releaseArgs);
+								IRBuilder<> cleanup(cont);
+								cleanup.CreateCall(release, releaseArgs);
 
 								//delete the original call instruction
 								callInst->eraseFromParent();
@@ -234,13 +194,8 @@ namespace {
 								Value *castArgVal = loadBuilder.CreateBitOrPointerCast(args2, myStruct->getPointerTo());
 								//cerr << "creating map\n";
 								for (auto &i : args1) {
-									//load each struct element at the start of the function
-									//cerr << "here\n";
-									//Value *mapVal = loadBuilder.CreateStructGEP(myStruct, castVal, p);
 									Value *mapVal = loadBuilder.CreateStructGEP(myStruct, castArgVal, p);
-									//cerr << "here\n";
 									LoadInst *loadInst = loadBuilder.CreateLoad(mapVal);
-									//structElements.push_back(loadInst);
 									vvmap.insert(std::make_pair(cast<Value>(&i), loadInst));
 									p++;
 								}
@@ -263,7 +218,6 @@ namespace {
 								//Replace values with new values in function
 								
 								//cerr << "replacing old function values\n";
-								
 								bool startFound = false;
 								bool endFound = false;
 								SmallVector<LoadInst *, 8>::iterator element = structElements.begin();
