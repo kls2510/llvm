@@ -173,7 +173,7 @@ namespace {
 								BasicBlock *terminate = BasicBlock::Create(context, "terminate", &F);
 								Instruction *startInst = builder.GetInsertPoint();
 								BasicBlock *cont = startInst->getParent()->splitBasicBlock(startInst->getNextNode(), "continue");
-								startInst->getParent()->rend()->removeFromParent();
+								startInst->getParent()->end()->getPrevNode()->removeFromParent();
 								builder.CreateCondBr(completeCond, cont, terminate);
 								SmallVector<Value *, 1> releaseArgs;
 								releaseArgs.push_back(groupCall);
