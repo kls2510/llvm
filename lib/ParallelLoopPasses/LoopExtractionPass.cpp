@@ -170,13 +170,14 @@ namespace {
 								Value *complete = builder.CreateCall(wait, waitArgTypes);
 								//condition on complete; if 0 OK, if non zero than force stop
 								Value *completeCond = builder.CreateICmpEQ(complete, ConstantInt::get(Type::getInt64Ty(context), 0));
-								BasicBlock *terminate = BasicBlock::Create(context, "terminate", newLoopFunc, newLoopFunc->end());
+								BasicBlock *terminate = BasicBlock::Create(context, "terminate", &F);
 								Instruction *startInst = builder.GetInsertPoint();
 								BasicBlock *cont = startInst->getParent()->splitBasicBlock(startInst->getNextNode(), "continue");
+								startInst->getParent()->rend()->removeFromParent();
 								builder.CreateCondBr(completeCond, cont, terminate);
 								SmallVector<Value *, 1> releaseArgs;
 								releaseArgs.push_back(groupCall);
-								IRBuilder<> cleanup(cont);
+								IRBuilder<> cleanup(cont->begin());
 								cleanup.CreateCall(release, releaseArgs);
 
 								//delete the original call instruction
