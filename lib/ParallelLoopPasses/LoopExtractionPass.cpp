@@ -182,7 +182,9 @@ namespace {
 								termBuilder.CreateRet(nullptr);
 								Instruction *startInst = builder.GetInsertPoint();
 								BasicBlock *cont = startInst->getParent()->splitBasicBlock(startInst->getNextNode(), "continue");
-								//startInst->getParent()->end()->getPrevNode()->eraseFromParent();
+								Instruction *toDelete = startInst->getParent()->end()->getPrevNode();
+								toDelete->replaceAllUsesWith(UndefValue::get(toDelete->getType());
+								toDelete->eraseFromParent();
 								builder.CreateCondBr(completeCond, cont, terminate);
 								SmallVector<Value *, 1> releaseArgs;
 								releaseArgs.push_back(groupCall);
