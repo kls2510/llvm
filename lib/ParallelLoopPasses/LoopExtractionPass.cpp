@@ -183,7 +183,7 @@ namespace {
 								Instruction *startInst = builder.GetInsertPoint();
 								BasicBlock *cont = startInst->getParent()->splitBasicBlock(startInst->getNextNode(), "continue");
 								Instruction *toDelete = startInst->getParent()->end()->getPrevNode();
-								toDelete->replaceAllUsesWith(UndefValue::get(toDelete->getType());
+								toDelete->replaceAllUsesWith(UndefValue::get(toDelete->getType()));
 								toDelete->eraseFromParent();
 								builder.CreateCondBr(completeCond, cont, terminate);
 								SmallVector<Value *, 1> releaseArgs;
