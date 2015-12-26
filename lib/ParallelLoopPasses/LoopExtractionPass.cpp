@@ -154,6 +154,8 @@ namespace {
 								Function *asyncDispatch = cast<Function>(symTab.lookup(StringRef("asyncDispatch")));
 								Function *wait = cast<Function>(symTab.lookup(StringRef("wait")));
 								Function *release = cast<Function>(symTab.lookup(StringRef("release")));
+								//Temporary for debugging TODO: remove
+								Function *print = cast<Function>(symTab.lookup(StringRef("printf")));
 
 
 								Value *groupCall = builder.CreateCall(createGroup, SmallVector<Value *, 0>());
@@ -166,11 +168,18 @@ namespace {
 								}
 								SmallVector<Value *, 2> waitArgTypes;
 								waitArgTypes.push_back(groupCall);
-								waitArgTypes.push_back(ConstantInt::get(Type::getInt64Ty(context), 10000));
+								waitArgTypes.push_back(ConstantInt::get(Type::getInt64Ty(context), 1000000000));
 								Value *complete = builder.CreateCall(wait, waitArgTypes);
 								//condition on complete; if 0 OK, if non zero than force stop
 								Value *completeCond = builder.CreateICmpEQ(complete, ConstantInt::get(Type::getInt64Ty(context), 0));
 								BasicBlock *terminate = BasicBlock::Create(context, "terminate", &F);
+								IRBuilder<> termBuilder(terminate);
+								SmallVector<Value *, 1> printArgs;
+								char *str = "Threads failed to terminate\n";
+								Constant *strConstant = ConstantDataArray::getString(context, str);
+								printArgs.push_back(strConstant);
+								termBuilder.CreateCall(print, printArgs);
+								termBuilder.CreateRet(nullptr);
 								Instruction *startInst = builder.GetInsertPoint();
 								BasicBlock *cont = startInst->getParent()->splitBasicBlock(startInst->getNextNode(), "continue");
 								startInst->getParent()->end()->getPrevNode()->removeFromParent();
