@@ -175,10 +175,10 @@ namespace {
 								BasicBlock *terminate = BasicBlock::Create(context, "terminate", &F);
 								IRBuilder<> termBuilder(terminate);
 								SmallVector<Value *, 1> printArgs;
-								char *str = "Threads failed to terminate\n";
+								/* char *str = "Threads failed to terminate\n";
 								Constant *strConstant = ConstantDataArray::getString(context, str);
 								printArgs.push_back(strConstant);
-								termBuilder.CreateCall(print, printArgs);
+								termBuilder.CreateCall(print, printArgs); */
 								termBuilder.CreateRet(nullptr);
 								Instruction *startInst = builder.GetInsertPoint();
 								BasicBlock *cont = startInst->getParent()->splitBasicBlock(startInst->getNextNode(), "continue");
