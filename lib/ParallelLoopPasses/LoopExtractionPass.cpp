@@ -154,9 +154,6 @@ namespace {
 								Function *asyncDispatch = cast<Function>(symTab.lookup(StringRef("asyncDispatch")));
 								Function *wait = cast<Function>(symTab.lookup(StringRef("wait")));
 								Function *release = cast<Function>(symTab.lookup(StringRef("release")));
-								//Temporary for debugging TODO: remove
-								Function *print = cast<Function>(symTab.lookup(StringRef("printf")));
-
 
 								Value *groupCall = builder.CreateCall(createGroup, SmallVector<Value *, 0>());
 								for (list<Value*>::iterator it = threadStructs.begin(); it != threadStructs.end(); ++it) {

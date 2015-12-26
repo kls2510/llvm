@@ -102,6 +102,11 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 			noOfPhiNodes++;
 			//finding Phi node that isn't a cannonical induction variable means the loop is not directly parallelizable
 		}
+		//also, say the function is not parallelizable if it calls a function (massive overesimation - TODO: fix)
+		else if (isa<CallInst>(inst)) {
+			parallelizable = false;
+			cerr << "Calls a function that may have dependencies/be non thread safe\n";
+		}
 		inst = inst->getNextNode();
 	}
 
