@@ -126,7 +126,15 @@ namespace {
 								Value *loadedStartIt = setupBuilder.CreateLoad(start);
 								Value *loadedEndIt = setupBuilder.CreateLoad(end);
 								Value *noIterations = setupBuilder.CreateBinOp(Instruction::Sub, loadedEndIt, loadedStartIt);
-								Value *iterationsEach = setupBuilder.CreateExactSDiv(noIterations, ConstantInt::get(Type::getInt64Ty(context), noThreads));
+								//TODO: Fix for when division isn't exact
+								Module * mod = (F.getParent());
+								ValueSymbolTable &symTab = mod->getValueSymbolTable();
+								Function *integerDiv = cast<Function>(symTab.lookup(StringRef("integerDivide")));
+								//Value *iterationsEach = setupBuilder.CreateExactSDiv(noIterations, ConstantInt::get(Type::getInt64Ty(context), noThreads));
+								SmallVector<Value *, 2> divArgs;
+								divArgs.push_back(noIterations);
+								divArgs.push_back(ConstantInt::get(Type::getInt64Ty(context), noThreads));
+								Value *iterationsEach = setupBuilder.CreateCall(integerDiv, divArgs);
 								//cerr << "setting up threads\n";
 								for (int i = 0; i < noThreads; i++) {
 									Value *threadStartIt;
@@ -135,7 +143,7 @@ namespace {
 									//cerr << "here\n";
 									threadStartIt = builder.CreateBinOp(Instruction::Add, loadedStartIt, startItMult);
 									if (i == (noThreads - 1)) {
-										endIt = builder.CreateLoad(end);
+										endIt = loadedEndIt;
 										//cerr << "here1\n";
 									}
 									else {
@@ -170,17 +178,14 @@ namespace {
 
 								//cerr << "creating new function\n";
 								//create a new function with added argument types
-								Module * mod = (F.getParent());
 								SmallVector<Type *, 8> paramTypes;
 								paramTypes.push_back((threadStructs.front())->getType());
-								//TODO: For local variables need to sort out what to return
 								FunctionType *FT = FunctionType::get(extractedLoop->getFunctionType()->getReturnType(), paramTypes, false);
 								string name = "_" + (extractedLoop->getName()).str() + "_";
 								Function *newLoopFunc = Function::Create(FT, Function::ExternalLinkage, name, mod);
 
 								//cerr << "inserting new function calls\n";
-								//insert calls to this new function
-								ValueSymbolTable &symTab = mod->getValueSymbolTable();
+								//insert calls to this new function in separate threads
 								Function *createGroup = cast<Function>(symTab.lookup(StringRef("createGroup")));
 								Function *asyncDispatch = cast<Function>(symTab.lookup(StringRef("asyncDispatch")));
 								Function *wait = cast<Function>(symTab.lookup(StringRef("wait")));
