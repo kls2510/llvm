@@ -173,6 +173,7 @@ namespace {
 								Module * mod = (F.getParent());
 								SmallVector<Type *, 8> paramTypes;
 								paramTypes.push_back((threadStructs.front())->getType());
+								//TODO: For local functions need to sort out what to return
 								FunctionType *FT = FunctionType::get(extractedLoop->getFunctionType()->getReturnType(), paramTypes, false);
 								string name = "_" + (extractedLoop->getName()).str() + "_";
 								Function *newLoopFunc = Function::Create(FT, Function::ExternalLinkage, name, mod);
