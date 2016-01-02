@@ -185,6 +185,7 @@ namespace {
 								Function *asyncDispatch = cast<Function>(symTab.lookup(StringRef("asyncDispatch")));
 								Function *wait = cast<Function>(symTab.lookup(StringRef("wait")));
 								Function *release = cast<Function>(symTab.lookup(StringRef("release")));
+								Function *exit = cast<Function>(symTab.lookup(StringRef("abort")));
 
 								Value *groupCall = builder.CreateCall(createGroup, SmallVector<Value *, 0>());
 								for (list<Value*>::iterator it = threadStructs.begin(); it != threadStructs.end(); ++it) {
@@ -203,11 +204,8 @@ namespace {
 								BasicBlock *terminate = BasicBlock::Create(context, "terminate", &F);
 								IRBuilder<> termBuilder(terminate);
 								SmallVector<Value *, 1> printArgs;
-								/* char *str = "Threads failed to terminate\n";
-								Constant *strConstant = ConstantDataArray::getString(context, str);
-								printArgs.push_back(strConstant);
-								termBuilder.CreateCall(print, printArgs); */
-								termBuilder.CreateRet(nullptr);
+								//what to return when the threads fail to terminate
+								termBuilder.CreateCall(exit);
 								Instruction *startInst = builder.GetInsertPoint();
 								BasicBlock *cont = startInst->getParent()->splitBasicBlock(startInst->getNextNode(), "continue");
 								Instruction *toDelete = startInst->getParent()->end()->getPrevNode();
