@@ -205,7 +205,10 @@ namespace {
 								IRBuilder<> termBuilder(terminate);
 								SmallVector<Value *, 1> printArgs;
 								//what to return when the threads fail to terminate
+								Instruction *ret = cast<Instruction *>(terminate->getPrevNode()->rbegin());
 								termBuilder.CreateCall(exit);
+								//ret will never be called as program aborts
+								termBuilder.CreateRet(ret);
 								Instruction *startInst = builder.GetInsertPoint();
 								BasicBlock *cont = startInst->getParent()->splitBasicBlock(startInst->getNextNode(), "continue");
 								Instruction *toDelete = startInst->getParent()->end()->getPrevNode();
