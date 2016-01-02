@@ -208,7 +208,7 @@ namespace {
 								Instruction *ret = terminate->getPrevNode()->end()->getPrevNode();
 								termBuilder.CreateCall(exit);
 								//ret will never be called as program aborts
-								termBuilder.CreateRet(ret->operands[0]);
+								termBuilder.CreateRet(cast<Value>(ret->op_begin()));
 								Instruction *startInst = builder.GetInsertPoint();
 								BasicBlock *cont = startInst->getParent()->splitBasicBlock(startInst->getNextNode(), "continue");
 								Instruction *toDelete = startInst->getParent()->end()->getPrevNode();
