@@ -36,24 +36,26 @@ bool IsParallelizableLoopPass::runOnFunction(Function &F) {
 	//results.insert(std::pair<Function&, list<LoopDependencyData *>>(F, l));
 	//cout << "Results size = " << results.size() << "\n";
 	
-	cerr << "Running parallelizable loop analysis on function " << (F.getName()).data() << "\n";
-	//initialize iterators and loop counter
-	LoopInfo::iterator i = LI.begin();
-	LoopInfo::iterator e = LI.end();
-	int LoopCounter = 1;
+	if (!F.hasFnAttribute("Extracted")) {
+		cerr << "Running parallelizable loop analysis on function " << (F.getName()).data() << "\n";
+		//initialize iterators and loop counter
+		LoopInfo::iterator i = LI.begin();
+		LoopInfo::iterator e = LI.end();
+		int LoopCounter = 1;
 
-	//iterate through all the OUTER loops found and run anaysis to see whether they are parallelizable
-	while (i != e) {
-		Loop *L = *i;
-		//cerr << "Found loop " << LoopCounter << "\n";
-		//call the function that will be implemented to analyse the code
-		if (isParallelizable(L, F)) {
-			cerr << "this loop is parallelizable\n";
+		//iterate through all the OUTER loops found and run anaysis to see whether they are parallelizable
+		while (i != e) {
+			Loop *L = *i;
+			//cerr << "Found loop " << LoopCounter << "\n";
+			//call the function that will be implemented to analyse the code
+			if (isParallelizable(L, F)) {
+				cerr << "this loop is parallelizable\n";
+			}
+			else {
+				cerr << "this loop is not parallelizable\n";
+			}
+			i++;
 		}
-		else {
-			cerr << "this loop is not parallelizable\n";
-		}
-		i++;
 	}
 	return false;
 }

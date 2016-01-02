@@ -10,25 +10,37 @@
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Transforms/Utils/CodeExtractor.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ParallelLoopPasses/IsParallelizableLoopPass.h"
+#include "llvm/Support/CommandLine.h"
 #include <iostream>
 #include <string>
 #include <set>
+#include <math.h>
 
 using namespace llvm;
 using namespace std;
 using namespace parallelize;
 
 namespace {
+	static const int DEFAULT_THREAD_COUNT = 1;
+	static const int DEFAULT_MIN_LOOP_COUNT = 100;
+
+	static cl::opt<unsigned> ThreadLimit(
+		"thread-limit", cl::init(DEFAULT_THREAD_COUNT), cl::value_desc("threadNo"),
+		cl::desc("The number of threads to use for parallelization (default 1)"));
+
+	static cl::opt<unsigned> MinLoopIterations(
+		"min-iter", cl::init(DEFAULT_MIN_LOOP_COUNT), cl::value_desc("iterationNo"),
+		cl::desc("The minimum number of iterations for a loop to be parallelized (default 100)"));
 	/*
 
 	*/
 	struct LoopExtractionPass : public FunctionPass {
-		int noThreads = 2;
+		int noThreads = ThreadLimit.getValue();
+		int minNoIter = MinLoopIterations.getValue();
 
 		//ID of the pass
 		static char ID;
@@ -48,7 +60,7 @@ namespace {
 			IsParallelizableLoopPass &IP = getAnalysis<IsParallelizableLoopPass>();
 			DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
 
-			if (!F.hasFnAttribute("Extracted")) {
+			if (!F.hasFnAttribute("Extracted") && noThreads > DEFAULT_THREAD_COUNT) {
 				list<LoopDependencyData *> loopData = IP.getResultsForFunction(F);
 				cerr << "In function " << (F.getName()).data() << "\n";
 				for (list<LoopDependencyData *>::iterator i = loopData.begin(); i != loopData.end(); i++) {
@@ -64,6 +76,24 @@ namespace {
 							//get start and end of loop
 							Value *startIt = loopData->getStartIt();
 							Value *finalIt = loopData->getFinalIt();
+
+							//only continue if the loop has at least the min number of iterations
+							if (isa<ConstantInt>(startIt) && isa<ConstantInt>(finalIt)) {
+								int64_t start = cast<ConstantInt>(startIt)->getSExtValue();
+								int64_t end = cast<ConstantInt>(finalIt)->getSExtValue();
+								if (end > start) {
+									if (end - start < minNoIter) {
+										break;
+									}
+								}
+								else if (start - end < minNoIter) {
+									break;
+								}
+							}
+							else {
+								//for now only parallelize integer loops
+								break;
+							}
 
 							//extract the loop into a new function
 							CodeExtractor extractor = CodeExtractor(DT, *(loopData->getLoop()), false);
