@@ -173,7 +173,7 @@ namespace {
 								Module * mod = (F.getParent());
 								SmallVector<Type *, 8> paramTypes;
 								paramTypes.push_back((threadStructs.front())->getType());
-								//TODO: For local functions need to sort out what to return
+								//TODO: For local variables need to sort out what to return
 								FunctionType *FT = FunctionType::get(extractedLoop->getFunctionType()->getReturnType(), paramTypes, false);
 								string name = "_" + (extractedLoop->getName()).str() + "_";
 								Function *newLoopFunc = Function::Create(FT, Function::ExternalLinkage, name, mod);
@@ -247,10 +247,17 @@ namespace {
 								val = loadBuilder.CreateStructGEP(myStruct, castArgVal, p + 1);
 								LoadInst *loadInst2 = loadBuilder.CreateLoad(val);
 								structElements.push_back(loadInst2);
-								//need to return changed local values but for now return nothing
-								SmallVector<ReturnInst *, 0> returns;
+								//need to return changed local values
+								SmallVector<ReturnInst *, 8> returns;
+								for (auto &bb : extractedLoop->getBasicBlockList()) {
+									for (auto &i : bb.getInstList()) {
+										if (isa<ReturnInst>(i)) {
+											ReturnInst *ret = cast<ReturnInst>(&i);
+											returns.push_back(ret);
+										}
+									}
+								}
 								//cerr << "cloning\n";
-
 								CloneFunctionInto(newLoopFunc, extractedLoop, vvmap, false, returns, "");
 								//bridge first bb to cloned bbs
 								loadBuilder.CreateBr((newLoopFunc->begin())->getNextNode());
@@ -283,6 +290,8 @@ namespace {
 								F.dump();
 								cerr << "with new function:\n";
 								newLoopFunc->dump();
+								cerr << "taken from:\n";
+								extractedLoop->dump();
 								//Mark the function to avoid infinite extraction
 								newLoopFunc->addFnAttr("Extracted", "true");
 								extractedLoop->addFnAttr("Extracted", "true");
