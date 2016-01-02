@@ -258,7 +258,7 @@ namespace {
 								
 								//cerr << "replacing old function values\n";
 								bool startFound = false;
-								bool endFound = false;
+								Instruction *exitCond;
 								SmallVector<LoadInst *, 8>::iterator element = structElements.begin();
 								//change start and end iter values
 								//cerr << "changing iteration bounds\n";
@@ -269,15 +269,13 @@ namespace {
 											operands[0] = *element++;
 											startFound = true;
 										}
-										if (!endFound) {
-											if (strcmp((i.getName()).data(), "exitcond") == 0) {
-												User::op_iterator operands = i.op_begin();
-												operands[1] = *element++;
-												endFound = true;
-											}
+										if (strncmp((i.getName()).data(), "exitcond", 8) == 0 || strncmp((i.getName()).data(), "cmp", 3) == 0) {
+											exitCond = &i;
 										}
 									}
 								}
+								User::op_iterator operands = exitCond->op_begin();
+								operands[1] = *element++;
 
 								//Debug
 								cerr << "Original function rewritten to:\n";

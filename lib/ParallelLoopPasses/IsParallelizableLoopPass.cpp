@@ -95,8 +95,6 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 	PhiNodes.push_back(phi);
 	noOfPhiNodes++;
 
-	//TODO: see if I can use a pass to cannonicalise more loops
-
 	Instruction *inst = phi->getNextNode();
 	//loop through all instructions to check for only one phi node per inner loop
 	while (L->contains(inst)) {
@@ -176,7 +174,6 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 	}
 	delete dependentInstructions;
 	
-	//TODO: check if load/store operands alias
 	vector<Value *> readwriteinstructions;
 	for (auto bb : L->getBlocks()) {
 		for (auto &i : bb->getInstList()) {
@@ -208,14 +205,11 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 	bool endFound = false;
 	Value *startIt = phi->getOperand(0);
 	Value *finalIt;
-	//find start and end iteration values
 	for (auto bb : L->getBlocks()) {
 		for (auto &i : bb->getInstList()) {
-			if (!endFound) {
-				if (strcmp((i.getName()).data(), "exitcond") == 0 || strcmp((i.getName()).data(), "cmp") == 0) {
-					finalIt = (i.getOperand(1));
-					endFound = true;
-				}
+			if (strncmp((i.getName()).data(), "exitcond", 8) == 0 || strncmp((i.getName()).data(), "cmp", 3) == 0) {
+				finalIt = (i.getOperand(1));
+				endFound = true;
 			}
 		}
 	}
@@ -243,11 +237,9 @@ void IsParallelizableLoopPass::getDependencies(Instruction *inst, PHINode *phi, 
 		else if (inst->mayWriteToMemory()) {
 			dependents->insert(inst);
 		}
-		else {
-			if (inst->getNumUses() > 0) {
-				for (Instruction::user_iterator ui = inst->user_begin(); ui != inst->user_end(); ui++) {
-					getDependencies(dyn_cast<Instruction>(*ui), phi, dependents);
-				}
+		if (inst->getNumUses() > 0) {
+			for (Instruction::user_iterator ui = inst->user_begin(); ui != inst->user_end(); ui++) {
+				getDependencies(dyn_cast<Instruction>(*ui), phi, dependents);
 			}
 		}
 	}
@@ -255,8 +247,6 @@ void IsParallelizableLoopPass::getDependencies(Instruction *inst, PHINode *phi, 
 }
 
 char IsParallelizableLoopPass::ID = 0;
-//define the static variable member
-//map<Function&, list<LoopDependencyData *>> IsParallelizableLoopPass::results;
 list<LoopDependencyData *> IsParallelizableLoopPass::results;
 static RegisterPass<IsParallelizableLoopPass> reg("IsParallelizableLoopPass",
 	"Categorizes loops into 2 categories per function; is parallelizable and is not parallelizable");
