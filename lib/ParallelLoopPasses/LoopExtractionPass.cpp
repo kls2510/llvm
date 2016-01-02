@@ -205,7 +205,7 @@ namespace {
 								IRBuilder<> termBuilder(terminate);
 								SmallVector<Value *, 1> printArgs;
 								//what to return when the threads fail to terminate
-								Instruction *ret = cast<Instruction *>(terminate->getPrevNode()->rbegin());
+								Instruction *ret = cast<Instruction>(&terminate->getPrevNode()->rbegin());
 								termBuilder.CreateCall(exit);
 								//ret will never be called as program aborts
 								termBuilder.CreateRet(ret);
