@@ -291,27 +291,27 @@ namespace {
 
 			//Create thread group
 			SmallVector<Type *, 0> groupParamTypes;
-			FunctionType *groupFunctionType = FunctionType::get(groupStruct->getPointerElementType(), groupParamTypes, false);
+			FunctionType *groupFunctionType = FunctionType::get(groupStruct->getPointerTo(), groupParamTypes, false);
 			mod->getOrInsertFunction("createGroup", groupFunctionType);
 			
 			//Create async dispatch
 			SmallVector<Type *, 3> asyncParamTypes;
-			asyncParamTypes.push_back(groupStruct->getPointerElementType());
+			asyncParamTypes.push_back(groupStruct->getPointerTo());
 			asyncParamTypes.push_back(Type::getInt8PtrTy(context));
-			asyncParamTypes.push_back((Type::getInt8PtrTy(context))->getPointerElementType());
+			asyncParamTypes.push_back((Type::getInt8PtrTy(context))->getPointerTo());
 			FunctionType *asyncFunctionType = FunctionType::get(Type::getVoidTy(context), asyncParamTypes, false);
 			mod->getOrInsertFunction("asyncDispatch", asyncFunctionType);
 
 			//Create wait
 			SmallVector<Type *, 2> waitParamTypes;
-			waitParamTypes.push_back(groupStruct->getPointerElementType());
+			waitParamTypes.push_back(groupStruct->getPointerTo());
 			waitParamTypes.push_back(Type::getInt64Ty(context));
 			FunctionType *waitFunctionType = FunctionType::get(Type::getInt64Ty(context), waitParamTypes, false);
 			mod->getOrInsertFunction("wait", waitFunctionType);
 
 			//Create release
 			SmallVector<Type *, 1> releaseParamTypes;
-			releaseParamTypes.push_back(groupStruct->getPointerElementType());
+			releaseParamTypes.push_back(groupStruct->getPointerTo());
 			FunctionType *releaseFunctionType = FunctionType::get(Type::getVoidTy(context), releaseParamTypes, false);
 			mod->getOrInsertFunction("release", releaseFunctionType);
 
