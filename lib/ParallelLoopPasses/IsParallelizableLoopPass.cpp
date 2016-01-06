@@ -228,7 +228,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	}
 
 	//store results of analysis
-	LoopDependencyData *data = new LoopDependencyData(L, dependencies, noOfPhiNodes, startIt, finalIt, parallelizable);
+	LoopDependencyData *data = new LoopDependencyData(L, dependencies, noOfPhiNodes, startIt, finalIt, tripCount, parallelizable);
 	results.push_back(data);
 	
 	return parallelizable;
