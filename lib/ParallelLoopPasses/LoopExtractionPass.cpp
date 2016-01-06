@@ -302,7 +302,7 @@ namespace {
 			SmallVector<Type *, 3> voidParamTypes;
 			voidParamTypes.push_back(Type::getInt8PtrTy(context));
 			FunctionType *voidFunctionType = FunctionType::get(Type::getVoidTy(context), voidParamTypes, false);
-			asyncParamTypes.push_back(voidFunctionType);
+			asyncParamTypes.push_back(voidFunctionType->getPointerTo());
 			FunctionType *asyncFunctionType = FunctionType::get(Type::getVoidTy(context), asyncParamTypes, false);
 			mod->getOrInsertFunction("asyncDispatch", asyncFunctionType);
 
