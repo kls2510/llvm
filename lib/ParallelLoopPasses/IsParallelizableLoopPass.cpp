@@ -105,10 +105,14 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 			noOfPhiNodes++;
 			//finding Phi node that isn't a cannonical induction variable means the loop is not directly parallelizable
 		}
-		//also, say the function is not parallelizable if it calls a function (massive overesimation - TODO: fix)
+		//also, say the function is not parallelizable if it calls a function (will be an overesimation)
 		else if (isa<CallInst>(inst)) {
-			parallelizable = false;
-			cerr << "Calls a function that may have dependencies/be non thread safe\n";
+			CallInst *call = cast<CallInst>(inst);
+			if (call->mayReadOrWriteMemory()) {
+				//TODO: check read/write is dependent on induction variable
+				parallelizable = false;
+				cerr << "Calls a function that may have dependencies/be non thread safe\n";
+			}
 		}
 		inst = inst->getNextNode();
 	}
@@ -245,7 +249,11 @@ void IsParallelizableLoopPass::getDependencies(Instruction *inst, PHINode *phi, 
 			dependents->insert(inst);
 		}
 		if (inst->getNumUses() > 0) {
+			inst->dump();
+			cerr << "num uses = " << inst->getNumUses() << "\n";
 			for (Instruction::user_iterator ui = inst->user_begin(); ui != inst->user_end(); ui++) {
+				cerr << "uses:\n";
+				ui->dump();
 				getDependencies(dyn_cast<Instruction>(*ui), phi, dependents);
 			}
 		}

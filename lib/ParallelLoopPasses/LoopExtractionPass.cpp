@@ -31,15 +31,11 @@ namespace {
 		"thread-limit", cl::init(DEFAULT_THREAD_COUNT), cl::value_desc("threadNo"),
 		cl::desc("The number of threads to use for parallelization (default 1)"));
 
-	static cl::opt<unsigned> MinLoopIterations(
-		"min-iter", cl::init(DEFAULT_MIN_LOOP_COUNT), cl::value_desc("iterationNo"),
-		cl::desc("The minimum number of iterations for a loop to be parallelized (default 100)"));
 	/*
 
 	*/
 	struct LoopExtractionPass : public FunctionPass {
 		int noThreads = ThreadLimit.getValue();
-		int minNoIter = MinLoopIterations.getValue();
 
 		//ID of the pass
 		static char ID;
@@ -61,16 +57,7 @@ namespace {
 			Value *startIt = loopData->getStartIt();
 			Value *finalIt = loopData->getFinalIt();
 
-			//only continue if the loop has at least the min number of iterations
-			if (loopData->getTripCount() > 0) {
-				if (loopData->getTripCount() < minNoIter) {
-					return false;
-				}
-			}
-			else {
-				cerr << "unable to calculate trip count\n";
-				return false;
-			}
+			//Calculate overhead/iteration work heuristic and decide whether parallelization is worthwhile
 
 			//extract the loop into a new function
 			CodeExtractor extractor = CodeExtractor(DT, *(loopData->getLoop()), false);
