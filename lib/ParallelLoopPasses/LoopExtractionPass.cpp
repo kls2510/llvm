@@ -71,23 +71,6 @@ namespace {
 				cerr << "unable to calculate trip count\n";
 				return false;
 			}
-			/* else if (isa<ConstantInt>(startIt) && isa<ConstantInt>(finalIt)) {
-				int64_t start = cast<ConstantInt>(startIt)->getSExtValue();
-				int64_t end = cast<ConstantInt>(finalIt)->getSExtValue();
-				//TODO: divide by amount added/decreased each loop
-				if (end > start) {
-					if (end - start < minNoIter) {
-						return false;
-					}
-				}
-				else if (start - end < minNoIter) {
-					return false;
-				}
-			}
-			else {
-				//for now only parallelize integer loops if not canonicalized
-				return false;
-			} */
 
 			//extract the loop into a new function
 			CodeExtractor extractor = CodeExtractor(DT, *(loopData->getLoop()), false);
@@ -102,6 +85,17 @@ namespace {
 		}
 
 		bool editExtraction(Function &F, Function *extractedLoop, Value *startIt, Value *finalIt, LLVMContext &context) {
+			//setup helper functions so declararations are there to be linked later
+			Module * mod = (F.getParent());
+			addHelperFunctionDeclarations(context, mod);
+			ValueSymbolTable symTab = mod->getValueSymbolTable();
+			Function *integerDiv = cast<Function>(symTab.lookup(StringRef("integerDivide")));
+			Function *createGroup = cast<Function>(symTab.lookup(StringRef("createGroup")));
+			Function *asyncDispatch = cast<Function>(symTab.lookup(StringRef("asyncDispatch")));
+			Function *wait = cast<Function>(symTab.lookup(StringRef("wait")));
+			Function *release = cast<Function>(symTab.lookup(StringRef("release")));
+			Function *exit = cast<Function>(symTab.lookup(StringRef("abort")));
+
 			//create the struct we'll use to pass data to/from the threads
 			StructType *myStruct = StructType::create(context, "ThreadPasser");
 			//send the: data required, startItvalue and endIt value
@@ -126,9 +120,6 @@ namespace {
 			Value *loadedStartIt = setupBuilder.CreateLoad(start);
 			Value *loadedEndIt = setupBuilder.CreateLoad(end);
 			Value *noIterations = setupBuilder.CreateBinOp(Instruction::Sub, loadedEndIt, loadedStartIt);
-			Module * mod = (F.getParent());
-			ValueSymbolTable &symTab = mod->getValueSymbolTable();
-			Function *integerDiv = cast<Function>(symTab.lookup(StringRef("integerDivide")));
 			SmallVector<Value *, 2> divArgs;
 			divArgs.push_back(noIterations);
 			divArgs.push_back(ConstantInt::get(Type::getInt64Ty(context), noThreads));
@@ -181,12 +172,6 @@ namespace {
 			Function *newLoopFunc = Function::Create(FT, Function::ExternalLinkage, name, mod);
 
 			//insert calls to this new function in separate threads
-			Function *createGroup = cast<Function>(symTab.lookup(StringRef("createGroup")));
-			Function *asyncDispatch = cast<Function>(symTab.lookup(StringRef("asyncDispatch")));
-			Function *wait = cast<Function>(symTab.lookup(StringRef("wait")));
-			Function *release = cast<Function>(symTab.lookup(StringRef("release")));
-			Function *exit = cast<Function>(symTab.lookup(StringRef("abort")));
-
 			Value *groupCall = builder.CreateCall(createGroup, SmallVector<Value *, 0>());
 			for (list<Value*>::iterator it = threadStructs.begin(); it != threadStructs.end(); ++it) {
 				SmallVector<Value *, 3> argsForDispatch;
@@ -291,6 +276,49 @@ namespace {
 			extractedLoop->addFnAttr("Extracted", "true");
 			F.addFnAttr("Extracted", "true");
 			return true;
+		}
+
+		void addHelperFunctionDeclarations(LLVMContext &context, Module *mod) {
+			//Integer divide
+			SmallVector<Type *, 2> divParamTypes;
+			divParamTypes.push_back(Type::getInt64Ty(context));
+			divParamTypes.push_back(Type::getInt64Ty(context));
+			FunctionType *intDivFunctionType = FunctionType::get(Type::getInt64Ty(context), divParamTypes, false);
+			mod->getOrInsertFunction("integerDivide", intDivFunctionType);
+
+			//create opaque type
+			StructType *groupStruct = StructType::create(context, "struct.dispatch_group_s");
+
+			//Create thread group
+			SmallVector<Type *, 0> groupParamTypes;
+			FunctionType *groupFunctionType = FunctionType::get(groupStruct->getPointerElementType(), groupParamTypes, false);
+			mod->getOrInsertFunction("createGroup", groupFunctionType);
+			
+			//Create async dispatch
+			SmallVector<Type *, 3> asyncParamTypes;
+			asyncParamTypes.push_back(groupStruct->getPointerElementType());
+			asyncParamTypes.push_back(Type::getInt8PtrTy(context));
+			asyncParamTypes.push_back((Type::getInt8PtrTy(context))->getPointerElementType());
+			FunctionType *asyncFunctionType = FunctionType::get(Type::getVoidTy(context), asyncParamTypes, false);
+			mod->getOrInsertFunction("asyncDispatch", asyncFunctionType);
+
+			//Create wait
+			SmallVector<Type *, 2> waitParamTypes;
+			waitParamTypes.push_back(groupStruct->getPointerElementType());
+			waitParamTypes.push_back(Type::getInt64Ty(context));
+			FunctionType *waitFunctionType = FunctionType::get(Type::getInt64Ty(context), waitParamTypes, false);
+			mod->getOrInsertFunction("wait", waitFunctionType);
+
+			//Create release
+			SmallVector<Type *, 1> releaseParamTypes;
+			releaseParamTypes.push_back(groupStruct->getPointerElementType());
+			FunctionType *releaseFunctionType = FunctionType::get(Type::getVoidTy(context), releaseParamTypes, false);
+			mod->getOrInsertFunction("release", releaseFunctionType);
+
+			//Create abort
+			SmallVector<Type *, 0> abortParamTypes;
+			FunctionType *abortFunctionType = FunctionType::get(Type::getVoidTy(context), abortParamTypes, false);
+			mod->getOrInsertFunction("abort", abortFunctionType);
 		}
 
 		virtual bool runOnFunction(Function &F) {
