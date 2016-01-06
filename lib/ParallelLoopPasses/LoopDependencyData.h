@@ -18,14 +18,15 @@ class LoopDependencyData {
 private:
 	Value *startIt;
 	Value *finalIt;
+	int tripCount;
 	Loop *loop;
 	list<Dependence *> dependencies;
 	int noOfPhiNodes;
 	bool parallelizable;
 
 public:
-	LoopDependencyData(Loop *L, list<Dependence *> d, int phi, Value *startIt, Value *finalIt, bool parallelizable) {
-		loop = L, dependencies = d, noOfPhiNodes = phi, this->parallelizable = parallelizable, this->startIt = startIt, this->finalIt = finalIt;
+	LoopDependencyData(Loop *L, list<Dependence *> d, int phi, Value *startIt, Value *finalIt, int tripCount, bool parallelizable) {
+		loop = L, dependencies = d, noOfPhiNodes = phi, this->parallelizable = parallelizable, this->startIt = startIt, this->finalIt = finalIt, this->tripCount = tripCount;
 	}
 
 	Loop *getLoop();
@@ -43,6 +44,8 @@ public:
 	Value *getStartIt();
 
 	Value *getFinalIt();
+
+	int getTripCount();
 
 };
 

@@ -63,3 +63,7 @@ Value *LoopDependencyData::getFinalIt() {
 	return finalIt;
 }
 
+int LoopDependencyData::getTripCount() {
+	return tripCount;
+}
+
