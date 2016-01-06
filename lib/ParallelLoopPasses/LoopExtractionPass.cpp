@@ -298,7 +298,11 @@ namespace {
 			SmallVector<Type *, 3> asyncParamTypes;
 			asyncParamTypes.push_back(groupStruct->getPointerTo());
 			asyncParamTypes.push_back(Type::getInt8PtrTy(context));
-			asyncParamTypes.push_back((Type::getInt8PtrTy(context))->getPointerTo());
+			//This arg type is wrong
+			SmallVector<Type *, 3> voidParamTypes;
+			voidParamTypes.push_back(Type::getInt8PtrTy(context));
+			FunctionType *voidFunctionType = FunctionType::get(Type::getVoidTy(context), voidParamTypes, false);
+			asyncParamTypes.push_back(voidFunctionType);
 			FunctionType *asyncFunctionType = FunctionType::get(Type::getVoidTy(context), asyncParamTypes, false);
 			mod->getOrInsertFunction("asyncDispatch", asyncFunctionType);
 
