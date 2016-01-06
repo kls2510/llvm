@@ -9,7 +9,6 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Transforms/Utils/CodeExtractor.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/ADT/SmallVector.h"
@@ -51,7 +50,6 @@ namespace {
 		//Set LoopInfo pass to run before this one so we can access its results
 		void getAnalysisUsage(AnalysisUsage &AU) const {
 			AU.addRequired<IsParallelizableLoopPass>();
-			AU.addRequired<ScalarEvolutionWrapperPass>();
 			AU.addRequired<DominatorTreeWrapperPass>();
 		}
 
@@ -76,11 +74,12 @@ namespace {
 							//get start and end of loop
 							Value *startIt = loopData->getStartIt();
 							Value *finalIt = loopData->getFinalIt();
-
+							
 							//only continue if the loop has at least the min number of iterations
 							if (isa<ConstantInt>(startIt) && isa<ConstantInt>(finalIt)) {
 								int64_t start = cast<ConstantInt>(startIt)->getSExtValue();
 								int64_t end = cast<ConstantInt>(finalIt)->getSExtValue();
+								//TODO: divide by amount added/decreased each loop
 								if (end > start) {
 									if (end - start < minNoIter) {
 										break;
@@ -126,11 +125,9 @@ namespace {
 								Value *loadedStartIt = setupBuilder.CreateLoad(start);
 								Value *loadedEndIt = setupBuilder.CreateLoad(end);
 								Value *noIterations = setupBuilder.CreateBinOp(Instruction::Sub, loadedEndIt, loadedStartIt);
-								//TODO: Fix for when division isn't exact
 								Module * mod = (F.getParent());
 								ValueSymbolTable &symTab = mod->getValueSymbolTable();
 								Function *integerDiv = cast<Function>(symTab.lookup(StringRef("integerDivide")));
-								//Value *iterationsEach = setupBuilder.CreateExactSDiv(noIterations, ConstantInt::get(Type::getInt64Ty(context), noThreads));
 								SmallVector<Value *, 2> divArgs;
 								divArgs.push_back(noIterations);
 								divArgs.push_back(ConstantInt::get(Type::getInt64Ty(context), noThreads));

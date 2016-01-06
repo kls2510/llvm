@@ -9,6 +9,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/ParallelLoopPasses/LoopDependencyData.h"
+#include "llvm/Transforms/Scalar.h"
 #include <iostream>
 #include <string>
 #include <set>
@@ -48,7 +49,7 @@ namespace parallelize {
 
 	private:
 		//runs the actual analysis
-		bool isParallelizable(Loop *L, Function &F);
+		bool isParallelizable(Loop *L, Function &F, ScalarEvolution &SE);
 
 		void getDependencies(Instruction *inst, PHINode *phi, set<Instruction *> *dependents);
 	};

@@ -6,6 +6,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/ParallelLoopPasses/LoopDependencyData.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include <iostream>
 #include "llvm/ParallelLoopPasses/IsParallelizableLoopPass.h"
 #include <string>
@@ -19,6 +20,7 @@ using namespace parallelize;
 //Set LoopInfo pass to run before this one so we can access its results
 void IsParallelizableLoopPass::getAnalysisUsage(AnalysisUsage &AU) const {
 	AU.addRequired<LoopInfoWrapperPass>();
+	AU.addRequired<ScalarEvolutionWrapperPass>();
 	AU.addRequired<DependenceAnalysis>();
 	AU.addRequired<AAResultsWrapperPass>();
 	AU.addRequired<ScalarEvolutionWrapperPass>();
@@ -29,6 +31,7 @@ void IsParallelizableLoopPass::getAnalysisUsage(AnalysisUsage &AU) const {
 bool IsParallelizableLoopPass::runOnFunction(Function &F) {
 	//get data from the loopInfo analysis
 	LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+	ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
 	DA = &getAnalysis<DependenceAnalysis>();
 	AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 	//list<LoopDependencyData *> l;
@@ -48,7 +51,7 @@ bool IsParallelizableLoopPass::runOnFunction(Function &F) {
 			Loop *L = *i;
 			//cerr << "Found loop " << LoopCounter << "\n";
 			//call the function that will be implemented to analyse the code
-			if (isParallelizable(L, F)) {
+			if (isParallelizable(L, F, SE)) {
 				cerr << "this loop is parallelizable\n";
 			}
 			else {
@@ -65,7 +68,7 @@ list<LoopDependencyData *> IsParallelizableLoopPass::getResultsForFunction(Funct
 }
 
 //runs the actual analysis
-bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
+bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvolution &SE) {
 	list<Dependence *> dependencies;
 	int noOfPhiNodes = 0;
 	bool parallelizable = true;
@@ -213,6 +216,10 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F) {
 			}
 		}
 	}
+
+	//attempt to find trip count
+	unsigned int tripCount = SE.getSmallConstantTripCount(L);
+	cerr << "trip count is: " << tripCount << "\n";
 
 	//not parallelizable if proper boundaries can't be found
 	if (!endFound) {
