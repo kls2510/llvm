@@ -249,7 +249,9 @@ void IsParallelizableLoopPass::getDependencies(Instruction *inst, PHINode *phi, 
 			dependents->insert(inst);
 		}
 		if (inst->getNumUses() > 0) {
+			cerr << "\n";
 			inst->dump();
+			cerr.flush();
 			cerr << "num uses = " << inst->getNumUses() << "\n";
 			for (Instruction::user_iterator ui = inst->user_begin(); ui != inst->user_end(); ui++) {
 				cerr << "uses:\n";
