@@ -88,7 +88,7 @@ namespace {
 			//setup helper functions so declararations are there to be linked later
 			Module * mod = (F.getParent());
 			addHelperFunctionDeclarations(context, mod);
-			ValueSymbolTable symTab = mod->getValueSymbolTable();
+			ValueSymbolTable &symTab = mod->getValueSymbolTable();
 			Function *integerDiv = cast<Function>(symTab.lookup(StringRef("integerDivide")));
 			Function *createGroup = cast<Function>(symTab.lookup(StringRef("createGroup")));
 			Function *asyncDispatch = cast<Function>(symTab.lookup(StringRef("asyncDispatch")));
