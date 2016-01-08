@@ -260,9 +260,9 @@ bool IsParallelizableLoopPass::getDependencies(Loop *L, PHINode *phi, set<Instru
 						break;
 					}
 					else {
-						for (auto &op : op->operands()) {
-							if (isa<Instruction>(op)) {
-								opsToCheck.insert(cast<Instruction>(op));
+						for (auto &newop : op->operands()) {
+							if (isa<Instruction>(newop)) {
+								opsToCheck.insert(cast<Instruction>(newop));
 							}
 						}
 						opsToCheck.erase(opsToCheck.begin());
