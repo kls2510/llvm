@@ -11,6 +11,7 @@
 #include "llvm/ParallelLoopPasses/IsParallelizableLoopPass.h"
 #include <string>
 #include <set>
+#include <list>
 
 using namespace llvm;
 using namespace std;
@@ -125,16 +126,10 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	//loop through instructions dependendent on the induction variable and check to see whether
 	//there are interloop dependencies
 	set<Instruction *> *dependentInstructions = new set<Instruction *>();
-	for (Instruction::user_iterator pui = phi->user_begin(); pui != phi->user_end(); pui++) {
-		Instruction *dependency = dyn_cast<Instruction>(*pui);
-		for (Instruction::user_iterator ui = dependency->user_begin(); ui != dependency->user_end(); ui++) {
-			Instruction *dependency2 = dyn_cast<Instruction>(*ui);
-			getDependencies(dependency2, phi, dependentInstructions);
-		}
-	}
+	parallelizable = getDependencies(L, phi, dependentInstructions);
 
 	bool dependent = false;
-	//find distance vectors for dependent instructions
+	//find distance vectors for loop induction dependent read/write instructions
 	for (set<Instruction *>::iterator si = dependentInstructions->begin(); si != dependentInstructions->end(); si++) {
 		Instruction *i1 = (*si);
 		for (set<Instruction *>::iterator si2 = dependentInstructions->begin(); si2 != dependentInstructions->end(); si2++) {
@@ -238,29 +233,30 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	return parallelizable;
 }
 
-
-void IsParallelizableLoopPass::getDependencies(Instruction *inst, PHINode *phi, set<Instruction *> *dependents) {
-	if (inst == phi) {}
-	else {
-		if (inst->mayReadFromMemory()) {
-			dependents->insert(inst);
-		}
-		else if (inst->mayWriteToMemory()) {
-			dependents->insert(inst);
-		}
-		if (inst->getNumUses() > 0) {
-			cerr << "\n";
-			inst->dump();
-			cerr.flush();
-			cerr << "num uses = " << inst->getNumUses() << "\n";
-			for (Instruction::user_iterator ui = inst->user_begin(); ui != inst->user_end(); ui++) {
-				cerr << "uses:\n";
-				ui->dump();
-				getDependencies(dyn_cast<Instruction>(*ui), phi, dependents);
+//function puts all instructions whose memory access depends on the induction variable in the set. And returns false if
+//there is write instruction not dependent on the induction variable (i.e. can't parallelize)
+bool IsParallelizableLoopPass::getDependencies(Loop *L, PHINode *phi, set<Instruction *> *dependents) {
+	bool parallelizable = true;
+	for (auto &bb : L->getBlocks()) {
+		for (auto &i : bb->getInstList()) {
+			if (i.mayReadOrWriteMemory()) {
+				unique_ptr<Dependence> d = (DA->depends(cast<Instruction>(&i), phi, true));
+				if (d != nullptr) {
+					i.dump();
+					cerr << "found to be dependent on the induction variable\n\n";
+					dependents->insert(&i);
+				}
+				else {
+					if (i.mayWriteToMemory()) {
+						i.dump();
+						cerr << "found to not be dependent on the induction variable but write to memory - loop not parallelizable\n\n";
+						parallelizable = false;
+					}
+				}
 			}
 		}
 	}
-	return;
+	return parallelizable;
 }
 
 char IsParallelizableLoopPass::ID = 0;

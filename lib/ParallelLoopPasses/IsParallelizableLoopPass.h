@@ -51,7 +51,7 @@ namespace parallelize {
 		//runs the actual analysis
 		bool isParallelizable(Loop *L, Function &F, ScalarEvolution &SE);
 
-		void getDependencies(Instruction *inst, PHINode *phi, set<Instruction *> *dependents);
+		bool getDependencies(Loop *L, PHINode *phi, set<Instruction *> *dependents);
 	};
 }
 
