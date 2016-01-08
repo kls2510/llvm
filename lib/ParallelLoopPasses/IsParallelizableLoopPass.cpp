@@ -265,7 +265,7 @@ bool IsParallelizableLoopPass::getDependencies(Loop *L, PHINode *phi, set<Instru
 								opsToCheck.insert(cast<Instruction>(newop));
 							}
 						}
-						opsToCheck.erase(opsToCheck.begin());
+						opsToCheck.erase(op);
 					}
 				}
 			}
