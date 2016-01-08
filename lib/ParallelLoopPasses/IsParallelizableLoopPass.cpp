@@ -233,6 +233,36 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	return parallelizable;
 }
 
+bool isDependentOnInductionVariable(Instruction * ptr, Instruction *phi, bool read) {
+	set<Instruction *> opsToCheck;
+	for (auto &op : ptr->operands()) {
+		if (isa<Instruction>(op)) {
+			opsToCheck.insert(cast<Instruction>(op));
+		}
+	}
+	while (!opsToCheck.empty()) {
+		Instruction *op = *opsToCheck.begin();
+		if (op == phi) {
+			if (read) {
+				cerr << "read dependent on i found\n";
+			}
+			else {
+				cerr << "write dependent on i found\n";
+			}
+			return true;
+		}
+		else {
+			for (auto &newop : op->operands()) {
+				if (isa<Instruction>(newop)) {
+					opsToCheck.insert(cast<Instruction>(newop));
+				}
+			}
+			opsToCheck.erase(op);
+		}
+	}
+	return false;
+}
+
 //function puts all instructions whose memory access depends on the induction variable in the set. And returns false if
 //there is write instruction not dependent on the induction variable (i.e. can't parallelize)
 bool IsParallelizableLoopPass::getDependencies(Loop *L, PHINode *phi, set<Instruction *> *dependents) {
@@ -245,84 +275,24 @@ bool IsParallelizableLoopPass::getDependencies(Loop *L, PHINode *phi, set<Instru
 				//case : load
 				//get the memory location pointer
 				Instruction *ptr = cast<Instruction>(i.getOperand(0));
-				set<Instruction *> opsToCheck;
-				for (auto &op : ptr->operands()) {
-					if (isa<Instruction>(op)) {
-						opsToCheck.insert(cast<Instruction>(op));
-					}
-				}
-				while (!opsToCheck.empty()) {
-					Instruction *op = *opsToCheck.begin();
-					if (op == phi) {
-						i.dump();
-						cerr << "read dependent on i found\n\n";
-						dependent = true;
-						break;
-					}
-					else {
-						for (auto &newop : op->operands()) {
-							if (isa<Instruction>(newop)) {
-								opsToCheck.insert(cast<Instruction>(newop));
-							}
-						}
-						opsToCheck.erase(op);
-					}
-				}
+				dependent = isDependentOnInductionVariable(ptr, phi, true);
+				i.dump();
+				cerr << "\n";
 			}
 			else if (i.mayWriteToMemory()) {
 				//case : write
 				Instruction *ptr = cast<Instruction>(i.getOperand(1));
 				if (isa<Instruction>(ptr->getOperand(1))) {
 					Instruction *idx1 = cast<Instruction>(ptr->getOperand(1));
-					set<Instruction *> opsToCheck;
-					for (auto &op : idx1->operands()) {
-						if (isa<Instruction>(op)) {
-							opsToCheck.insert(cast<Instruction>(op));
-						}
-					}
-					while (!opsToCheck.empty()) {
-						Instruction *op = *opsToCheck.begin();
-						if (op == phi) {
-							i.dump();
-							cerr << "write dependent on i found\n\n";
-							dependent = true;
-							break;
-						}
-						else {
-							for (auto &newop : op->operands()) {
-								if (isa<Instruction>(newop)) {
-									opsToCheck.insert(cast<Instruction>(newop));
-								}
-							}
-							opsToCheck.erase(op);
-						}
-					}
+					dependent = isDependentOnInductionVariable(idx1, phi, false);
+					i.dump();
+					cerr << "\n";
 				}
 				if (isa<Instruction>(ptr->getOperand(2))) {
 					Instruction *idx2 = cast<Instruction>(ptr->getOperand(2));
-					set<Instruction *> opsToCheck;
-					for (auto &op : idx2->operands()) {
-						if (isa<Instruction>(op)) {
-							opsToCheck.insert(cast<Instruction>(op));
-						}
-					}
-					while (!opsToCheck.empty()) {
-						Instruction *op = *opsToCheck.begin();
-						if (op == phi) {
-							i.dump();
-							cerr << "write dependent on i found\n\n";
-							dependent = true;
-							break;
-						}
-						else {
-							for (auto &newop : op->operands()) {
-								if (isa<Instruction>(newop)) {
-									opsToCheck.insert(cast<Instruction>(newop));
-								}
-							}
-							opsToCheck.erase(op);
-						}
-					}
+					dependent = isDependentOnInductionVariable(idx2, phi, false);
+					i.dump();
+					cerr << "\n";
 				}
 				if(!dependent) {
 					i.dump();
