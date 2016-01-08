@@ -123,7 +123,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	//loop through instructions dependendent on the induction variable and check to see whether
 	//there are interloop dependencies
 	set<Instruction *> *dependentInstructions = new set<Instruction *>();
-	parallelizable = getDependencies(L, phi, dependentInstructions);
+	parallelizable = !parallelizable ? parallelizable : getDependencies(L, phi, dependentInstructions);
 
 	bool dependent = false;
 	//find distance vectors for loop induction dependent read/write instructions
