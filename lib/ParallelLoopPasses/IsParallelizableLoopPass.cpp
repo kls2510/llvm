@@ -101,20 +101,20 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 
 	Instruction *inst = phi->getNextNode();
 	//loop through all instructions to check for only one phi node per inner loop
-	while (L->contains(inst)) {
-		if (isa<PHINode>(inst)) {
-			noOfPhiNodes++;
-			//finding Phi node that isn't a cannonical induction variable means the loop is not directly parallelizable
+	for (auto &bb : L->getBlocks()) {
+		for (auto &inst : bb->getInstList()) {
+			if (isa<PHINode>(inst)) {
+				noOfPhiNodes++;
+			}
+			//also, say the function is not parallelizable if it calls a function (will be an overestimation)
+			else if (isa<CallInst>(inst)) {
+				CallInst *call = cast<CallInst>(&inst);
+				cerr << "call found in loop so not parallelizable";
+				parallelizable = false;
+				//TODO: IMPROVE
+				return false;
+			}
 		}
-		//also, say the function is not parallelizable if it calls a function (will be an overestimation)
-		else if (isa<CallInst>(inst)) {
-			CallInst *call = cast<CallInst>(inst);
-			cerr << "call found in loop so not parallelizable";
-			parallelizable = false;
-			//TODO: IMPROVE
-			return false;
-		}
-		inst = inst->getNextNode();
 	}
 
 	if (noOfPhiNodes > (L->getSubLoops().size() + 1)) {
