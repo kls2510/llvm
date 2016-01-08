@@ -285,7 +285,6 @@ namespace {
 			SmallVector<Type *, 3> asyncParamTypes;
 			asyncParamTypes.push_back(groupStruct->getPointerTo());
 			asyncParamTypes.push_back(Type::getInt8PtrTy(context));
-			//This arg type is wrong
 			SmallVector<Type *, 3> voidParamTypes;
 			voidParamTypes.push_back(Type::getInt8PtrTy(context));
 			FunctionType *voidFunctionType = FunctionType::get(Type::getVoidTy(context), voidParamTypes, false);

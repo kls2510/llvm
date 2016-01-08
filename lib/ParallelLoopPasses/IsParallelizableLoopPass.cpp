@@ -248,9 +248,18 @@ bool IsParallelizableLoopPass::getDependencies(Loop *L, PHINode *phi, set<Instru
 				}
 				else {
 					if (i.mayWriteToMemory()) {
-						i.dump();
-						cerr << "found to not be dependent on the induction variable but write to memory - loop not parallelizable\n\n";
-						parallelizable = false;
+						Instruction *loc = cast<Instruction>(i.getOperand(1));
+						unique_ptr<Dependence> d = (DA->depends(loc, phi, true));
+						if (d != nullptr) {
+							i.dump();
+							cerr << "found to be dependent on the induction variable\n\n";
+							dependents->insert(&i);
+						}
+						else {
+							i.dump();
+							cerr << "found to not be dependent on the induction variable but write to memory - loop not parallelizable\n\n";
+							parallelizable = false;
+						}
 					}
 				}
 			}
