@@ -243,12 +243,30 @@ bool IsParallelizableLoopPass::getDependencies(Loop *L, PHINode *phi, set<Instru
 			dependent = false;
 			if (i.mayReadFromMemory()) {
 				//case : load
-				Instruction *idx = cast<Instruction>(i.getOperand(0));
-				unique_ptr<Dependence> d = DA->depends(idx, phi, false);
-				if (d != nullptr) {
-					i.dump();
-					cerr << "Read instruction found dependent on i\n\n";
-					dependent = true;
+				//get the memory location pointer
+				Instruction *ptr = cast<Instruction>(i.getOperand(0));
+				set<Instruction *> opsToCheck;
+				for (auto &op : ptr->operands()) {
+					if (isa<Instruction>(op)) {
+						opsToCheck.insert(cast<Instruction>(op));
+					}
+				}
+				while (!opsToCheck.empty()) {
+					Instruction *op = *opsToCheck.begin();
+					if (op == phi) {
+						i.dump();
+						cerr << "read dependent on i found\n\n";
+						dependent = true;
+						break;
+					}
+					else {
+						for (auto &op : op->operands()) {
+							if (isa<Instruction>(op)) {
+								opsToCheck.insert(cast<Instruction>(op));
+							}
+						}
+						opsToCheck.erase(opsToCheck.begin());
+					}
 				}
 			}
 			else if (i.mayWriteToMemory()) {
@@ -272,7 +290,7 @@ bool IsParallelizableLoopPass::getDependencies(Loop *L, PHINode *phi, set<Instru
 						dependent = true;
 					}
 				}
-				else {
+				if(!dependent) {
 					i.dump();
 					cerr << "Write instruction found but not dependent on i, not parallelizable\n\n";
 					parallelizable = false;
