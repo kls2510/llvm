@@ -109,8 +109,10 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 		//also, say the function is not parallelizable if it calls a function (will be an overestimation)
 		else if (isa<CallInst>(inst)) {
 			CallInst *call = cast<CallInst>(inst);
-			//TODO: IMPROVE
+			cerr << "call found in loop so not parallelizable";
 			parallelizable = false;
+			//TODO: IMPROVE
+			return false;
 		}
 		inst = inst->getNextNode();
 	}
@@ -118,12 +120,13 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	if (noOfPhiNodes > (L->getSubLoops().size() + 1)) {
 		parallelizable = false;
 		cerr << "Too many phi nodes\n";
+		return false;
 	}
 
 	//loop through instructions dependendent on the induction variable and check to see whether
 	//there are interloop dependencies
 	set<Instruction *> *dependentInstructions = new set<Instruction *>();
-	parallelizable = !parallelizable ? parallelizable : getDependencies(L, phi, dependentInstructions);
+	parallelizable = getDependencies(L, phi, dependentInstructions);
 
 	bool dependent = false;
 	//find distance vectors for loop induction dependent read/write instructions
