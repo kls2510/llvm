@@ -271,23 +271,57 @@ bool IsParallelizableLoopPass::getDependencies(Loop *L, PHINode *phi, set<Instru
 			}
 			else if (i.mayWriteToMemory()) {
 				//case : write
-				Instruction *idx = cast<Instruction>(i.getOperand(1));
-				if (isa<Instruction>(idx->getOperand(1))) {
-					Instruction *idx1 = cast<Instruction>(idx->getOperand(1));
-					unique_ptr<Dependence> d1 = DA->depends(idx1, phi, false);
-					if (d1 != nullptr) {
-						i.dump();
-						cerr << "Write instruction found dependent on i\n\n";
-						dependent = true;
+				Instruction *ptr = cast<Instruction>(i.getOperand(1));
+				if (isa<Instruction>(ptr->getOperand(1))) {
+					Instruction *idx1 = cast<Instruction>(ptr->getOperand(1));
+					set<Instruction *> opsToCheck;
+					for (auto &op : idx1->operands()) {
+						if (isa<Instruction>(op)) {
+							opsToCheck.insert(cast<Instruction>(op));
+						}
+					}
+					while (!opsToCheck.empty()) {
+						Instruction *op = *opsToCheck.begin();
+						if (op == phi) {
+							i.dump();
+							cerr << "write dependent on i found\n\n";
+							dependent = true;
+							break;
+						}
+						else {
+							for (auto &newop : op->operands()) {
+								if (isa<Instruction>(newop)) {
+									opsToCheck.insert(cast<Instruction>(newop));
+								}
+							}
+							opsToCheck.erase(op);
+						}
 					}
 				}
-				if (isa<Instruction>(idx->getOperand(2))) {
-					Instruction *idx2 = cast<Instruction>(idx->getOperand(2));
-					unique_ptr<Dependence> d2 = DA->depends(idx2, phi, false);
-					if (d2 != nullptr) {
-						i.dump();
-						cerr << "Write instruction found dependent on i\n\n";
-						dependent = true;
+				if (isa<Instruction>(ptr->getOperand(2))) {
+					Instruction *idx2 = cast<Instruction>(ptr->getOperand(2));
+					set<Instruction *> opsToCheck;
+					for (auto &op : idx2->operands()) {
+						if (isa<Instruction>(op)) {
+							opsToCheck.insert(cast<Instruction>(op));
+						}
+					}
+					while (!opsToCheck.empty()) {
+						Instruction *op = *opsToCheck.begin();
+						if (op == phi) {
+							i.dump();
+							cerr << "write dependent on i found\n\n";
+							dependent = true;
+							break;
+						}
+						else {
+							for (auto &newop : op->operands()) {
+								if (isa<Instruction>(newop)) {
+									opsToCheck.insert(cast<Instruction>(newop));
+								}
+							}
+							opsToCheck.erase(op);
+						}
 					}
 				}
 				if(!dependent) {
