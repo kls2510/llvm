@@ -239,28 +239,29 @@ bool IsParallelizableLoopPass::getDependencies(Loop *L, PHINode *phi, set<Instru
 	bool parallelizable = true;
 	for (auto &bb : L->getBlocks()) {
 		for (auto &i : bb->getInstList()) {
-			if (i.mayReadOrWriteMemory()) {
-				unique_ptr<Dependence> d = (DA->depends(cast<Instruction>(&i), phi, true));
+			if (i.mayReadFromMemory()) {
+				//case : load
+				Instruction *idx = cast<Instruction>(i.getOperand(0));
+				unique_ptr<Dependence> d = DA->depends(idx, phi, false);
 				if (d != nullptr) {
 					i.dump();
-					cerr << "found to be dependent on the induction variable\n\n";
-					dependents->insert(&i);
+					cerr << "Read instruction found dependent on i\n\n";
+				}
+			}
+			else if (i.mayWriteToMemory()) {
+				//case : write
+				Instruction *idx = cast<Instruction>(i.getOperand(1));
+				Instruction *idx1 = cast<Instruction>(idx->getOperand(1));
+				Instruction *idx2 = cast<Instruction>(idx->getOperand(2));
+				unique_ptr<Dependence> d1 = DA->depends(idx1, phi, false);
+				unique_ptr<Dependence> d2 = DA->depends(idx2, phi, false);
+				if (d1 != nullptr || d2 != nullptr) {
+					i.dump();
+					cerr << "Write instruction found dependent on i\n\n";
 				}
 				else {
-					if (i.mayWriteToMemory()) {
-						Instruction *loc = cast<Instruction>(i.getOperand(1));
-						unique_ptr<Dependence> d = (DA->depends(loc, phi, true));
-						if (d != nullptr) {
-							i.dump();
-							cerr << "found to be dependent on the induction variable\n\n";
-							dependents->insert(&i);
-						}
-						else {
-							i.dump();
-							cerr << "found to not be dependent on the induction variable but write to memory - loop not parallelizable\n\n";
-							parallelizable = false;
-						}
-					}
+					i.dump();
+					cerr << "Write instruction found but not dependent on i, not parallelizable\n\n";
 				}
 			}
 		}
