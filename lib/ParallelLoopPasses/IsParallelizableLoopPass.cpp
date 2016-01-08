@@ -106,14 +106,11 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 			noOfPhiNodes++;
 			//finding Phi node that isn't a cannonical induction variable means the loop is not directly parallelizable
 		}
-		//also, say the function is not parallelizable if it calls a function (will be an overesimation)
+		//also, say the function is not parallelizable if it calls a function (will be an overestimation)
 		else if (isa<CallInst>(inst)) {
 			CallInst *call = cast<CallInst>(inst);
-			if (call->mayReadOrWriteMemory()) {
-				//TODO: check read/write is dependent on induction variable
-				parallelizable = false;
-				cerr << "Calls a function that may have dependencies/be non thread safe\n";
-			}
+			//TODO: IMPROVE
+			parallelizable = false;
 		}
 		inst = inst->getNextNode();
 	}
@@ -233,7 +230,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	return parallelizable;
 }
 
-bool isDependentOnInductionVariable(Instruction * ptr, Instruction *phi, bool read) {
+bool isDependentOnInductionVariable(Instruction *ptr, Instruction *phi, bool read) {
 	set<Instruction *> opsToCheck;
 	for (auto &op : ptr->operands()) {
 		if (isa<Instruction>(op)) {
@@ -250,6 +247,10 @@ bool isDependentOnInductionVariable(Instruction * ptr, Instruction *phi, bool re
 				cerr << "write dependent on i found\n";
 			}
 			return true;
+		}
+		else if (isa<PHINode>(op)) {
+			//stop searching on this branch
+			opsToCheck.erase(op);
 		}
 		else {
 			for (auto &newop : op->operands()) {
@@ -271,30 +272,25 @@ bool IsParallelizableLoopPass::getDependencies(Loop *L, PHINode *phi, set<Instru
 	for (auto &bb : L->getBlocks()) {
 		for (auto &i : bb->getInstList()) {
 			dependent = false;
-			if (i.mayReadFromMemory()) {
+			if (isa<LoadInst>(&i)) {
 				//case : load
 				//get the memory location pointer
 				Instruction *ptr = cast<Instruction>(i.getOperand(0));
 				dependent = isDependentOnInductionVariable(ptr, phi, true);
-				i.dump();
-				cerr << "\n";
+				if (dependent) {
+					i.dump();
+					cerr << "\n";
+				}
 			}
-			else if (i.mayWriteToMemory()) {
+			else if (isa<StoreInst>(&i)) {
 				//case : write
 				Instruction *ptr = cast<Instruction>(i.getOperand(1));
-				if (isa<Instruction>(ptr->getOperand(1))) {
-					Instruction *idx1 = cast<Instruction>(ptr->getOperand(1));
-					dependent = isDependentOnInductionVariable(idx1, phi, false);
+				dependent = isDependentOnInductionVariable(ptr, phi, false);
+				if (dependent) {
 					i.dump();
 					cerr << "\n";
 				}
-				if (isa<Instruction>(ptr->getOperand(2))) {
-					Instruction *idx2 = cast<Instruction>(ptr->getOperand(2));
-					dependent = isDependentOnInductionVariable(idx2, phi, false);
-					i.dump();
-					cerr << "\n";
-				}
-				if(!dependent) {
+				else {
 					i.dump();
 					cerr << "Write instruction found but not dependent on i, not parallelizable\n\n";
 					parallelizable = false;
