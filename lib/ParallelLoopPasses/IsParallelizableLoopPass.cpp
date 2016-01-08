@@ -237,8 +237,10 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 //there is write instruction not dependent on the induction variable (i.e. can't parallelize)
 bool IsParallelizableLoopPass::getDependencies(Loop *L, PHINode *phi, set<Instruction *> *dependents) {
 	bool parallelizable = true;
+	bool dependent;
 	for (auto &bb : L->getBlocks()) {
 		for (auto &i : bb->getInstList()) {
+			dependent = false;
 			if (i.mayReadFromMemory()) {
 				//case : load
 				Instruction *idx = cast<Instruction>(i.getOperand(0));
@@ -246,23 +248,38 @@ bool IsParallelizableLoopPass::getDependencies(Loop *L, PHINode *phi, set<Instru
 				if (d != nullptr) {
 					i.dump();
 					cerr << "Read instruction found dependent on i\n\n";
+					dependent = true;
 				}
 			}
 			else if (i.mayWriteToMemory()) {
 				//case : write
 				Instruction *idx = cast<Instruction>(i.getOperand(1));
-				Instruction *idx1 = cast<Instruction>(idx->getOperand(1));
-				Instruction *idx2 = cast<Instruction>(idx->getOperand(2));
-				unique_ptr<Dependence> d1 = DA->depends(idx1, phi, false);
-				unique_ptr<Dependence> d2 = DA->depends(idx2, phi, false);
-				if (d1 != nullptr || d2 != nullptr) {
-					i.dump();
-					cerr << "Write instruction found dependent on i\n\n";
+				if (isa<Instruction>(idx->getOperand(1))) {
+					Instruction *idx1 = cast<Instruction>(idx->getOperand(1));
+					unique_ptr<Dependence> d1 = DA->depends(idx1, phi, false);
+					if (d1 != nullptr) {
+						i.dump();
+						cerr << "Write instruction found dependent on i\n\n";
+						dependent = true;
+					}
+				}
+				if (isa<Instruction>(idx->getOperand(2))) {
+					Instruction *idx2 = cast<Instruction>(idx->getOperand(2));
+					unique_ptr<Dependence> d2 = DA->depends(idx2, phi, false);
+					if (d2 != nullptr) {
+						i.dump();
+						cerr << "Write instruction found dependent on i\n\n";
+						dependent = true;
+					}
 				}
 				else {
 					i.dump();
 					cerr << "Write instruction found but not dependent on i, not parallelizable\n\n";
+					parallelizable = false;
 				}
+			}
+			if (dependent) {
+				dependents->insert(&i);
 			}
 		}
 	}
