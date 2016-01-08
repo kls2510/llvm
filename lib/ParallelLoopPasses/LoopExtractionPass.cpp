@@ -273,24 +273,6 @@ namespace {
 			FunctionType *intDivFunctionType1 = FunctionType::get(Type::getInt64Ty(context), divParamTypes1, false);
 			mod->getOrInsertFunction("integerDivide", intDivFunctionType1);
 
-			SmallVector<Type *, 2> divParamTypes2;
-			divParamTypes2.push_back(Type::getInt32Ty(context));
-			divParamTypes2.push_back(Type::getInt32Ty(context));
-			FunctionType *intDivFunctionType2 = FunctionType::get(Type::getInt64Ty(context), divParamTypes2, false);
-			mod->getOrInsertFunction("integerDivide", intDivFunctionType2);
-
-			SmallVector<Type *, 2> divParamTypes3;
-			divParamTypes3.push_back(Type::getInt64Ty(context));
-			divParamTypes3.push_back(Type::getInt32Ty(context));
-			FunctionType *intDivFunctionType3 = FunctionType::get(Type::getInt64Ty(context), divParamTypes3, false);
-			mod->getOrInsertFunction("integerDivide", intDivFunctionType3);
-			
-			SmallVector<Type *, 2> divParamTypes4;
-			divParamTypes4.push_back(Type::getInt32Ty(context));
-			divParamTypes4.push_back(Type::getInt64Ty(context));
-			FunctionType *intDivFunctionType4 = FunctionType::get(Type::getInt64Ty(context), divParamTypes4, false);
-			mod->getOrInsertFunction("integerDivide", intDivFunctionType4);
-
 			//create opaque type
 			StructType *groupStruct = StructType::create(context, "struct.dispatch_group_s");
 
