@@ -104,12 +104,14 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	for (auto &bb : L->getBlocks()) {
 		for (auto &inst : bb->getInstList()) {
 			if (isa<PHINode>(inst)) {
-				noOfPhiNodes++;
+				if (&inst != phi) {
+					noOfPhiNodes++;
+				}
 			}
 			//also, say the function is not parallelizable if it calls a function (will be an overestimation)
 			else if (isa<CallInst>(inst)) {
 				CallInst *call = cast<CallInst>(&inst);
-				cerr << "call found in loop so not parallelizable";
+				cerr << "call found in loop so not parallelizable\n";
 				parallelizable = false;
 				//TODO: IMPROVE
 				return false;
@@ -117,11 +119,12 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 		}
 	}
 
-	if (noOfPhiNodes > (L->getSubLoops().size() + 1)) {
+	//pretend there is no vectorising pass - will fix
+	/* if (noOfPhiNodes > (L->getSubLoops().size() + 1)) {
 		parallelizable = false;
 		cerr << "Too many phi nodes\n";
 		return false;
-	}
+	} */
 
 	//loop through instructions dependendent on the induction variable and check to see whether
 	//there are interloop dependencies
