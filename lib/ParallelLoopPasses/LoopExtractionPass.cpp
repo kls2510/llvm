@@ -282,15 +282,24 @@ namespace {
 			cerr << "induction node:\n";
 			phi->dump();
 			cerr << "\n";
-			User::op_iterator operands = phi->op_begin();
-			operands[0] = *element++;
 
 			Instruction *exitCond = loopData->getExitCondNode();
 			cerr << "exit cond node:\n";
 			exitCond->dump();
 			cerr << "\n";
-			operands = exitCond->op_begin();
-			operands[1] = *element++;
+
+			for (auto &bb : newLoopFunc->getBasicBlockList()) {
+				for (auto &i : bb.getInstList()) {
+					if (&i == phi) {
+						User::op_iterator operands = i.op_begin();
+						operands[0] = *element++;
+					}
+					else if (&i == exitCond) {
+						User::op_iterator operands = i.op_begin();
+						operands[1] = *element++;
+					}
+				}
+			}
 
 			//after looping, store values from analysis in a struct and return it
 			/* for (auto &bb : newLoopFunc->getBasicBlockList()) {
