@@ -143,7 +143,7 @@ namespace {
 					elts.push_back(threadStartIt->getType());
 					elts.push_back(endIt->getType());
 					//memory on original stack to store return values
-					elts.push_back(returnStruct);
+					//elts.push_back(returnStruct);
 					myStruct->setBody(elts);
 				}
 
@@ -205,7 +205,7 @@ namespace {
 			IRBuilder<> cleanup(cont->begin());
 			cleanup.CreateCall(release, releaseArgs);
 			//back in the main function that calls the loop in separate threads, values must be updated with the loop return values
-			int retValNo = 0;
+			/*int retValNo = 0;
 			int structIndex = noOps + 2;
 			Value *lastStruct = threadStructs.back();
 			Value *lastReturnStruct = cleanup.CreateStructGEP(myStruct, lastStruct, structIndex);
@@ -231,7 +231,7 @@ namespace {
 					//loop through every return struct and do whatever accumulation need to be done, then replace values
 				}
 				retValNo++;
-			}
+			} */
 
 			//delete the original call instruction
 			callInst->eraseFromParent();
@@ -293,7 +293,7 @@ namespace {
 			operands[1] = *element++;
 
 			//after looping, store values from analysis in a struct and return it
-			for (auto &bb : newLoopFunc->getBasicBlockList()) {
+			/* for (auto &bb : newLoopFunc->getBasicBlockList()) {
 				//insert return instructions at the end of every possible exit block
 				for (auto &i : bb.getInstList()) {
 					if (isa<ReturnInst>(i)) {
@@ -307,7 +307,7 @@ namespace {
 						}
 					}
 				}
-			}
+			} */
 
 
 			//Mark the function to avoid infinite extraction
