@@ -210,7 +210,7 @@ namespace {
 			Value *lastStruct = threadStructs.back();
 			Value *lastReturnStruct = cleanup.CreateStructGEP(myStruct, lastStruct, structIndex);
 			list<PHINode *> accumulativePhiNodes = loopData->getOuterLoopNonInductionPHIs();
-			for (auto retVal : loopData->getReturnValues()) {
+			for (auto retVal : valuesToReturn) {
 				if (std::find(accumulativePhiNodes.begin(), accumulativePhiNodes.end(), retVal) == accumulativePhiNodes.end()) {
 					//replace required values with the loaded return value from the last thread if there isn't an associated phi node
 					Value *returnedValue = cleanup.CreateStructGEP(returnStruct, lastReturnStruct, retValNo);
@@ -289,11 +289,10 @@ namespace {
 			cerr << "exit cond node:\n";
 			exitCond->dump();
 			cerr << "\n";
-			User::op_iterator operands = exitCond->op_begin();
+			operands = exitCond->op_begin();
 			operands[1] = *element++;
 
 			//after looping, store values from analysis in a struct and return it
-			list<Instruction *> valuesToReturn = loopData->getReturnValues();
 			for (auto &bb : newLoopFunc->getBasicBlockList()) {
 				//insert return instructions at the end of every possible exit block
 				for (auto &i : bb.getInstList()) {
