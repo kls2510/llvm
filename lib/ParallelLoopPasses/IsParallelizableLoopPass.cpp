@@ -73,9 +73,9 @@ PHINode *inductionPhiNode(Instruction &i) {
 		PHINode *potentialPhi = cast<PHINode>(&i);
 		BasicBlock *phiBB = potentialPhi->getParent();
 		//check for a back edge with the phi node variable
-		for (auto &inst : potentialPhi->uses()) {
+		for (auto inst : potentialPhi->users()) {
 			if (isa<CmpInst>(inst)) {
-				for (auto &u : inst->uses()) {
+				for (auto u : inst->users()) {
 					if (isa<BranchInst>(u)) {
 						BranchInst *br = cast<BranchInst>(u);
 						Value *bb = br->getOperand(1);
@@ -93,9 +93,9 @@ PHINode *inductionPhiNode(Instruction &i) {
 		}
 		//If one doesn't exist, check for a back edge with the next phi node variable
 		Value *nextVal = potentialPhi->getOperand(1);
-		for (auto &inst : nextVal->uses()) {
+		for (auto inst : nextVal->users()) {
 			if (isa<CmpInst>(inst)) {
-				for (auto &u : inst->uses()) {
+				for (auto u : inst->users()) {
 					if (isa<BranchInst>(u)) {
 						BranchInst *br = cast<BranchInst>(u);
 						Value *bb = br->getOperand(1);
