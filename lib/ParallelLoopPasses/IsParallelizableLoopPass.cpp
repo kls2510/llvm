@@ -190,10 +190,14 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 			for (auto u : inst.users()) {
 				Instruction *use = cast<Instruction>(u);
 				if (!L->contains(use)) {
-					cerr << "use of value in loop that is also used after:\n";
-					inst.dump();
-					use->dump();
-					returnValues.insert(make_pair(&inst,use));
+					//we don't want duplicates
+					pair <multimap<Instruction *, Instruction *>::iterator, multimap<Instruction *, Instruction *>::iterator> range = returnValues.equal_range(&inst);
+					if (find(range.first, range.second, use) == returnValues.end()) {
+						cerr << "use of value in loop that is also used after:\n";
+						inst.dump();
+						use->dump();
+						returnValues.insert(make_pair(&inst, use));
+					}					
 				}
 			}
 		}
