@@ -74,7 +74,7 @@ PHINode *inductionPhiNode(Instruction &i) {
 		BasicBlock *phiBB = potentialPhi->getParent();
 		//check for a back edge with the phi node variable
 		for (auto &inst : potentialPhi->uses()) {
-			if (isa<CmpInst>(i)) {
+			if (isa<CmpInst>(inst)) {
 				for (auto &u : inst->uses()) {
 					if (isa<BranchInst>(u)) {
 						BranchInst *br = cast<BranchInst>(u);
@@ -94,7 +94,7 @@ PHINode *inductionPhiNode(Instruction &i) {
 		//If one doesn't exist, check for a back edge with the next phi node variable
 		Value *nextVal = potentialPhi->getOperand(1);
 		for (auto &inst : nextVal->uses()) {
-			if (isa<CmpInst>(i)) {
+			if (isa<CmpInst>(inst)) {
 				for (auto &u : inst->uses()) {
 					if (isa<BranchInst>(u)) {
 						BranchInst *br = cast<BranchInst>(u);
@@ -148,7 +148,6 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	PhiNodes.push_back(phi);
 	noOfPhiNodes++;
 
-	Instruction *inst = phi->getNextNode();
 	//loop through all instructions to check for only one phi node per inner loop, calls to instructions and variables live outside the loop (so must be returned)
 	for (auto &bb : L->getBlocks()) {
 		for (auto &inst : bb->getInstList()) {
