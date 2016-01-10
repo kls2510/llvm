@@ -1,5 +1,6 @@
 #include "LoopDependencyData.h"
 #include <iostream>
+#include <set>
 
 using namespace llvm;
 using namespace std;
@@ -67,3 +68,36 @@ int LoopDependencyData::getTripCount() {
 	return tripCount;
 }
 
+list<Instruction *> LoopDependencyData::getReturnValues() {
+	list<Instruction *> toReturn;
+	set<Instruction *> returnSet;
+	for (auto p : returnValues) {
+		returnSet.insert(p.first);
+	}
+	for (auto i : returnSet) {
+		toReturn.push_back(i);
+	}
+	return toReturn;
+}
+
+list<Instruction *> LoopDependencyData::getReplaceReturnValueIn(Instruction *returnValue) {
+	list<Instruction *> toReturn;
+	pair <multimap<Instruction *, Instruction *>::iterator, multimap<Instruction *, Instruction *>::iterator> range = returnValues.equal_range(returnValue);
+	multimap<Instruction *, Instruction *>::iterator i;
+	for (i = range.first; i != range.second; i++) {
+		toReturn.push_back(i->second);
+	}
+	return toReturn;
+}
+
+list<PHINode *> LoopDependencyData::getOuterLoopNonInductionPHIs() {
+	return accumulativePhiNodes;
+}
+
+Instruction *LoopDependencyData::getInductionPhi() {
+	return phi;
+}
+
+Instruction *LoopDependencyData::getExitCondNode() {
+	return end;
+}

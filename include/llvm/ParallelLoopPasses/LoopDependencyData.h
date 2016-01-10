@@ -23,10 +23,17 @@ private:
 	list<Dependence *> dependencies;
 	int noOfPhiNodes;
 	bool parallelizable;
+	multimap<Instruction *, Instruction *> returnValues;
+	list<PHINode *> accumulativePhiNodes;
+	Instruction *phi;
+	Instruction *end;
 
 public:
-	LoopDependencyData(Loop *L, list<Dependence *> d, int phi, Value *startIt, Value *finalIt, int tripCount, bool parallelizable) {
-		loop = L, dependencies = d, noOfPhiNodes = phi, this->parallelizable = parallelizable, this->startIt = startIt, this->finalIt = finalIt, this->tripCount = tripCount;
+	LoopDependencyData(Instruction *IndPhi, Instruction *end, Loop *L, list<Dependence *> d, int phi, Value *startIt, Value *finalIt, int tripCount, 
+						bool parallelizable, multimap<Instruction *, Instruction *> returnValues, list<PHINode *> accumulativePhiNodes) {
+		loop = L, dependencies = d, noOfPhiNodes = phi, this->parallelizable = parallelizable, this->startIt = startIt,
+			this->finalIt = finalIt, this->tripCount = tripCount, this->returnValues = returnValues, this->accumulativePhiNodes = accumulativePhiNodes,
+			this->phi = IndPhi, this->end = end;
 	}
 
 	Loop *getLoop();
@@ -47,6 +54,15 @@ public:
 
 	int getTripCount();
 
+	list<Instruction *> getReturnValues();
+
+	list<Instruction *> getReplaceReturnValueIn(Instruction *returnValue);
+
+	list<PHINode *> getOuterLoopNonInductionPHIs();
+
+	Instruction *getInductionPhi();
+
+	Instruction *getExitCondNode();
 };
 
 #endif
