@@ -89,14 +89,32 @@ namespace {
 			//send the: data required, startItvalue and endIt value
 			vector<Type *> elts;
 
+			int noCallOperands = 0;
+			SmallVector<Value *, 8> callOperands;
+			SmallVector<Value *, 8> callArgs;
+			SmallVector<Value *, 8> localArgs;
+			Value *oldArgs = extractedLoop->arg_begin();
 			//setup struct type
 			CallInst *callInst = dyn_cast<CallInst>(*(extractedLoop->user_begin()));
 			int noOps = callInst->getNumArgOperands();
 			for (int i = 0; i < noOps; i++) {
-				elts.push_back(callInst->getOperand(i)->getType());
+				//only want to share memory for array accesses, not local variables
+				if (isa<PointerType>(callInst->getOperand(i)->getType())) {
+					if (cast<PointerType>(callInst->getOperand(i)->getType())->getElementType()->isArrayTy()) {
+						cerr << "argument is of array type:\n";
+						callInst->getOperand(i)->dump();
+						callOperands.push_back(callInst->getOperand(i));
+						callArgs.push_back(&oldArgs[i]);
+						noCallOperands++;
+						elts.push_back(callInst->getOperand(i)->getType());
+					}
+					else {
+						localArgs.push_back(&oldArgs[i]);
+					}
+				}
 			}
 
-			//create the struct we'll use to return data from the threads
+			//create the struct we'll use to return local data variables from the threads (separate store needed for each thread)
 			StructType *returnStruct = StructType::create(context, "ThreadReturner");
 			vector<Type *> retElts;
 
@@ -143,22 +161,26 @@ namespace {
 					elts.push_back(threadStartIt->getType());
 					elts.push_back(endIt->getType());
 					//memory on original stack to store return values
-					//elts.push_back(returnStruct);
+					elts.push_back(returnStruct);
 					myStruct->setBody(elts);
 				}
 
 				AllocaInst *allocateInst = builder.CreateAlloca(myStruct);
-				//store original arguments in struct
-				for (int i = 0; i < noOps; i++) {
-					Value *getPTR = builder.CreateStructGEP(myStruct, allocateInst, i);
-					builder.CreateStore(callInst->getOperand(i), getPTR);
+				//store original array arguments in struct
+				int k = 0;
+				for (auto op : callOperands) {
+					Value *getPTR = builder.CreateStructGEP(myStruct, allocateInst, k);
+					builder.CreateStore(op, getPTR);
+					k++;
 				}
 				//store startIt
-				Value *getPTR = builder.CreateStructGEP(myStruct, allocateInst, noOps + 0);
+				Value *getPTR = builder.CreateStructGEP(myStruct, allocateInst, noCallOperands);
 				builder.CreateStore(threadStartIt, getPTR);
 				//store endIt
-				getPTR = builder.CreateStructGEP(myStruct, allocateInst, noOps + 1);
+				getPTR = builder.CreateStructGEP(myStruct, allocateInst, noCallOperands + 1);
 				builder.CreateStore(endIt, getPTR);
+				//store local variables in struct at the end
+				//return struct therefore at index noCallOperands + 2
 				//store the struct pointer for passing into the function - as type void *
 				Value *structInst = builder.CreateCast(Instruction::CastOps::BitCast, allocateInst, Type::getInt8PtrTy(context));
 				threadStructs.push_back(structInst);
@@ -203,10 +225,16 @@ namespace {
 			SmallVector<Value *, 1> releaseArgs;
 			releaseArgs.push_back(groupCall);
 			IRBuilder<> cleanup(cont->begin());
-			cleanup.CreateCall(release, releaseArgs);
-			//back in the main function that calls the loop in separate threads, values must be updated with the loop return values
-			/*int retValNo = 0;
-			int structIndex = noOps + 2;
+			cleanup.SetInsertPoint(cleanup.CreateCall(release, releaseArgs));
+			//delete any original load instructions
+			for (auto &i : cont->getInstList()) {
+				if (isa<LoadInst>(i)) {
+					i.eraseFromParent();
+				}
+			}
+			//now load in our local variable values and update where they are used
+			int retValNo = 0;
+			int structIndex = noCallOperands + 2;
 			Value *lastStruct = threadStructs.back();
 			Value *lastReturnStruct = cleanup.CreateStructGEP(myStruct, lastStruct, structIndex);
 			list<PHINode *> accumulativePhiNodes = loopData->getOuterLoopNonInductionPHIs();
@@ -214,15 +242,16 @@ namespace {
 				if (std::find(accumulativePhiNodes.begin(), accumulativePhiNodes.end(), retVal) == accumulativePhiNodes.end()) {
 					//replace required values with the loaded return value from the last thread if there isn't an associated phi node
 					Value *returnedValue = cleanup.CreateStructGEP(returnStruct, lastReturnStruct, retValNo);
+					Value *loadedValue = cleanup.CreateLoad(returnedValue);
 					for (auto replacePos : loopData->getReplaceReturnValueIn(retVal)) {
 						for (auto &op : replacePos->operands()) {
 							if (op == retVal) {
 								cerr << "Replacing a returned value: \n";
 								op->dump();
 								cerr << "with\n";
-								returnedValue->dump();
+								loadedValue->dump();
 								cerr << "\n";
-								op = returnedValue;
+								op = loadedValue;
 							}
 						}
 					}
@@ -231,7 +260,7 @@ namespace {
 					//loop through every return struct and do whatever accumulation need to be done, then replace values
 				}
 				retValNo++;
-			} */
+			} 
 
 			//delete the original call instruction
 			callInst->eraseFromParent();
@@ -246,15 +275,26 @@ namespace {
 			BasicBlock *writeTo = BasicBlock::Create(context, "loads", newLoopFunc);
 			IRBuilder<> loadBuilder(writeTo);
 			Value *castArgVal = loadBuilder.CreateBitOrPointerCast(args2, myStruct->getPointerTo());
-			//cerr << "creating map\n";
-			for (auto &i : args1) {
+			for (auto val : callArgs) {
+				//map the arrays in the old function to their values in the new one
 				Value *mapVal = loadBuilder.CreateStructGEP(myStruct, castArgVal, p);
 				LoadInst *loadInst = loadBuilder.CreateLoad(mapVal);
-				vvmap.insert(std::make_pair(cast<Value>(&i), loadInst));
+				vvmap.insert(std::make_pair(val, loadInst));
 				p++;
 			}
+			Value *localReturns = loadBuilder.CreateStructGEP(myStruct, castArgVal, p + 2);
+			//map the local variables to the original function values, using the return arg struct
+			int retValCounter = 0;
+			SmallVector<Value *, 8>::iterator localArg = localArgs.begin();
+			for (auto val : valuesToReturn) {
+				Value *mapVal = loadBuilder.CreateStructGEP(returnStruct, localReturns, retValCounter);
+				LoadInst *loadInst = loadBuilder.CreateLoad(mapVal);
+				vvmap.insert(std::make_pair(*localArg, loadInst));
+				retValCounter++;
+				localArg++;
+			}
 			//cerr << "loading start and end it too\n";
-			//load start and end it too
+			//map the start and end it too (without using the map)
 			Value *val = loadBuilder.CreateStructGEP(myStruct, castArgVal, p);
 			LoadInst *loadInst = loadBuilder.CreateLoad(val);
 			structElements.push_back(loadInst);
