@@ -147,14 +147,17 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	}
 	PhiNodes.push_back(phi);
 	noOfPhiNodes++;
+	cerr << "set loop induction variable to\n";
+	phi->dump();
+	cerr << "\n";
 
 	//loop through all instructions to check for only one phi node per inner loop, calls to instructions and variables live outside the loop (so must be returned)
 	for (auto &bb : L->getBlocks()) {
 		for (auto &inst : bb->getInstList()) {
-			PHINode *foundPhi;
-			if ((foundPhi = inductionPhiNode(inst)) != nullptr) {
+			PHINode *foundPhi = inductionPhiNode(inst);
+			if (foundPhi != nullptr) {
 				//found another loop induction phi node
-				if (&inst != phi) {
+				if (!(foundPhi == phi)) {
 					noOfPhiNodes++;
 				}
 			}
@@ -184,7 +187,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 				return false;
 			}
 			//check for uses outside the loop
-			for (auto &u : inst.uses()) {
+			for (auto u : inst.users()) {
 				Instruction *use = cast<Instruction>(u);
 				if (!L->contains(use)) {
 					cerr << "use of value in loop that is also used after:\n";
@@ -196,9 +199,12 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 		}
 	}
 	
-	if (noOfPhiNodes > (L->getSubLoops().size() + 1)) {
+	cerr << "total number of loops nested = " << noOfPhiNodes << "\n";
+	//note: getSubLoops only obtains the immediate subloop number
+	//say we'll only parallelize if the outerloop only contains one immediate inner loop
+	if ((L->getSubLoops().size()) > 1) {
 		parallelizable = false;
-		cerr << "Too many phi nodes\n";
+		cerr << "Too many loops immediately within the outer loop\n";
 		return false;
 	}
 
