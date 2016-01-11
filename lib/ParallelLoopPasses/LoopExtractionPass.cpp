@@ -296,13 +296,11 @@ namespace {
 			localReturns = loadBuilder.CreateLoad(localReturns);
 			//map the local variables to the original function values, using the return arg struct
 			int retValCounter = 0;
-			SmallVector<Value *, 8>::iterator localArg = localArgs.begin();
-			for (auto val : valuesToReturn) {
+			for (auto oldVal : localArgs) {
 				Value *mapVal = loadBuilder.CreateStructGEP(returnStruct, localReturns, retValCounter);
 				LoadInst *loadInst = loadBuilder.CreateLoad(mapVal);
-				vvmap.insert(std::make_pair(*localArg, loadInst));
+				vvmap.insert(std::make_pair(oldVal, loadInst));
 				retValCounter++;
-				localArg++;
 			}
 			//cerr << "loading start and end it too\n";
 			//map the start and end it too (without using the map)
