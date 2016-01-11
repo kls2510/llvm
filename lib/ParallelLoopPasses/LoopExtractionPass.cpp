@@ -93,7 +93,7 @@ namespace {
 			SmallVector<Value *, 8> callOperands;
 			SmallVector<Value *, 8> callArgs;
 			SmallVector<Value *, 8> localArgs;
-			Value *oldArg = extractedLoop->arg_begin();
+			Function::arg_iterator oldArg = extractedLoop->arg_begin();
 			cerr << "old args:\n";
 			//setup struct type
 			CallInst *callInst = dyn_cast<CallInst>(*(extractedLoop->user_begin()));
