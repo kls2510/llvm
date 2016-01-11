@@ -301,8 +301,8 @@ namespace {
 			int retValCounter = 0;
 			for (auto oldVal : localArgs) {
 				Value *mapVal = loadBuilder.CreateStructGEP(returnStruct, localReturns, retValCounter);
-				LoadInst *loadInst = loadBuilder.CreateLoad(mapVal);
-				vvmap.insert(std::make_pair(oldVal, loadInst));
+				//LoadInst *loadInst = loadBuilder.CreateLoad(mapVal);
+				vvmap.insert(std::make_pair(oldVal, mapVal));
 				retValCounter++;
 			}
 			//cerr << "loading start and end it too\n";
