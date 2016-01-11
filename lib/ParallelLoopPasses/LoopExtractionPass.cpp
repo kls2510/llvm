@@ -293,6 +293,7 @@ namespace {
 				p++;
 			}
 			Value *localReturns = loadBuilder.CreateStructGEP(myStruct, castArgVal, p + 2);
+			localReturns = loadBuilder.CreateLoad(localReturns);
 			//map the local variables to the original function values, using the return arg struct
 			int retValCounter = 0;
 			SmallVector<Value *, 8>::iterator localArg = localArgs.begin();
