@@ -50,6 +50,53 @@ namespace {
 			AU.addRequired<DominatorTreeWrapperPass>();
 		}
 
+		Instruction *inductionPhiNode(Instruction &i) {
+			if (isa<PHINode>(i)) {
+				PHINode *potentialPhi = cast<PHINode>(&i);
+				BasicBlock *phiBB = potentialPhi->getParent();
+				//check for a back edge with the phi node variable
+				for (auto inst : potentialPhi->users()) {
+					if (isa<CmpInst>(inst)) {
+						for (auto u : inst->users()) {
+							if (isa<BranchInst>(u)) {
+								BranchInst *br = cast<BranchInst>(u);
+								Value *bb = br->getOperand(1);
+								Value *bb2 = br->getOperand(2);
+								if (bb == phiBB || bb2 == phiBB) {
+									//we have found the phi node
+									cerr << "found a loop induction variable\n";
+									i.dump();
+									cerr << "\n";
+									return cast<Instruction>(inst);
+								}
+							}
+						}
+					}
+				}
+				//If one doesn't exist, check for a back edge with the next phi node variable
+				Value *nextVal = potentialPhi->getOperand(1);
+				for (auto inst : nextVal->users()) {
+					if (isa<CmpInst>(inst)) {
+						for (auto u : inst->users()) {
+							if (isa<BranchInst>(u)) {
+								BranchInst *br = cast<BranchInst>(u);
+								Value *bb = br->getOperand(1);
+								Value *bb2 = br->getOperand(2);
+								if (bb == phiBB || bb2 == phiBB) {
+									//we have found the phi node
+									cerr << "found a loop induction variable\n";
+									i.dump();
+									cerr << "\n";
+									return cast<Instruction>(inst);
+								}
+							}
+						}
+					}
+				}
+			}
+			return nullptr;
+		}
+
 		bool extract(Function &F, LoopDependencyData *loopData, DominatorTree &DT, LLVMContext &context) {
 			//extract the loop
 			//cerr << "This loop has no dependencies so can be extracted\n";
@@ -253,20 +300,13 @@ namespace {
 				if (std::find(accumulativePhiNodes.begin(), accumulativePhiNodes.end(), retVal) == accumulativePhiNodes.end()) {
 					//replace loaded values with the loaded return value from the last thread if there isn't an associated phi node
 					Value *returnedValue = cleanup.CreateStructGEP(returnStruct, lastReturnStruct, retValNo);
-					//Value *loadedValue = cleanup.CreateLoad(returnedValue);
-					//for (auto replacePos : loopData->getReplaceReturnValueIn(retVal)) {
-						//for (auto &op : replacePos->operands()) {
-							//if (op == retVal) {
-								cerr << "Replacing a returned value: \n";
-								Instruction *load = *loadIterator;
-								load->dump();
-								cerr << "with\n";
-								returnedValue->dump();
-								cerr << "\n";
-								load->op_begin()[0] = returnedValue;
-							//}
-						//}
-					//}
+					cerr << "Replacing a returned value: \n";
+					Instruction *load = *loadIterator;
+					load->dump();
+					cerr << "with\n";
+					returnedValue->dump();
+					cerr << "\n";
+					load->op_begin()[0] = returnedValue;
 				}
 				else {
 					//loop through every return struct and do whatever accumulation need to be done, then replace values
@@ -301,7 +341,6 @@ namespace {
 			int retValCounter = 0;
 			for (auto oldVal : localArgs) {
 				Value *mapVal = loadBuilder.CreateStructGEP(returnStruct, localReturns, retValCounter);
-				//LoadInst *loadInst = loadBuilder.CreateLoad(mapVal);
 				vvmap.insert(std::make_pair(oldVal, mapVal));
 				retValCounter++;
 			}
@@ -327,49 +366,26 @@ namespace {
 			//bridge first bb to cloned bbs
 			loadBuilder.CreateBr((newLoopFunc->begin())->getNextNode());
 
-			//Replace values with new values in function
-			//cerr << "replacing old function values\n";
+			//Replace start and end iteration values
+			bool phiFound = false;
 			SmallVector<LoadInst *, 8>::iterator element = structElements.begin();
-			Instruction *phi = loopData->getInductionPhi();
-			cerr << "induction node:\n";
-			phi->dump();
-			cerr << "\n";
-
-			Instruction *exitCond = loopData->getExitCondNode();
-			cerr << "exit cond node:\n";
-			exitCond->dump();
-			cerr << "\n";
-
-			for (auto &bb : newLoopFunc->getBasicBlockList()) {
-				for (auto &i : bb.getInstList()) {
-					if (&i == phi) {
-						User::op_iterator operands = i.op_begin();
+			for (auto bb : loopData->getLoop()->getBlocks()) {
+				for (auto &i : bb->getInstList()) {
+					if (inductionPhiNode(i) != nullptr) {
+						PHINode *phi = cast<PHINode>(&i);
+						CmpInst *exitCond = cast<CmpInst>(inductionPhiNode(i));
+						User::op_iterator operands = phi->op_begin();
 						operands[0] = *element++;
-					}
-					else if (&i == exitCond) {
-						User::op_iterator operands = i.op_begin();
+						User::op_iterator operands = exitCond->op_begin();
 						operands[1] = *element++;
+						phiFound = true;
+						break;
 					}
+				}
+				if (phiFound) {
+					break;
 				}
 			}
-
-			//after looping, store values from analysis in a struct and return it
-			/* for (auto &bb : newLoopFunc->getBasicBlockList()) {
-				//insert return instructions at the end of every possible exit block
-				for (auto &i : bb.getInstList()) {
-					if (isa<ReturnInst>(i)) {
-						int retNo = 0;
-						IRBuilder<> returner(&i);
-						Value *returnMemory = returner.CreateStructGEP(myStruct, castArgVal, p + 2);
-						for (auto r : valuesToReturn) {
-							Value *getPTR = returner.CreateStructGEP(returnStruct, returnMemory, retNo);
-							returner.CreateStore(r, getPTR);
-							retNo++;
-						}
-					}
-				}
-			} */
-
 
 			//Mark the function to avoid infinite extraction
 			newLoopFunc->addFnAttr("Extracted", "true");
