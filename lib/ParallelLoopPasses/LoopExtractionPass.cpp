@@ -243,6 +243,7 @@ namespace {
 			Value *lastStruct = threadStructs.back();
 			lastStruct = cleanup.CreateBitOrPointerCast(lastStruct, myStruct->getPointerTo());
 			Value *lastReturnStruct = cleanup.CreateStructGEP(myStruct, lastStruct, structIndex);
+			lastReturnStruct = cleanup.CreateLoad(lastReturnStruct);
 			list<PHINode *> accumulativePhiNodes = loopData->getOuterLoopNonInductionPHIs();
 			SmallVector<Instruction *, 8>::iterator loadIterator = originalLoads.begin();
 			for (auto retVal : valuesToReturn) {
