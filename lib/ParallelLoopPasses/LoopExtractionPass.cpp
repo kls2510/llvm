@@ -369,8 +369,8 @@ namespace {
 			//Replace start and end iteration values
 			bool phiFound = false;
 			SmallVector<LoadInst *, 8>::iterator element = structElements.begin();
-			for (auto bb : loopData->getLoop()->getBlocks()) {
-				for (auto &i : bb->getInstList()) {
+			for (auto &bb : newLoopFunc->getBasicBlockList()) {
+				for (auto &i : bb.getInstList()) {
 					if (inductionPhiNode(i) != nullptr) {
 						PHINode *phi = cast<PHINode>(&i);
 						CmpInst *exitCond = cast<CmpInst>(inductionPhiNode(i));
