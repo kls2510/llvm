@@ -376,7 +376,7 @@ namespace {
 						CmpInst *exitCond = cast<CmpInst>(inductionPhiNode(i));
 						User::op_iterator operands = phi->op_begin();
 						operands[0] = *element++;
-						User::op_iterator operands = exitCond->op_begin();
+						operands = exitCond->op_begin();
 						operands[1] = *element++;
 						phiFound = true;
 						break;
