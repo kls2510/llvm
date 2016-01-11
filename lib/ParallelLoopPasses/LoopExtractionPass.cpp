@@ -123,6 +123,7 @@ namespace {
 			for (auto i : valuesToReturn) {
 				retElts.push_back(i->getType());
 			}
+			returnStruct->setBody(retElts);
 
 			IRBuilder<> builder(callInst);
 
@@ -161,11 +162,12 @@ namespace {
 					elts.push_back(threadStartIt->getType());
 					elts.push_back(endIt->getType());
 					//memory on original stack to store return values
-					elts.push_back(returnStruct);
+					elts.push_back(returnStruct->getPointerTo());
 					myStruct->setBody(elts);
 				}
 
 				AllocaInst *allocateInst = builder.CreateAlloca(myStruct);
+				AllocaInst *allocateReturns = builder.CreateAlloca(returnStruct);
 				//store original array arguments in struct
 				int k = 0;
 				for (auto op : callOperands) {
@@ -174,13 +176,15 @@ namespace {
 					k++;
 				}
 				//store startIt
-				Value *getPTR = builder.CreateStructGEP(myStruct, allocateInst, noCallOperands);
+				Value *getPTR = builder.CreateStructGEP(myStruct, allocateInst, k);
 				builder.CreateStore(threadStartIt, getPTR);
 				//store endIt
-				getPTR = builder.CreateStructGEP(myStruct, allocateInst, noCallOperands + 1);
+				getPTR = builder.CreateStructGEP(myStruct, allocateInst, k + 1);
 				builder.CreateStore(endIt, getPTR);
 				//store local variables in struct at the end
 				//return struct therefore at index noCallOperands + 2
+				getPTR = builder.CreateStructGEP(myStruct, allocateInst, k + 2);
+				builder.CreateStore(allocateReturns, getPTR);
 				//store the struct pointer for passing into the function - as type void *
 				Value *structInst = builder.CreateCast(Instruction::CastOps::BitCast, allocateInst, Type::getInt8PtrTy(context));
 				threadStructs.push_back(structInst);
