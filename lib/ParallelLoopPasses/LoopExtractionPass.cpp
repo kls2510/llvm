@@ -93,7 +93,7 @@ namespace {
 			SmallVector<Value *, 8> callOperands;
 			SmallVector<Value *, 8> callArgs;
 			SmallVector<Value *, 8> localArgs;
-			Value *oldArgs = extractedLoop->arg_begin();
+			Value *oldArg = extractedLoop->arg_begin();
 			//setup struct type
 			CallInst *callInst = dyn_cast<CallInst>(*(extractedLoop->user_begin()));
 			int noOps = callInst->getNumArgOperands();
@@ -104,14 +104,15 @@ namespace {
 						cerr << "argument is of array type:\n";
 						callInst->getOperand(i)->dump();
 						callOperands.push_back(callInst->getOperand(i));
-						callArgs.push_back(&oldArgs[i]);
+						callArgs.push_back(oldArg);
 						noCallOperands++;
 						elts.push_back(callInst->getOperand(i)->getType());
 					}
 					else {
-						localArgs.push_back(&oldArgs[i]);
+						localArgs.push_back(oldArg);
 					}
 				}
+				oldArg++;
 			}
 
 			//create the struct we'll use to return local data variables from the threads (separate store needed for each thread)
