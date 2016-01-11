@@ -94,6 +94,7 @@ namespace {
 			SmallVector<Value *, 8> callArgs;
 			SmallVector<Value *, 8> localArgs;
 			Value *oldArg = extractedLoop->arg_begin();
+			cerr << "old args:\n";
 			//setup struct type
 			CallInst *callInst = dyn_cast<CallInst>(*(extractedLoop->user_begin()));
 			int noOps = callInst->getNumArgOperands();
@@ -112,6 +113,7 @@ namespace {
 						localArgs.push_back(oldArg);
 					}
 				}
+				oldArg->dump();
 				oldArg++;
 			}
 
