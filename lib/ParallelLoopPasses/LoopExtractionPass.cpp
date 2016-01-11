@@ -230,10 +230,11 @@ namespace {
 			releaseArgs.push_back(groupCall);
 			IRBuilder<> cleanup(cont->begin());
 			cleanup.SetInsertPoint(cleanup.CreateCall(release, releaseArgs));
-			//delete any original load instructions
+			//obtain any original load instructions and replace them with our determined local values
+			SmallVector<Instruction *, 8> originalLoads;
 			for (auto &i : cont->getInstList()) {
 				if (isa<LoadInst>(i)) {
-					i.eraseFromParent();
+					originalLoads.push_back(&i);
 				}
 			}
 			//now load in our local variable values and update where they are used
@@ -242,27 +243,30 @@ namespace {
 			Value *lastStruct = threadStructs.back();
 			Value *lastReturnStruct = cleanup.CreateStructGEP(myStruct, lastStruct, structIndex);
 			list<PHINode *> accumulativePhiNodes = loopData->getOuterLoopNonInductionPHIs();
+			SmallVector<Instruction *, 8>::iterator loadIterator = originalLoads.begin();
 			for (auto retVal : valuesToReturn) {
 				if (std::find(accumulativePhiNodes.begin(), accumulativePhiNodes.end(), retVal) == accumulativePhiNodes.end()) {
-					//replace required values with the loaded return value from the last thread if there isn't an associated phi node
+					//replace loaded values with the loaded return value from the last thread if there isn't an associated phi node
 					Value *returnedValue = cleanup.CreateStructGEP(returnStruct, lastReturnStruct, retValNo);
-					Value *loadedValue = cleanup.CreateLoad(returnedValue);
-					for (auto replacePos : loopData->getReplaceReturnValueIn(retVal)) {
-						for (auto &op : replacePos->operands()) {
-							if (op == retVal) {
+					//Value *loadedValue = cleanup.CreateLoad(returnedValue);
+					//for (auto replacePos : loopData->getReplaceReturnValueIn(retVal)) {
+						//for (auto &op : replacePos->operands()) {
+							//if (op == retVal) {
 								cerr << "Replacing a returned value: \n";
-								op->dump();
+								Instruction *load = *loadIterator;
+								load->dump();
 								cerr << "with\n";
-								loadedValue->dump();
+								returnedValue->dump();
 								cerr << "\n";
-								op = loadedValue;
-							}
-						}
-					}
+								load->op_begin()[0] = returnedValue;
+							//}
+						//}
+					//}
 				}
 				else {
 					//loop through every return struct and do whatever accumulation need to be done, then replace values
 				}
+				loadIterator++;
 				retValNo++;
 			} 
 
