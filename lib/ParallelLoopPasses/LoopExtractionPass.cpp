@@ -389,6 +389,8 @@ namespace {
 
 			cerr << "extracted loop:\n";
 			newLoopFunc->dump();
+			cerr << "calling function:\n";
+			F.dump();
 
 			//Mark the function to avoid infinite extraction
 			newLoopFunc->addFnAttr("Extracted", "true");
