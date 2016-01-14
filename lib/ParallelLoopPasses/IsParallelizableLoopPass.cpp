@@ -223,14 +223,14 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 					inst.dump();
 					cerr << "\n";
 					parallelizable = false;
-					return;
+					return false;
 				}
 				else if (!L->getSubLoops().front()->contains(&inst)) {
 					cerr << "Outer loop contains a conditional value select, not parallelizable:\n";
 					inst.dump();
 					cerr << "\n";
 					parallelizable = false;
-					return;
+					return false;
 				}
 			}
 		}
