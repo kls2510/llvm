@@ -131,9 +131,17 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 		//loop has no cannonical induction variable but may have a normal phi node
 		for (auto bb : L->getBlocks()) {
 			for (auto &i : bb->getInstList()) {
-				phi = inductionPhiNode(i);
+				if (isa<PHINode>(i)) {
+					phi = inductionPhiNode(i);
+				}
 				if (phi != nullptr) {
+					cerr << "first found phi node is the outer loop induction variable, continuing...\n";
 					break;
+				}
+				else {
+					cerr << "first found phi node is not the outer loop induction variable; not parallelizable...\n";
+					parallelizable = false;
+					return false;
 				}
 			}
 			if (phi != nullptr) {
@@ -142,6 +150,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 		}
 		if (phi == nullptr) {
 			cerr << "no induction variable exists\n";
+			parallelizable = false;
 			return false;
 		}
 	}
@@ -151,7 +160,8 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	phi->dump();
 	cerr << "\n";
 
-	//loop through all instructions to check for only one phi node per inner loop, calls to instructions and variables live outside the loop (so must be returned)
+	int branchNo = 0;
+	//loop through all instructions to check for only one induction phi node per inner loop, calls to instructions and variables live outside the loop (so must be returned)
 	for (auto &bb : L->getBlocks()) {
 		for (auto &inst : bb->getInstList()) {
 			PHINode *foundPhi = inductionPhiNode(inst);
@@ -209,6 +219,8 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 			}
 		}
 	}
+
+
 	
 	cerr << "total number of loops nested = " << noOfPhiNodes << "\n";
 	//note: getSubLoops only obtains the immediate subloop number
@@ -216,6 +228,34 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	if ((L->getSubLoops().size()) > 1) {
 		parallelizable = false;
 		cerr << "Too many loops immediately within the outer loop\n";
+		return false;
+	}
+
+	for (auto &bb : L->getBlocks()) {
+		for (auto &i : bb->getInstList()) {
+			//don't want to parallelize if multiple conditional branch instructions exist in the outer loop (i.e. if's) - to be safe
+			if (isa<BranchInst>(i)) {
+				BranchInst *br = cast<BranchInst>(&i);
+				if (br->isConditional()) {
+					if (L->getSubLoops().size() == 0) {
+						cerr << "Outer loop contains a conditional branch:\n";
+						br->dump();
+						cerr << "\n";
+						branchNo++;
+					}
+					else if (!L->getSubLoops().front()->contains(br)) {
+						cerr << "Outer loop contains a conditional branch:\n";
+						br->dump();
+						cerr << "\n";
+						branchNo++;
+					}
+				}
+			}
+		}
+	}
+	if (branchNo > 1) {
+		cerr << "Too many conditional branches found\n";
+		parallelizable = false;
 		return false;
 	}
 
