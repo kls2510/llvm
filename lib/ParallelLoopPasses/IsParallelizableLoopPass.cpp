@@ -217,6 +217,22 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 					}					
 				}
 			}
+			if (isa<SelectInst>(inst)) {
+				if (L->getSubLoops().size() == 0) {
+					cerr << "Outer loop contains a conditional value select, not parallelizable:\n";
+					inst.dump();
+					cerr << "\n";
+					parallelizable = false;
+					return;
+				}
+				else if (!L->getSubLoops().front()->contains(&inst)) {
+					cerr << "Outer loop contains a conditional value select, not parallelizable:\n";
+					inst.dump();
+					cerr << "\n";
+					parallelizable = false;
+					return;
+				}
+			}
 		}
 	}
 
@@ -234,6 +250,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	for (auto &bb : L->getBlocks()) {
 		for (auto &i : bb->getInstList()) {
 			//don't want to parallelize if multiple conditional branch instructions exist in the outer loop (i.e. if's) - to be safe
+			//these also come in the form of select
 			if (isa<BranchInst>(i)) {
 				BranchInst *br = cast<BranchInst>(&i);
 				if (br->isConditional()) {
