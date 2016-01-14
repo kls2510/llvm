@@ -268,7 +268,10 @@ namespace {
 			//what to return when the threads fail to terminate
 			termBuilder.CreateCall(exit);
 			//ret will never be called as program aborts
-			termBuilder.CreateRetVoid();
+			//termBuilder.CreateRetVoid();
+			Value *retPtr = termBuilder.CreateAlloca(F.getReturnType());
+			Value *ret = termBuilder.CreateLoad(retPtr);
+			termBuilder.CreateRet(ret);
 			Instruction *startInst = builder.GetInsertPoint();
 			BasicBlock *cont = startInst->getParent()->splitBasicBlock(startInst->getNextNode(), "continue");
 			Instruction *toDelete = startInst->getParent()->end()->getPrevNode();
