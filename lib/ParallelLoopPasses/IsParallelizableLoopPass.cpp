@@ -68,7 +68,7 @@ list<LoopDependencyData *> IsParallelizableLoopPass::getResultsForFunction(Funct
 	return results;
 }
 
-PHINode *inductionPhiNode(Instruction &i) {
+PHINode *inductionPhiNode(Instruction &i, Loop *L) {
 	if (isa<PHINode>(i)) {
 		PHINode *potentialPhi = cast<PHINode>(&i);
 		BasicBlock *phiBB = potentialPhi->getParent();
@@ -93,8 +93,9 @@ PHINode *inductionPhiNode(Instruction &i) {
 		}
 		//If one doesn't exist, check for a back edge with the next phi node variable
 		int op;
+		BasicBlock *initialEntry = L->getLoopPredecessor();
 		for (op = 0; op < 2; op++) {
-			if (potentialPhi->getIncomingBlock(op) == phiBB->getPrevNode()){
+			if (potentialPhi->getIncomingBlock(op) == initialEntry){
 				//initial entry edge, do nothing
 			}
 			else {
@@ -111,7 +112,7 @@ PHINode *inductionPhiNode(Instruction &i) {
 									cerr << "found a loop induction variable\n";
 									i.dump();
 									cerr << "\n";
-									return cast<PHINode>(potentialPhi);
+									return cast<PHINode>(inst);
 								}
 							}
 						}
@@ -140,7 +141,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 		for (auto bb : L->getBlocks()) {
 			for (auto &i : bb->getInstList()) {
 				if (isa<PHINode>(i)) {
-					phi = inductionPhiNode(i);
+					phi = inductionPhiNode(i, L);
 				}
 				if (phi != nullptr) {
 					cerr << "found phi node is the outer loop induction variable, continuing...\n";
@@ -168,15 +169,36 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	phi->dump();
 	cerr << "\n";
 
+	//check only max one nested loop within each 
+	int noLoops = 1;
+	vector<Loop *> currentSubloops = L->getSubLoops();
+	while (currentSubloops.size != 0) {
+		if (currentSubloops.size == 1) {
+			Loop *next = *currentSubloops.begin();
+			currentSubloops = next->getSubLoops();
+			noLoops++;
+		}
+		else {
+			//multiple subloops in one loop so don't parallelize
+			cerr << "too many inner loops, not parallelizable\n";
+			parallelizable = false;
+			return false;
+		}
+	}
+
 	int branchNo = 0;
+	auto currentInnerLoop = L->getSubLoops().begin();
 	//loop through all instructions to check for only one induction phi node per inner loop, calls to instructions and variables live outside the loop (so must be returned)
 	for (auto &bb : L->getBlocks()) {
 		for (auto &inst : bb->getInstList()) {
-			PHINode *foundPhi = inductionPhiNode(inst);
-			if (foundPhi != nullptr) {
-				//found another loop induction phi node
-				if (!(foundPhi == phi)) {
-					noOfPhiNodes++;
+			if (noOfPhiNodes < noLoops) {
+				PHINode *foundPhi = inductionPhiNode(inst, *currentInnerLoop);
+				if (foundPhi != nullptr) {
+					//found another loop induction phi node
+					if (!(foundPhi == phi)) {
+						noOfPhiNodes++;
+						currentInnerLoop = (*currentInnerLoop)->getSubLoops().begin();
+					}
 				}
 			}
 			else if (isa<PHINode>(inst)) {
@@ -198,8 +220,9 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 					//i.e. case Add, case FAdd, case Mul, case FMul, case And, case Or, case Xor
 					int op;
 					BasicBlock *currentBB = phi->getParent();
+					BasicBlock *initialEntry = L->getLoopPredecessor();
 					for (op = 0; op < 2; op++) {
-						if (phi->getIncomingBlock(op) == currentBB->getPrevNode()){
+						if (phi->getIncomingBlock(op) == initialEntry){
 							//initial entry edge, do nothing
 						}
 						else {
@@ -281,12 +304,12 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 
 
 	
-	cerr << "total number of loops nested = " << noOfPhiNodes << "\n";
-	//note: getSubLoops only obtains the immediate subloop number
-	//say we'll only parallelize if the outerloop only contains one immediate inner loop
-	if ((L->getSubLoops().size()) > 1) {
+	cerr << "total number of induction phi nodes = " << noOfPhiNodes << "\n";
+	cerr << "total number of loops = " << noLoops << "\n";
+	//only parallelizable if these match
+	if (noOfPhiNodes != noLoops) {
 		parallelizable = false;
-		cerr << "Too many loops immediately within the outer loop\n";
+		cerr << "No of phi nodes don't match no of loops - not parallelizable\n";
 		return false;
 	}
 

@@ -50,7 +50,7 @@ namespace {
 			AU.addRequired<DominatorTreeWrapperPass>();
 		}
 
-		Instruction *inductionPhiNode(Instruction &i) {
+		Instruction *inductionPhiNode(Instruction &i, Loop *L) {
 			if (isa<PHINode>(i)) {
 				PHINode *potentialPhi = cast<PHINode>(&i);
 				BasicBlock *phiBB = potentialPhi->getParent();
@@ -75,8 +75,9 @@ namespace {
 				}
 				//If one doesn't exist, check for a back edge with the next phi node variable
 				int op;
+				BasicBlock *initialEntry = L->getLoopPredecessor();
 				for (op = 0; op < 2; op++) {
-					if (potentialPhi->getIncomingBlock(op) == phiBB->getPrevNode()){
+					if (potentialPhi->getIncomingBlock(op) == initialEntry){
 						//initial entry edge, do nothing
 					}
 					else {
@@ -417,13 +418,14 @@ namespace {
 						User::op_iterator operands = exitCond->op_begin();
 						operands[1] = *element++;
 					} */
-					if (inductionPhiNode(i) != nullptr) {
+					if (inductionPhiNode(i, loopData->getLoop()) != nullptr) {
 						PHINode *phi = cast<PHINode>(&i);
-						CmpInst *exitCond = cast<CmpInst>(inductionPhiNode(i));
+						CmpInst *exitCond = cast<CmpInst>(inductionPhiNode(i, loopData->getLoop()));
 						User::op_iterator operands = phi->op_begin();
+						BasicBlock *initialEntry = loopData->getLoop()->getLoopPredecessor();
 						int op;
 						for (op = 0; op < 2; op++) {
-							if (phi->getIncomingBlock(op) == phi->getParent()->getPrevNode()){
+							if (phi->getIncomingBlock(op) == initialEntry){
 								//initial entry edge, this is the position of the value we want to replace
 								operands[op] = *element++;
 								break;
