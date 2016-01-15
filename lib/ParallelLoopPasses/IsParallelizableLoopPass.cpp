@@ -427,7 +427,16 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	//find loop boundaries
 	bool endFound = false;
 	Instruction *exitCond;
-	Value *startIt = phi->getOperand(0);
+	Value *startIt;
+	int op;
+	BasicBlock *initialEntry = L->getLoopPredecessor();
+	for (op = 0; op < 2; op++) {
+		if (phi->getIncomingBlock(op) == initialEntry){
+			//initial entry edge, replace here
+			startIt = phi->getOperand(op);
+			break;
+		}
+	}
 	Value *finalIt;
 	for (auto bb : L->getBlocks()) {
 		for (auto &i : bb->getInstList()) {
