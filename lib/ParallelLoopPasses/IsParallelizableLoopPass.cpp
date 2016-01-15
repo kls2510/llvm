@@ -92,20 +92,28 @@ PHINode *inductionPhiNode(Instruction &i) {
 			}
 		}
 		//If one doesn't exist, check for a back edge with the next phi node variable
-		Value *nextVal = potentialPhi->getOperand(1);
-		for (auto inst : nextVal->users()) {
-			if (isa<CmpInst>(inst)) {
-				for (auto u : inst->users()) {
-					if (isa<BranchInst>(u)) {
-						BranchInst *br = cast<BranchInst>(u);
-						Value *bb = br->getOperand(1);
-						Value *bb2 = br->getOperand(2);
-						if (bb == phiBB || bb2 == phiBB) {
-							//we have found the phi node
-							cerr << "found a loop induction variable\n";
-							i.dump();
-							cerr << "\n";
-							return cast<PHINode>(potentialPhi);
+		int op;
+		for (op = 0; op < 2; op++) {
+			if (potentialPhi->getIncomingBlock(op) == phiBB->getPrevNode()){
+				//initial entry edge, do nothing
+			}
+			else {
+				Value *nextVal = potentialPhi->getOperand(op);
+				for (auto inst : nextVal->users()) {
+					if (isa<CmpInst>(inst)) {
+						for (auto u : inst->users()) {
+							if (isa<BranchInst>(u)) {
+								BranchInst *br = cast<BranchInst>(u);
+								Value *bb = br->getOperand(1);
+								Value *bb2 = br->getOperand(2);
+								if (bb == phiBB || bb2 == phiBB) {
+									//we have found the phi node
+									cerr << "found a loop induction variable\n";
+									i.dump();
+									cerr << "\n";
+									return cast<PHINode>(potentialPhi);
+								}
+							}
 						}
 					}
 				}

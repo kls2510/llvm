@@ -74,20 +74,28 @@ namespace {
 					}
 				}
 				//If one doesn't exist, check for a back edge with the next phi node variable
-				Value *nextVal = potentialPhi->getOperand(1);
-				for (auto inst : nextVal->users()) {
-					if (isa<CmpInst>(inst)) {
-						for (auto u : inst->users()) {
-							if (isa<BranchInst>(u)) {
-								BranchInst *br = cast<BranchInst>(u);
-								Value *bb = br->getOperand(1);
-								Value *bb2 = br->getOperand(2);
-								if (bb == phiBB || bb2 == phiBB) {
-									//we have found the phi node
-									cerr << "found a loop induction variable\n";
-									i.dump();
-									cerr << "\n";
-									return cast<Instruction>(inst);
+				int op;
+				for (op = 0; op < 2; op++) {
+					if (potentialPhi->getIncomingBlock(op) == phiBB->getPrevNode()){
+						//initial entry edge, do nothing
+					}
+					else {
+						Value *nextVal = potentialPhi->getOperand(op);
+						for (auto inst : nextVal->users()) {
+							if (isa<CmpInst>(inst)) {
+								for (auto u : inst->users()) {
+									if (isa<BranchInst>(u)) {
+										BranchInst *br = cast<BranchInst>(u);
+										Value *bb = br->getOperand(1);
+										Value *bb2 = br->getOperand(2);
+										if (bb == phiBB || bb2 == phiBB) {
+											//we have found the phi node
+											cerr << "found a loop induction variable\n";
+											i.dump();
+											cerr << "\n";
+											return cast<PHINode>(inst);
+										}
+									}
 								}
 							}
 						}
@@ -298,6 +306,7 @@ namespace {
 			lastReturnStruct = cleanup.CreateLoad(lastReturnStruct);
 			list<PHINode *> accumulativePhiNodes = loopData->getOuterLoopNonInductionPHIs();
 			SmallVector<Instruction *, 8>::iterator loadIterator = originalLoads.begin();
+			//TODO: thread release should go first!!!
 			for (auto retVal : valuesToReturn) {
 				if (std::find(accumulativePhiNodes.begin(), accumulativePhiNodes.end(), retVal) == accumulativePhiNodes.end()) {
 					//replace loaded values with the loaded return value from the last thread if there isn't an associated phi node
@@ -412,7 +421,14 @@ namespace {
 						PHINode *phi = cast<PHINode>(&i);
 						CmpInst *exitCond = cast<CmpInst>(inductionPhiNode(i));
 						User::op_iterator operands = phi->op_begin();
-						operands[0] = *element++;
+						int op;
+						for (op = 0; op < 2; op++) {
+							if (phi->getIncomingBlock(op) == phi->getParent()->getPrevNode()){
+								//initial entry edge, this is the position of the value we want to replace
+								operands[op] = *element++;
+								break;
+							}
+						}
 						operands = exitCond->op_begin();
 						operands[1] = *element++;
 						phiFound = true;
