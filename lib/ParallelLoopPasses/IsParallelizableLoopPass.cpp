@@ -191,17 +191,19 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	//loop through all instructions to check for only one induction phi node per inner loop, calls to instructions and variables live outside the loop (so must be returned)
 	for (auto &bb : L->getBlocks()) {
 		for (auto &inst : bb->getInstList()) {
+			bool inductionPhi = false;
 			if (noOfPhiNodes < noLoops) {
 				PHINode *foundPhi = inductionPhiNode(inst, *currentInnerLoop);
 				if (foundPhi != nullptr) {
 					//found another loop induction phi node
 					if (!(foundPhi == phi)) {
+						inductionPhi = true;
 						noOfPhiNodes++;
 						currentInnerLoop = (*currentInnerLoop)->getSubLoops().begin();
 					}
 				}
 			}
-			else if (isa<PHINode>(inst)) {
+			else if (isa<PHINode>(inst) && &inst != phi && !inductionPhi) {
 				bool inOuterLoop = true;
 				//we have found a non-loop-induction phi node variable
 				for (Loop *inner : L->getSubLoops()) {
