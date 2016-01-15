@@ -172,8 +172,8 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	//check only max one nested loop within each 
 	int noLoops = 1;
 	vector<Loop *> currentSubloops = L->getSubLoops();
-	while (currentSubloops.size != 0) {
-		if (currentSubloops.size == 1) {
+	while (currentSubloops.size() != 0) {
+		if (currentSubloops.size() == 1) {
 			Loop *next = *currentSubloops.begin();
 			currentSubloops = next->getSubLoops();
 			noLoops++;
