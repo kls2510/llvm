@@ -119,7 +119,7 @@ PHINode *inductionPhiNode(Instruction &i) {
 bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvolution &SE) {
 	list<Dependence *> dependencies;
 	multimap<Instruction *, Instruction *> returnValues;
-	list<PHINode *> accumulativePhiNodes;
+	map<PHINode *, unsigned int> accumulativePhiNodes;
 	int noOfPhiNodes = 0;
 	bool parallelizable = true;
 
@@ -135,14 +135,14 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 					phi = inductionPhiNode(i);
 				}
 				if (phi != nullptr) {
-					cerr << "first found phi node is the outer loop induction variable, continuing...\n";
+					cerr << "found phi node is the outer loop induction variable, continuing...\n";
 					break;
 				}
-				else {
+				/* else {
 					cerr << "first found phi node is not the outer loop induction variable; not parallelizable...\n";
 					parallelizable = false;
 					return false;
-				}
+				} */
 			}
 			if (phi != nullptr) {
 				break;
@@ -185,7 +185,42 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 					cerr << "non-induction phi-node found in outer loop\n";
 					inst.dump();
 					cerr << "\n";
-					accumulativePhiNodes.push_back(cast<PHINode>(&inst));
+					PHINode *phi = cast<PHINode>(&inst);
+					//find what the repeated operation is - only accept commutative operations
+					//i.e. case Add, case FAdd, case Mul, case FMul, case And, case Or, case Xor
+					int op;
+					BasicBlock *currentBB = phi->getParent();
+					for (op = 0; op < 2; op++) {
+						if (phi->getIncomingBlock(op) == currentBB->getPrevNode()){
+							//initial entry edge, do nothing
+						}
+						else {
+							//find where incoming value is defined - this op will be what needs to be used to accumulate
+							Value *incomingNewValue = phi->getIncomingValue(op);
+							if (isa<Instruction>(incomingNewValue)) {
+								Instruction *incomingInstruction = cast<Instruction>(incomingNewValue);
+								cerr << "found instruction to accumulate\n";
+								incomingInstruction->dump();
+								cerr << "\n";
+								unsigned int opcode = incomingInstruction->getOpcode();
+								if (Instruction::isCommutative(opcode)) {
+									accumulativePhiNodes.insert(make_pair(phi, opcode));
+								}
+								else {
+									cerr << "phi variable op not commutative so can't be parallelized\n";
+									parallelizable = false;
+									return false;
+								}
+							}
+							else {
+								cerr << "found incoming value not of instruction type\n";
+								incomingNewValue->dump();
+								cerr << "\n";
+								//TODO: Not parallelizable?
+							}
+							break;
+						}
+					}
 				}
 			}
 			//also, say the function is not parallelizable if it calls a function (will be an overestimation)

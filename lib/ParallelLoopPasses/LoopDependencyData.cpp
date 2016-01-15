@@ -91,7 +91,15 @@ list<Instruction *> LoopDependencyData::getReplaceReturnValueIn(Instruction *ret
 }
 
 list<PHINode *> LoopDependencyData::getOuterLoopNonInductionPHIs() {
-	return accumulativePhiNodes;
+	list<PHINode *> toReturn;
+	for (auto p : accumulativePhiNodes) {
+		toReturn.push_back(p.first);
+	}
+	return toReturn;
+}
+
+unsigned int LoopDependencyData::getPhiNodeOpCode(PHINode *phi) {
+	return accumulativePhiNodes.find(phi)->second;
 }
 
 Instruction *LoopDependencyData::getInductionPhi() {

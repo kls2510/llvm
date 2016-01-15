@@ -24,13 +24,13 @@ private:
 	int noOfPhiNodes;
 	bool parallelizable;
 	multimap<Instruction *, Instruction *> returnValues;
-	list<PHINode *> accumulativePhiNodes;
+	map<PHINode *, unsigned int> accumulativePhiNodes;
 	Instruction *phi;
 	Instruction *end;
 
 public:
 	LoopDependencyData(Instruction *IndPhi, Instruction *end, Loop *L, list<Dependence *> d, int phi, Value *startIt, Value *finalIt, int tripCount, 
-						bool parallelizable, multimap<Instruction *, Instruction *> returnValues, list<PHINode *> accumulativePhiNodes) {
+		bool parallelizable, multimap<Instruction *, Instruction *> returnValues, map<PHINode *, unsigned int>accumulativePhiNodes) {
 		loop = L, dependencies = d, noOfPhiNodes = phi, this->parallelizable = parallelizable, this->startIt = startIt,
 			this->finalIt = finalIt, this->tripCount = tripCount, this->returnValues = returnValues, this->accumulativePhiNodes = accumulativePhiNodes,
 			this->phi = IndPhi, this->end = end;
@@ -59,6 +59,8 @@ public:
 	list<Instruction *> getReplaceReturnValueIn(Instruction *returnValue);
 
 	list<PHINode *> getOuterLoopNonInductionPHIs();
+
+	unsigned int getPhiNodeOpCode(PHINode *phi);
 
 	Instruction *getInductionPhi();
 

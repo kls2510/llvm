@@ -312,6 +312,29 @@ namespace {
 				}
 				else {
 					//loop through every return struct and do whatever accumulation need to be done, then replace values
+					//TODO: inefficient - same structs loaded repeatedly! - fix
+					cerr << "accumulating values\n";
+					unsigned int opcode = loopData->getPhiNodeOpCode(cast<PHINode>(retVal));
+					int numOtherThreads = threadStructs.size() - 1;
+					Value *lastReturnedValue = cleanup.CreateStructGEP(returnStruct, lastReturnStruct, retValNo);
+					int i;
+					auto threadIterator = threadStructs.begin();
+					for (i = 0; i < numOtherThreads; i++) {
+						Value *nextStruct = *threadIterator;
+						nextStruct = cleanup.CreateBitOrPointerCast(nextStruct, myStruct->getPointerTo());
+						Value *nextReturnStruct = cleanup.CreateStructGEP(myStruct, nextStruct, structIndex);
+						nextReturnStruct = cleanup.CreateLoad(nextReturnStruct);
+						Value *nextReturnedValue = cleanup.CreateStructGEP(returnStruct, nextReturnStruct, retValNo);
+						lastReturnedValue = cleanup.CreateBinOp(Instruction::BinaryOps(opcode), lastReturnedValue, nextReturnedValue);
+						threadIterator++;
+					}
+					cerr << "Replacing a returned value: \n";
+					Instruction *load = *loadIterator;
+					load->dump();
+					cerr << "with\n";
+					lastReturnedValue->dump();
+					cerr << "\n";
+					load->op_begin()[0] = lastReturnedValue;
 				}
 				loadIterator++;
 				retValNo++;
@@ -369,11 +392,23 @@ namespace {
 			loadBuilder.CreateBr((newLoopFunc->begin())->getNextNode());
 
 			//Replace start and end iteration values
-			bool phiFound = false;
+			//bool phiFound = false;
 			SmallVector<LoadInst *, 8>::iterator element = structElements.begin();
 			for (auto &bb : newLoopFunc->getBasicBlockList()) {
 				for (auto &i : bb.getInstList()) {
-					if (inductionPhiNode(i) != nullptr) {
+					if (i.isIdenticalTo(loopData->getInductionPhi())) {
+						cerr << "replacing phi node start variable\n";
+						PHINode *phi = cast<PHINode>(&i);
+						User::op_iterator operands = phi->op_begin();
+						operands[0] = *element++;
+					}
+					if (i.isIdenticalTo(loopData->getExitCondNode())) {
+						cerr << "replacing conditional end variable\n";
+						CmpInst *exitCond = cast<CmpInst>(&i);
+						User::op_iterator operands = exitCond->op_begin();
+						operands[1] = *element++;
+					}
+					/* if (inductionPhiNode(i) != nullptr) {
 						PHINode *phi = cast<PHINode>(&i);
 						CmpInst *exitCond = cast<CmpInst>(inductionPhiNode(i));
 						User::op_iterator operands = phi->op_begin();
@@ -382,11 +417,11 @@ namespace {
 						operands[1] = *element++;
 						phiFound = true;
 						break;
-					}
+					} */
 				}
-				if (phiFound) {
+				/* if (phiFound) {
 					break;
-				}
+				} */
 			}
 
 			cerr << "extracted loop:\n";
