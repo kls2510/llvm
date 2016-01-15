@@ -77,10 +77,10 @@ namespace {
 				int op;
 				BasicBlock *initialEntry = L->getLoopPredecessor();
 				for (op = 0; op < 2; op++) {
-					if (potentialPhi->getIncomingBlock(op) == initialEntry){
+					//if (potentialPhi->getIncomingBlock(op) == initialEntry){
 						//initial entry edge, do nothing
-					}
-					else {
+					//}
+					//else {
 						Value *nextVal = potentialPhi->getOperand(op);
 						for (auto inst : nextVal->users()) {
 							if (isa<CmpInst>(inst)) {
@@ -100,7 +100,7 @@ namespace {
 								}
 							}
 						}
-					}
+					//}
 				}
 			}
 			return nullptr;
@@ -290,7 +290,7 @@ namespace {
 			SmallVector<Value *, 1> releaseArgs;
 			releaseArgs.push_back(groupCall);
 			IRBuilder<> cleanup(cont->begin());
-			cleanup.SetInsertPoint(cleanup.CreateCall(release, releaseArgs));
+			cleanup.SetInsertPoint(cleanup.CreateCall(release, releaseArgs)->getNextNode());
 			//obtain any original load instructions and replace them with our determined local values
 			SmallVector<Instruction *, 8> originalLoads;
 			for (auto &i : cont->getInstList()) {
@@ -307,9 +307,20 @@ namespace {
 			lastReturnStruct = cleanup.CreateLoad(lastReturnStruct);
 			list<PHINode *> accumulativePhiNodes = loopData->getOuterLoopNonInductionPHIs();
 			SmallVector<Instruction *, 8>::iterator loadIterator = originalLoads.begin();
-			//TODO: thread release should go first!!!
 			for (auto retVal : valuesToReturn) {
-				if (std::find(accumulativePhiNodes.begin(), accumulativePhiNodes.end(), retVal) == accumulativePhiNodes.end()) {
+				bool accumulativeValue = false;
+				for (auto &p : accumulativePhiNodes) {
+					for (auto &op : p->operands()) {
+						if (op == retVal) {
+							accumulativeValue = true;
+							break;
+						}
+					}
+					if (accumulativeValue) {
+						break;
+					}
+				}
+				if (!accumulativeValue) {
 					//replace loaded values with the loaded return value from the last thread if there isn't an associated phi node
 					Value *returnedValue = cleanup.CreateStructGEP(returnStruct, lastReturnStruct, retValNo);
 					cerr << "Replacing a returned value: \n";
