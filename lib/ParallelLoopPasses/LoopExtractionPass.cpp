@@ -422,11 +422,12 @@ namespace {
 						PHINode *phi = cast<PHINode>(&i);
 						CmpInst *exitCond = cast<CmpInst>(inductionPhiNode(i, loopData->getLoop()));
 						User::op_iterator operands = phi->op_begin();
-						BasicBlock *initialEntry = loopData->getLoop()->getLoopPredecessor();
+						StringRef phiName = phi->getName();
 						int op;
 						for (op = 0; op < 2; op++) {
-							if (phi->getIncomingBlock(op) == initialEntry){
+							if (!(strncmp((phiName).data(), phi->getIncomingValue(op)->getName().data(), 8) == 0)){
 								//initial entry edge, this is the position of the value we want to replace
+								//i.e not the one that matches the phi value in name with next on the end
 								operands[op] = *element++;
 								break;
 							}
