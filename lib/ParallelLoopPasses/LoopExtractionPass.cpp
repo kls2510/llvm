@@ -308,11 +308,13 @@ namespace {
 			list<PHINode *> accumulativePhiNodes = loopData->getOuterLoopNonInductionPHIs();
 			SmallVector<Instruction *, 8>::iterator loadIterator = originalLoads.begin();
 			for (auto retVal : valuesToReturn) {
+				PHINode *accumulativePhi;
 				bool accumulativeValue = false;
 				for (auto &p : accumulativePhiNodes) {
 					for (auto &op : p->operands()) {
 						if (op == retVal) {
 							accumulativeValue = true;
+							accumulativePhi = p;
 							break;
 						}
 					}
@@ -335,7 +337,7 @@ namespace {
 					//loop through every return struct and do whatever accumulation need to be done, then replace values
 					//TODO: inefficient - same structs loaded repeatedly! - fix
 					cerr << "accumulating values\n";
-					unsigned int opcode = loopData->getPhiNodeOpCode(cast<PHINode>(retVal));
+					unsigned int opcode = loopData->getPhiNodeOpCode(cast<PHINode>(accumulativePhi));
 					int numOtherThreads = threadStructs.size() - 1;
 					Value *lastReturnedValue = cleanup.CreateStructGEP(returnStruct, lastReturnStruct, retValNo);
 					int i;
