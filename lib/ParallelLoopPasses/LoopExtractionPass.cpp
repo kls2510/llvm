@@ -392,11 +392,11 @@ namespace {
 			loadBuilder.CreateBr((newLoopFunc->begin())->getNextNode());
 
 			//Replace start and end iteration values
-			//bool phiFound = false;
+			bool phiFound = false;
 			SmallVector<LoadInst *, 8>::iterator element = structElements.begin();
 			for (auto &bb : newLoopFunc->getBasicBlockList()) {
 				for (auto &i : bb.getInstList()) {
-					if (i.isIdenticalTo(loopData->getInductionPhi())) {
+					/* if (i.isIdenticalTo(loopData->getInductionPhi())) {
 						cerr << "replacing phi node start variable\n";
 						PHINode *phi = cast<PHINode>(&i);
 						User::op_iterator operands = phi->op_begin();
@@ -407,8 +407,8 @@ namespace {
 						CmpInst *exitCond = cast<CmpInst>(&i);
 						User::op_iterator operands = exitCond->op_begin();
 						operands[1] = *element++;
-					}
-					/* if (inductionPhiNode(i) != nullptr) {
+					} */
+					if (inductionPhiNode(i) != nullptr) {
 						PHINode *phi = cast<PHINode>(&i);
 						CmpInst *exitCond = cast<CmpInst>(inductionPhiNode(i));
 						User::op_iterator operands = phi->op_begin();
@@ -417,11 +417,11 @@ namespace {
 						operands[1] = *element++;
 						phiFound = true;
 						break;
-					} */
+					}
 				}
-				/* if (phiFound) {
+				if (phiFound) {
 					break;
-				} */
+				}
 			}
 
 			cerr << "extracted loop:\n";
