@@ -340,6 +340,7 @@ namespace {
 					unsigned int opcode = loopData->getPhiNodeOpCode(cast<PHINode>(accumulativePhi));
 					int numOtherThreads = threadStructs.size() - 1;
 					Value *lastReturnedValue = cleanup.CreateStructGEP(returnStruct, lastReturnStruct, retValNo);
+					lastReturnedValue = cleanup.CreateLoad(lastReturnedValue);
 					int i;
 					auto threadIterator = threadStructs.begin();
 					for (i = 0; i < numOtherThreads; i++) {
