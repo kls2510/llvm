@@ -93,7 +93,7 @@ namespace {
 											cerr << "found a loop induction variable\n";
 											i.dump();
 											cerr << "\n";
-											return cast<PHINode>(inst);
+											return cast<Instruction>(inst);
 										}
 									}
 								}
