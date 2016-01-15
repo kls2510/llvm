@@ -348,16 +348,19 @@ namespace {
 						Value *nextReturnStruct = cleanup.CreateStructGEP(myStruct, nextStruct, structIndex);
 						nextReturnStruct = cleanup.CreateLoad(nextReturnStruct);
 						Value *nextReturnedValue = cleanup.CreateStructGEP(returnStruct, nextReturnStruct, retValNo);
+						nextReturnedValue = cleanup.CreateLoad(nextReturnedValue);
 						lastReturnedValue = cleanup.CreateBinOp(Instruction::BinaryOps(opcode), lastReturnedValue, nextReturnedValue);
 						threadIterator++;
 					}
+					Value *replaceValue = cleanup.CreateAlloca(lastReturnedValue->getType());
+					cleanup.CreateStore(lastReturnedValue, replaceValue);
 					cerr << "Replacing a returned value: \n";
 					Instruction *load = *loadIterator;
 					load->dump();
 					cerr << "with\n";
 					lastReturnedValue->dump();
 					cerr << "\n";
-					load->op_begin()[0] = lastReturnedValue;
+					load->op_begin()[0] = replaceValue;
 				}
 				loadIterator++;
 				retValNo++;
