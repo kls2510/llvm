@@ -404,7 +404,8 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 			if (i.mayReadOrWriteMemory()) {
 				for (auto &op : i.operands()) {
 					if (isa<PointerType>(op->getType())){
-						arrays.insert(op);
+						Instruction *gep = cast<Instruction>(op);
+						arrays.insert(cast<Value>(gep->op_begin()));
 						for (auto other : readwriteinstructions) {
 							if (!(other == op)) {
 								cerr << "looking for alias between:\n";
