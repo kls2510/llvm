@@ -220,7 +220,10 @@ namespace {
 			SmallVector<Type *, 1> paramTypes;
 			paramTypes.push_back(threadStructPointerType);
 			FunctionType *FT = FunctionType::get(Type::getVoidTy(context), paramTypes, false);
-			Function *newLoopFunc = Function::Create(FT, Function::ExternalLinkage, "", mod);
+			Function *newLoopFunc = Function::Create(FT, Function::ExternalLinkage, "threadFunction", mod);
+
+			//add basic block to the new function
+			loadBlock = BasicBlock::Create(context, "load", newLoopFunc);
 
 			//add calls to it, one per thread
 			IRBuilder<> builder(setupBlock);
@@ -248,9 +251,6 @@ namespace {
 			Value *retPtr = termBuilder.CreateAlloca(callingFunction->getReturnType());
 			Value *ret = termBuilder.CreateLoad(retPtr);
 			termBuilder.CreateRet(ret);
-
-			//add basic block to the new function
-			loadBlock = BasicBlock::Create(context, "load", newLoopFunc);
 
 			//If threads returned, delete the thread group and add in local value loads, then continue as before
 			BasicBlock *cont = BasicBlock::Create(context, "continue", callingFunction);
