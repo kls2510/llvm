@@ -128,7 +128,7 @@ namespace {
 			list<Value *> threadStructs = setupStructs(&F, context, loopData, startIt, finalIt, symTab);
 
 			//create the thread function and calls to it, and setup the return of local variables afterwards
-			Function *threadFunction = createThreadFunction(threadStructs.front()->getType()->getPointerTo(), context, mod, symTab, loopData, threadStructs, &F);
+			Function *threadFunction = createThreadFunction(threadStructs.front()->getType(), context, mod, symTab, loopData, threadStructs, &F);
 
 			//Add load instructions to the created function and replace values in the loop with them
 			list<Value *> loadedArrayAndLocalValues = loadStructValuesInFunctionForLoop(threadFunction, context, loopData);
