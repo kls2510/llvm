@@ -190,6 +190,7 @@ namespace {
 							*operand = structSetup;
 						}
 						operand++;
+					}
 				}
 			}
 
