@@ -84,7 +84,7 @@ namespace {
 			replaceLoopValues(loopData, context, threadFunction, loadedArrayAndLocalValues, loopData->getLoop(), loopData->getArrays(), loopData->getReturnValues());
 
 			//copy loop blocks into the function and delete them from the caller
-			extractTheLoop(loopData->getLoop(), threadFunction, &F);
+			extractTheLoop(loopData->getLoop(), threadFunction, &F, context);
 
 			//Mark the function to avoid infinite extraction
 			threadFunction->addFnAttr("Extracted", "true");
@@ -531,7 +531,7 @@ namespace {
 			}
 		}
 
-		void extractTheLoop(Loop *loop, Function *function, Function *callingFunction, LLVMContext context) {
+		void extractTheLoop(Loop *loop, Function *function, Function *callingFunction, LLVMContext &context) {
 			BasicBlock &insertBefore = function->back();
 			BasicBlock *loopEntry;
 			BasicBlock *toInsert;
