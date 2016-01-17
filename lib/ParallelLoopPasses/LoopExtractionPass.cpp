@@ -546,10 +546,10 @@ namespace {
 				}
 				IRBuilder<> inserter(current);
 				valuemap.insert(make_pair(bb, current));
-				for (auto &i : bb->getInstList()) {
-					Instruction *inst = i.clone();
+				for (auto &instr : bb->getInstList()) {
+					Instruction *inst = instr.clone();
 					Instruction *inserted = inserter.Insert(inst);
-					valuemap.insert(make_pair(&i, inserted));
+					valuemap.insert(make_pair(&instr, inserted));
 				}
 				i++;
 			}
@@ -557,17 +557,22 @@ namespace {
 			auto newInst = loopEntry->begin();
 			for (auto &bb : loop->getBlocks()) {
 				for (auto &inst : bb->getInstList()) {
-					User::op_iterator oldoperand = inst.op_begin();
-					User::op_iterator newoperand = newInst->op_begin();
-					while (oldoperand != inst.op_end()) {
-						map<Value *, Value *>::iterator pos = valuemap.find(*oldoperand);
-						if (pos != valuemap.end()) {
-							Value *mappedOp = pos->second;
-							//replace in new instruction with new value
-							*newoperand = mappedOp;
+					if (!isa<PHINode>(inst)) {
+						User::op_iterator oldoperand = inst.op_begin();
+						User::op_iterator newoperand = newInst->op_begin();
+						while (oldoperand != inst.op_end()) {
+							map<Value *, Value *>::iterator pos = valuemap.find(*oldoperand);
+							if (pos != valuemap.end()) {
+								Value *mappedOp = pos->second;
+								//replace in new instruction with new value
+								*newoperand = mappedOp;
+							}
+							oldoperand++;
+							newoperand++;
 						}
-						oldoperand++;
-						newoperand++;
+					}
+					else {
+						
 					}
 				}
 				newInst++;
