@@ -20,6 +20,7 @@
 #include <set>
 #include <math.h>
 #include <algorithm>
+#include <stdlib.h>
 
 using namespace llvm;
 using namespace std;
