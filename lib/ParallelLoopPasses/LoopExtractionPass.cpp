@@ -570,27 +570,12 @@ namespace {
 
 			//create entry to the loop
 			BasicBlock *loads = function->begin();
-			IRBuilder<> builder(loads->end());
+			IRBuilder<> builder(loads);
 			builder.CreateBr(loopEntry);
 
 			//change suitable predecessor basic blocks in the calling function
 			for (auto &bb : callingFunction->getBasicBlockList()) {
 				bb.removePredecessor(loop->getBlocks().back());
-			}
-			//remove branches to the loop
-			BasicBlock *predecessor = loop->getLoopPredecessor();
-			for (auto &inst : predecessor->getInstList()) {
-				if (isa<BranchInst>(inst)) {
-					User::op_iterator operand = inst.op_begin();
-					while (operand != inst.op_end()) {
-						if (*operand == loopEntry) {
-							cerr << "removing branch to old loop\n";
-							inst.removeFromParent();
-							break;
-						}
-						operand++;
-					}
-				}
 			}
 
 			for (auto &bb : loop->getBlocks()) {
