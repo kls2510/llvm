@@ -505,7 +505,15 @@ namespace {
 			for (auto a : arrayValues) {
 				BasicBlock::iterator toReplace(a);
 				for (auto &bb : loop->getBlocks()) {
-					ReplaceInstWithValue(bb->getInstList(), toReplace, *loadedVal);
+					for (auto &inst : bb->getInstList()) {
+						User::op_iterator operand = inst.op_begin();
+						while (operand != inst.op_end()) {
+							if (*operand == a) {
+								*operand = *loadedVal;
+							}
+							operand++;
+						}
+					}
 				}
 				loadedVal++;
 			}
