@@ -531,12 +531,44 @@ namespace {
 			}
 		}
 
-		void extractTheLoop(Loop *loop, Function *function, Function *callingFunction) {
+		void extractTheLoop(Loop *loop, Function *function, Function *callingFunction, LLVMContext context) {
 			BasicBlock &insertBefore = function->back();
 			BasicBlock *loopEntry;
 			BasicBlock *toInsert;
 			int i = 0;
+			map<Value *, Value *> valuemap;
+			BasicBlock *current;
 			//copy loop into new function
+			int i = 0;
+			for (auto &bb : loop->getBlocks()) {
+				current = BasicBlock::Create(context, bb->getName(), function, &insertBefore);
+				if (i == 0) {
+					loopEntry = current;
+				}
+				IRBuilder<> inserter(current);
+				valuemap.insert(make_pair(bb, current));
+				for (auto &i : bb->getInstList()) {
+					Instruction *inst = i.clone();
+					Instruction *inserted = inserter.Insert(inst);
+					valuemap.insert(make_pair(&i, inserted));
+				}
+				i++;
+			}
+
+			/*
+			for (auto)
+				toInsert = CloneBasicBlock(bb, vvmap);
+				if (i == 0) {
+					loopEntry = toInsert;
+				}
+				//remap instructions
+				for (auto pair : vvmap) {
+					const Value *v1 = pair->first;
+					Value *v2 = pair->second;
+				}
+				toInsert->insertInto(function, &insertBefore);
+				i++;
+
 			ValueToValueMapTy vvmap;
 			for (auto &bb : loop->getBlocks()) {
 				toInsert = CloneBasicBlock(bb, vvmap);
@@ -545,12 +577,12 @@ namespace {
 				}
 				//remap instructions
 				for (auto pair : vvmap) {
-					const Value *v1 = pair.first;
-					Value *v2 = pair.second;
+					const Value *v1 = pair->first;
+					Value *v2 = pair->second;
 				}
 				toInsert->insertInto(function, &insertBefore);
 				i++;
-			}
+			} */
 			
 			
 			//create entry to the loop
