@@ -14,6 +14,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ParallelLoopPasses/IsParallelizableLoopPass.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <iostream>
 #include <string>
 #include <set>
@@ -37,6 +38,8 @@ namespace {
 	*/
 	struct LoopExtractionPass : public FunctionPass {
 		int noThreads = ThreadLimit.getValue();
+		StructType *threadStruct;
+		StructType *returnStruct;
 
 		//ID of the pass
 		static char ID;
@@ -114,149 +117,148 @@ namespace {
 			Value *startIt = loopData->getStartIt();
 			Value *finalIt = loopData->getFinalIt();
 
-			//Calculate overhead/iteration work heuristic and decide whether parallelization is worthwhile
+			//TODO: Calculate overhead/iteration work heuristic and decide whether parallelization is worthwhile
 
-			//extract the loop into a new function
-			CodeExtractor extractor = CodeExtractor(DT, *(loopData->getLoop()), false);
-			Function *extractedLoop = extractor.extractCodeRegion();
-
-			if (extractedLoop != 0) {
-				return editExtraction(loopData ,F, extractedLoop, startIt, finalIt, context);
-			}
-			else {
-				return false;
-			}
-		}
-
-		bool editExtraction(LoopDependencyData *loopData, Function &F, Function *extractedLoop, Value *startIt, Value *finalIt, LLVMContext &context) {
 			//setup helper functions so declararations are there to be linked later
 			Module * mod = (F.getParent());
 			addHelperFunctionDeclarations(context, mod);
 			ValueSymbolTable &symTab = mod->getValueSymbolTable();
+
+			//Setup structs to pass data to/from the threads
+			list<Value *> threadStructs = setupStructs(context, loopData, startIt, finalIt, symTab);
+
+			//create the thread function and calls to it, and setup the return of local variables afterwards
+			Function *threadFunction = createThreadFunction(threadStructs.front()->getType()->getPointerTo(), context, mod, symTab, loopData, threadStructs, &F);
+
+			//Add load instructions to the created function and replace values in the loop with them
+			list<Value *> loadedArrayAndLocalValues = loadStructValuesInFunctionForLoop(threadFunction, context, loopData);
+
+			//replace the array and local value Values in the loop with the ones loaded from the struct
+			replaceLoopValues(loopData, context, threadFunction, loadedArrayAndLocalValues, loopData->getLoop(), loopData->getArrays(), loopData->getReturnValues());
+
+			//copy loop blocks into the function and delete them from the caller
+			extractTheLoop(loopData->getLoop(), threadFunction, &F);
+
+			//Mark the function to avoid infinite extraction
+			threadFunction->addFnAttr("Extracted", "true");
+			F.addFnAttr("Extracted", "true");
+			return true;
+			
+		}
+
+		list<Value *> setupStructs(LLVMContext &context, LoopDependencyData *loopData, Value *startIt, Value *finalIt, ValueSymbolTable &symTab) {
 			Function *integerDiv = cast<Function>(symTab.lookup(StringRef("integerDivide")));
+
+			//Obtain the array and local argument values required for passing to/from the function
+			list<Instruction *> arrayArguments = loopData->getArrays();
+			list<Instruction *>  localArgumentsAndReturnVals = loopData->getReturnValues();
+
+			//create the struct we'll use to pass data to the threads
+			threadStruct = StructType::create(context, "ThreadPasser");
+
+			//send the: data required, startItvalue and endIt value
+			vector<Type *> elts;
+
+			//setup thread passer
+			for (auto a : arrayArguments) {
+				elts.push_back(a->getType());
+			}
+
+			//create the struct we'll use to return local data variables from the threads (separate store needed for each thread)
+			returnStruct = StructType::create(context, "ThreadReturner");
+			vector<Type *> retElts;
+
+			//setup return struct type with all values discovered by the analysis pass
+			for (auto i : localArgumentsAndReturnVals) {
+				cerr << "adding local return value to return struct with type:\n";
+				i->getType()->dump();
+				cerr << "\n";
+				retElts.push_back(i->getType());
+			}
+			returnStruct->setBody(retElts);
+			
+			//setup structs in basic block before the loop
+			IRBuilder<> builder(loopData->getLoop()->getLoopPredecessor());
+
+			//store all struct values created in IR
+			list<Value *> threadStructs;
+
+			//setup the threads in IR
+			Value *start = builder.CreateAlloca(startIt->getType());
+			Value *end = builder.CreateAlloca(finalIt->getType());
+			builder.CreateStore(startIt, start);
+			builder.CreateStore(finalIt, end);
+			Value *loadedStartIt = builder.CreateLoad(start);
+			Value *loadedEndIt = builder.CreateLoad(end);
+			Value *noIterations = builder.CreateBinOp(Instruction::Sub, loadedEndIt, loadedStartIt);
+			SmallVector<Value *, 2> divArgs;
+			divArgs.push_back(noIterations);
+			divArgs.push_back(ConstantInt::get(Type::getInt64Ty(context), noThreads));
+			Value *iterationsEach = builder.CreateCall(integerDiv, divArgs);
+			for (int i = 0; i < noThreads; i++) {
+				Value *threadStartIt;
+				Value *endIt;
+				Value *startItMult = builder.CreateBinOp(Instruction::Mul, iterationsEach, ConstantInt::get(Type::getInt64Ty(context), i));
+				threadStartIt = builder.CreateBinOp(Instruction::Add, loadedStartIt, startItMult);
+				if (i == (noThreads - 1)) {
+					endIt = loadedEndIt;
+				}
+				else {
+					endIt = builder.CreateBinOp(Instruction::Add, threadStartIt, iterationsEach);
+				}
+
+				//add final types to thread passer struct
+				if (i == 0) {
+					elts.push_back(threadStartIt->getType());
+					elts.push_back(endIt->getType());
+					//memory on original stack to store return values
+					elts.push_back(returnStruct->getPointerTo());
+					threadStruct->setBody(elts);
+				}
+
+				AllocaInst *allocateInst = builder.CreateAlloca(threadStruct);
+				AllocaInst *allocateReturns = builder.CreateAlloca(returnStruct);
+				//store original array arguments in struct
+				int k = 0;
+				for (auto op : arrayArguments) {
+					Value *getPTR = builder.CreateStructGEP(threadStruct, allocateInst, k);
+					builder.CreateStore(op, getPTR);
+					k++;
+				}
+				//store startIt
+				Value *getPTR = builder.CreateStructGEP(threadStruct, allocateInst, k);
+				builder.CreateStore(threadStartIt, getPTR);
+				//store endIt
+				getPTR = builder.CreateStructGEP(threadStruct, allocateInst, k + 1);
+				builder.CreateStore(endIt, getPTR);
+				//store local variables in return struct at the end
+				//return struct therefore at index noCallOperands + 2
+				getPTR = builder.CreateStructGEP(threadStruct, allocateInst, k + 2);
+				builder.CreateStore(allocateReturns, getPTR);
+				//store the struct pointer for passing into the function - as type void *
+				Value *structInst = builder.CreateCast(Instruction::CastOps::BitCast, allocateInst, Type::getInt8PtrTy(context));
+				threadStructs.push_back(structInst);
+			}
+
+			return threadStructs;
+		}
+
+		Function *createThreadFunction(Type *threadStructPointerType, LLVMContext &context, Module *mod, ValueSymbolTable &symTab, LoopDependencyData *loopData, 
+										list<Value *> threadStructs, Function *callingFunction) {
 			Function *createGroup = cast<Function>(symTab.lookup(StringRef("createGroup")));
 			Function *asyncDispatch = cast<Function>(symTab.lookup(StringRef("asyncDispatch")));
 			Function *wait = cast<Function>(symTab.lookup(StringRef("wait")));
 			Function *release = cast<Function>(symTab.lookup(StringRef("release")));
 			Function *exit = cast<Function>(symTab.lookup(StringRef("abort")));
 
-			//create the struct we'll use to pass data to the threads
-			StructType *myStruct = StructType::create(context, "ThreadPasser");
-			//send the: data required, startItvalue and endIt value
-			vector<Type *> elts;
-
-			int noCallOperands = 0;
-			SmallVector<Value *, 8> callOperands;
-			SmallVector<Value *, 8> callArgs;
-			SmallVector<Value *, 8> localArgs;
-			Function::arg_iterator oldArg = extractedLoop->arg_begin();
-			cerr << "old args:\n";
-			//setup struct type
-			CallInst *callInst = dyn_cast<CallInst>(*(extractedLoop->user_begin()));
-			int noOps = callInst->getNumArgOperands();
-			for (int i = 0; i < noOps; i++) {
-				//only want to share memory for array accesses, not local variables
-				if (isa<PointerType>(callInst->getOperand(i)->getType())) {
-					if (cast<PointerType>(callInst->getOperand(i)->getType())->getElementType()->isArrayTy()) {
-						cerr << "argument is of array type:\n";
-						callInst->getOperand(i)->dump();
-						callOperands.push_back(callInst->getOperand(i));
-						callArgs.push_back(oldArg);
-						noCallOperands++;
-						elts.push_back(callInst->getOperand(i)->getType());
-					}
-					else {
-						localArgs.push_back(oldArg);
-					}
-				}
-				oldArg->dump();
-				oldArg++;
-			}
-
-			//create the struct we'll use to return local data variables from the threads (separate store needed for each thread)
-			StructType *returnStruct = StructType::create(context, "ThreadReturner");
-			vector<Type *> retElts;
-
-			//setup struct type with all values discovered by the analysis pass
-			list<Instruction *> valuesToReturn = loopData->getReturnValues();
-			for (auto i : valuesToReturn) {
-				retElts.push_back(i->getType());
-			}
-			returnStruct->setBody(retElts);
-
-			IRBuilder<> builder(callInst);
-
-			list<Value *> threadStructs;
-
-			IRBuilder<> setupBuilder(F.begin()->begin());
-			Value *start = setupBuilder.CreateAlloca(startIt->getType());
-			Value *end = setupBuilder.CreateAlloca(finalIt->getType());
-			setupBuilder.CreateStore(startIt, start);
-			setupBuilder.CreateStore(finalIt, end);
-			Value *loadedStartIt = setupBuilder.CreateLoad(start);
-			Value *loadedEndIt = setupBuilder.CreateLoad(end);
-			Value *noIterations = setupBuilder.CreateBinOp(Instruction::Sub, loadedEndIt, loadedStartIt);
-			SmallVector<Value *, 2> divArgs;
-			divArgs.push_back(noIterations);
-			divArgs.push_back(ConstantInt::get(Type::getInt64Ty(context), noThreads));
-			Value *iterationsEach = setupBuilder.CreateCall(integerDiv, divArgs);
-			//cerr << "setting up threads\n";
-			for (int i = 0; i < noThreads; i++) {
-				Value *threadStartIt;
-				Value *endIt;
-				Value *startItMult = builder.CreateBinOp(Instruction::Mul, iterationsEach, ConstantInt::get(Type::getInt64Ty(context), i));
-				//cerr << "here\n";
-				threadStartIt = builder.CreateBinOp(Instruction::Add, loadedStartIt, startItMult);
-				if (i == (noThreads - 1)) {
-					endIt = loadedEndIt;
-					//cerr << "here1\n";
-				}
-				else {
-					endIt = builder.CreateBinOp(Instruction::Add, threadStartIt, iterationsEach);
-					//cerr << "here2\n";
-				}
-
-				//add final types to struct
-				if (i == 0) {
-					elts.push_back(threadStartIt->getType());
-					elts.push_back(endIt->getType());
-					//memory on original stack to store return values
-					elts.push_back(returnStruct->getPointerTo());
-					myStruct->setBody(elts);
-				}
-
-				AllocaInst *allocateInst = builder.CreateAlloca(myStruct);
-				AllocaInst *allocateReturns = builder.CreateAlloca(returnStruct);
-				//store original array arguments in struct
-				int k = 0;
-				for (auto op : callOperands) {
-					Value *getPTR = builder.CreateStructGEP(myStruct, allocateInst, k);
-					builder.CreateStore(op, getPTR);
-					k++;
-				}
-				//store startIt
-				Value *getPTR = builder.CreateStructGEP(myStruct, allocateInst, k);
-				builder.CreateStore(threadStartIt, getPTR);
-				//store endIt
-				getPTR = builder.CreateStructGEP(myStruct, allocateInst, k + 1);
-				builder.CreateStore(endIt, getPTR);
-				//store local variables in struct at the end
-				//return struct therefore at index noCallOperands + 2
-				getPTR = builder.CreateStructGEP(myStruct, allocateInst, k + 2);
-				builder.CreateStore(allocateReturns, getPTR);
-				//store the struct pointer for passing into the function - as type void *
-				Value *structInst = builder.CreateCast(Instruction::CastOps::BitCast, allocateInst, Type::getInt8PtrTy(context));
-				threadStructs.push_back(structInst);
-			}
-			
 			//create a new function with added argument types and return type
-			SmallVector<Type *, 8> paramTypes;
-			paramTypes.push_back((threadStructs.front())->getType());
+			SmallVector<Type *, 1> paramTypes;
+			paramTypes.push_back(threadStructPointerType);
 			FunctionType *FT = FunctionType::get(Type::getVoidTy(context), paramTypes, false);
-			string name = "_" + (extractedLoop->getName()).str() + "_";
-			Function *newLoopFunc = Function::Create(FT, Function::ExternalLinkage, name, mod);
+			Function *newLoopFunc = Function::Create(FT, Function::ExternalLinkage, nullptr, mod);
 
-			//insert calls to this new function in separate threads
+			//add calls to it, one per thread
+			IRBuilder<> builder(loopData->getLoop()->getLoopPredecessor());
 			Value *groupCall = builder.CreateCall(createGroup, SmallVector<Value *, 0>());
 			for (list<Value*>::iterator it = threadStructs.begin(); it != threadStructs.end(); ++it) {
 				SmallVector<Value *, 3> argsForDispatch;
@@ -265,211 +267,298 @@ namespace {
 				argsForDispatch.push_back(newLoopFunc);
 				builder.CreateCall(asyncDispatch, argsForDispatch);
 			}
+			//Wait for threads to finish
 			SmallVector<Value *, 2> waitArgTypes;
 			waitArgTypes.push_back(groupCall);
 			waitArgTypes.push_back(ConstantInt::get(Type::getInt64Ty(context), 1000000000));
 			Value *complete = builder.CreateCall(wait, waitArgTypes);
-			//condition on complete; if 0 OK, if non zero than force stop
+
+			//condition on thread complete; if 0 OK, if non zero than force stop
 			Value *completeCond = builder.CreateICmpEQ(complete, ConstantInt::get(Type::getInt64Ty(context), 0));
-			BasicBlock *terminate = BasicBlock::Create(context, "terminate", &F);
+
+			//If thread didn't return, branch to this BB that calls a function to terminate the program. It's return will never be reached
+			BasicBlock *terminate = BasicBlock::Create(context, "terminate", callingFunction);
 			IRBuilder<> termBuilder(terminate);
-			SmallVector<Value *, 1> printArgs;
-			//what to return when the threads fail to terminate
 			termBuilder.CreateCall(exit);
-			//ret will never be called as program aborts
-			//termBuilder.CreateRetVoid();
-			Value *retPtr = termBuilder.CreateAlloca(F.getReturnType());
+			Value *retPtr = termBuilder.CreateAlloca(callingFunction->getReturnType());
 			Value *ret = termBuilder.CreateLoad(retPtr);
 			termBuilder.CreateRet(ret);
-			Instruction *startInst = builder.GetInsertPoint();
-			BasicBlock *cont = startInst->getParent()->splitBasicBlock(startInst->getNextNode(), "continue");
-			Instruction *toDelete = startInst->getParent()->end()->getPrevNode();
-			toDelete->replaceAllUsesWith(UndefValue::get(toDelete->getType()));
-			toDelete->eraseFromParent();
-			builder.CreateCondBr(completeCond, cont, terminate);
+
+			//If threads returned, delete the thread group and add in local value loads, then continue as before
+			BasicBlock *cont = BasicBlock::Create(context, "continue", callingFunction);
 			SmallVector<Value *, 1> releaseArgs;
 			releaseArgs.push_back(groupCall);
-			IRBuilder<> cleanup(cont->begin());
-			cleanup.SetInsertPoint(cleanup.CreateCall(release, releaseArgs)->getNextNode());
-			//obtain any original load instructions and replace them with our determined local values
-			SmallVector<Instruction *, 8> originalLoads;
-			for (auto &i : cont->getInstList()) {
-				if (isa<LoadInst>(i)) {
-					originalLoads.push_back(&i);
-				}
+			IRBuilder<> cleanup(cont);
+			cleanup.CreateCall(release, releaseArgs);
+			loadAndReplaceLocals(cleanup, loopData, threadStructs, context);
+			cleanup.CreateBr(loopData->getLoop()->getExitBlock());
+
+			//insert the branch to the IR
+			builder.CreateCondBr(completeCond, cont, terminate);
+
+			return newLoopFunc;
+		}
+
+		Value *replaceValue(unsigned int opcode, LLVMContext &context, Type *type) {
+			if (Instruction::BinaryOps(opcode) == Instruction::BinaryOps::Add || Instruction::BinaryOps(opcode) == Instruction::BinaryOps::FAdd) {
+				return ConstantInt::get(type, 0);
 			}
+			else if (Instruction::BinaryOps(opcode) == Instruction::BinaryOps::Mul || Instruction::BinaryOps(opcode) == Instruction::BinaryOps::FMul) {
+				return ConstantInt::get(type, 1);
+			}
+			else if (Instruction::BinaryOps(opcode) == Instruction::BinaryOps::And) {
+				return ConstantInt::getAllOnesValue(type);
+			}
+			else if (Instruction::BinaryOps(opcode) == Instruction::BinaryOps::Or) {
+				return ConstantInt::get(type, 0);
+			}
+			else /*xor*/{
+				return ConstantInt::get(type, 0);
+			}
+		}
+
+		void loadAndReplaceLocals(IRBuilder<> cleanup, LoopDependencyData *loopData, list<Value *> threadStructs, LLVMContext &context) {
+			//Obtain the array and local argument values required for passing to/from the function
+			list<Instruction *> arrayArguments = loopData->getArrays();
+			list<Instruction *>  localArgumentsAndReturnVals = loopData->getReturnValues();
+
+			list<Value *> returnStructs;
+
+			//load the return struct for each thread
+			int structIndex = arrayArguments.size() + 2;
+			for (auto s : threadStructs) {
+				Value *structx = s;
+				structx = cleanup.CreateBitOrPointerCast(structx, threadStruct->getPointerTo());
+				Value *returnStructx = cleanup.CreateStructGEP(threadStruct, structx, structIndex);
+				returnStructx = cleanup.CreateLoad(returnStructx);
+				returnStructs.push_back(returnStructx);
+			}
+
 			//now load in our local variable values and update where they are used
 			int retValNo = 0;
-			int structIndex = noCallOperands + 2;
-			Value *lastStruct = threadStructs.back();
-			lastStruct = cleanup.CreateBitOrPointerCast(lastStruct, myStruct->getPointerTo());
-			Value *lastReturnStruct = cleanup.CreateStructGEP(myStruct, lastStruct, structIndex);
-			lastReturnStruct = cleanup.CreateLoad(lastReturnStruct);
+			Value *lastReturnStruct = returnStructs.back();
 			list<PHINode *> accumulativePhiNodes = loopData->getOuterLoopNonInductionPHIs();
-			SmallVector<Instruction *, 8>::iterator loadIterator = originalLoads.begin();
-			for (auto retVal : valuesToReturn) {
+			for (auto retVal : localArgumentsAndReturnVals) {
 				PHINode *accumulativePhi;
+				int pos;
 				bool accumulativeValue = false;
 				for (auto &p : accumulativePhiNodes) {
+					pos = 0;
 					for (auto &op : p->operands()) {
 						if (op == retVal) {
 							accumulativeValue = true;
 							accumulativePhi = p;
 							break;
 						}
+						pos++;
 					}
 					if (accumulativeValue) {
 						break;
 					}
 				}
 				if (!accumulativeValue) {
-					//replace loaded values with the loaded return value from the last thread if there isn't an associated phi node
+					//replace uses of value with the value loaded from the last return struct if there isn't an associated phi node
 					Value *returnedValue = cleanup.CreateStructGEP(returnStruct, lastReturnStruct, retValNo);
-					cerr << "Replacing a returned value: \n";
-					Instruction *load = *loadIterator;
-					load->dump();
-					cerr << "with\n";
-					returnedValue->dump();
-					cerr << "\n";
-					load->op_begin()[0] = returnedValue;
+					returnedValue = cleanup.CreateLoad(returnedValue);
+					for (auto inst : loopData->getReplaceReturnValueIn(retVal)) {
+						User::op_iterator operand = inst->op_begin();
+						while (operand != inst->op_end()) {
+							if (*operand == retVal) {
+								cerr << "Replacing a returned value in instruction: \n";
+								inst->dump();
+								cerr << "with\n";
+								returnedValue->dump();
+								cerr << "\n";
+								
+								*operand = returnedValue;
+							}
+							operand++;
+						}
+					}
 				}
 				else {
 					//loop through every return struct and do whatever accumulation need to be done, then replace values
-					//TODO: inefficient - same structs loaded repeatedly! - fix
 					cerr << "accumulating values\n";
 					unsigned int opcode = loopData->getPhiNodeOpCode(cast<PHINode>(accumulativePhi));
-					int numOtherThreads = threadStructs.size() - 1;
-					Value *lastReturnedValue = cleanup.CreateStructGEP(returnStruct, lastReturnStruct, retValNo);
-					lastReturnedValue = cleanup.CreateLoad(lastReturnedValue);
-					int i;
-					auto threadIterator = threadStructs.begin();
-					for (i = 0; i < numOtherThreads; i++) {
-						Value *nextStruct = *threadIterator;
-						nextStruct = cleanup.CreateBitOrPointerCast(nextStruct, myStruct->getPointerTo());
-						Value *nextReturnStruct = cleanup.CreateStructGEP(myStruct, nextStruct, structIndex);
-						nextReturnStruct = cleanup.CreateLoad(nextReturnStruct);
-						Value *nextReturnedValue = cleanup.CreateStructGEP(returnStruct, nextReturnStruct, retValNo);
-						nextReturnedValue = cleanup.CreateLoad(nextReturnedValue);
-						lastReturnedValue = cleanup.CreateBinOp(Instruction::BinaryOps(opcode), lastReturnedValue, nextReturnedValue);
-						threadIterator++;
-					}
-					Value *replaceValue = cleanup.CreateAlloca(lastReturnedValue->getType());
-					cleanup.CreateStore(lastReturnedValue, replaceValue);
-					cerr << "Replacing a returned value: \n";
-					Instruction *load = *loadIterator;
-					load->dump();
-					cerr << "with\n";
-					lastReturnedValue->dump();
-					cerr << "\n";
-					load->op_begin()[0] = replaceValue;
-				}
-				loadIterator++;
-				retValNo++;
-			} 
-
-			//delete the original call instruction
-			callInst->eraseFromParent();
-
-			//cerr << "cloning function\n";
-			//clone old function into this new one that takes the correct amount of arguments
-			ValueToValueMapTy vvmap;
-			Function::ArgumentListType &args1 = extractedLoop->getArgumentList();
-			Function::arg_iterator args2 = newLoopFunc->arg_begin();
-			unsigned int p = 0;
-			SmallVector<LoadInst *, 8> structElements;
-			BasicBlock *writeTo = BasicBlock::Create(context, "loads", newLoopFunc);
-			IRBuilder<> loadBuilder(writeTo);
-			Value *castArgVal = loadBuilder.CreateBitOrPointerCast(args2, myStruct->getPointerTo());
-			for (auto val : callArgs) {
-				//map the arrays in the old function to their values in the new one
-				Value *mapVal = loadBuilder.CreateStructGEP(myStruct, castArgVal, p);
-				LoadInst *loadInst = loadBuilder.CreateLoad(mapVal);
-				vvmap.insert(std::make_pair(val, loadInst));
-				p++;
-			}
-			Value *localReturns = loadBuilder.CreateStructGEP(myStruct, castArgVal, p + 2);
-			localReturns = loadBuilder.CreateLoad(localReturns);
-			//map the local variables to the original function values, using the return arg struct
-			int retValCounter = 0;
-			for (auto oldVal : localArgs) {
-				Value *mapVal = loadBuilder.CreateStructGEP(returnStruct, localReturns, retValCounter);
-				vvmap.insert(std::make_pair(oldVal, mapVal));
-				retValCounter++;
-			}
-			//cerr << "loading start and end it too\n";
-			//map the start and end it too (without using the map)
-			Value *val = loadBuilder.CreateStructGEP(myStruct, castArgVal, p);
-			LoadInst *loadInst = loadBuilder.CreateLoad(val);
-			structElements.push_back(loadInst);
-			val = loadBuilder.CreateStructGEP(myStruct, castArgVal, p + 1);
-			LoadInst *loadInst2 = loadBuilder.CreateLoad(val);
-			structElements.push_back(loadInst2);
-			SmallVector<ReturnInst *, 8> returns;
-			for (auto &bb : extractedLoop->getBasicBlockList()) {
-				for (auto &i : bb.getInstList()) {
-					if (isa<ReturnInst>(i)) {
-						ReturnInst *ret = cast<ReturnInst>(&i);
-						returns.push_back(ret);
-					}
-				}
-			}
-			//cerr << "cloning\n";
-			CloneFunctionInto(newLoopFunc, extractedLoop, vvmap, false, returns, "");
-			//bridge first bb to cloned bbs
-			loadBuilder.CreateBr((newLoopFunc->begin())->getNextNode());
-
-			//Replace start and end iteration values
-			bool phiFound = false;
-			SmallVector<LoadInst *, 8>::iterator element = structElements.begin();
-			for (auto &bb : newLoopFunc->getBasicBlockList()) {
-				for (auto &i : bb.getInstList()) {
-					/* if (i.isIdenticalTo(loopData->getInductionPhi())) {
-						cerr << "replacing phi node start variable\n";
-						PHINode *phi = cast<PHINode>(&i);
-						User::op_iterator operands = phi->op_begin();
-						operands[0] = *element++;
-					}
-					if (i.isIdenticalTo(loopData->getExitCondNode())) {
-						cerr << "replacing conditional end variable\n";
-						CmpInst *exitCond = cast<CmpInst>(&i);
-						User::op_iterator operands = exitCond->op_begin();
-						operands[1] = *element++;
-					} */
-					if (inductionPhiNode(i, loopData->getLoop()) != nullptr) {
-						PHINode *phi = cast<PHINode>(&i);
-						CmpInst *exitCond = cast<CmpInst>(inductionPhiNode(i, loopData->getLoop()));
-						User::op_iterator operands = phi->op_begin();
-						StringRef phiName = phi->getName();
-						int op;
-						for (op = 0; op < 2; op++) {
-							if (!(strncmp((phiName).data(), phi->getIncomingValue(op)->getName().data(), 8) == 0)){
-								//initial entry edge, this is the position of the value we want to replace
-								//i.e not the one that matches the phi value in name with next on the end
-								operands[op] = *element++;
-								break;
-							}
+					User::op_iterator operand = accumulativePhi->op_begin();
+					Value *initialValue;
+					while (operand != accumulativePhi->op_end()) {
+						if (!(*operand == retVal)) {
+							//this is the position the initial value will be in, replace it with the identity
+							initialValue = *operand;
+							*operand = replaceValue(opcode, context, initialValue->getType());
+							cerr << "initial value to acc later = \n";
+							initialValue->dump();
+							cerr << "\n";
+							cerr << "and has been replaced by = \n";
+							(*operand)->dump();
+							cerr << "\n";
+							break;
 						}
-						operands = exitCond->op_begin();
-						operands[1] = *element++;
-						phiFound = true;
-						break;
+					}
+					Value *accumulatedValue = initialValue;
+					for (auto retStruct : returnStructs) {
+						Value *nextReturnedValue = cleanup.CreateStructGEP(returnStruct, retStruct, retValNo);
+						nextReturnedValue = cleanup.CreateLoad(nextReturnedValue);
+						accumulatedValue = cleanup.CreateBinOp(Instruction::BinaryOps(opcode), accumulatedValue, nextReturnedValue);
+					}
+					for (auto inst : loopData->getReplaceReturnValueIn(retVal)) {
+						User::op_iterator operand = inst->op_begin();
+						while (operand != inst->op_end()) {
+							if (*operand == retVal) {
+								cerr << "Replacing a returned value in instruction: \n";
+								inst->dump();
+								cerr << "with\n";
+								accumulatedValue->dump();
+								cerr << "\n";
+
+								*operand = accumulatedValue;
+							}
+							operand++;
+						}
 					}
 				}
-				if (phiFound) {
+				retValNo++;
+			}
+
+			return;
+		}
+
+		list<Value *> loadStructValuesInFunctionForLoop(Function *loopFunction, LLVMContext &context, LoopDependencyData *loopData) {
+			//Obtain the array and local argument values required for passing to/from the function
+			list<Instruction *> arrayArguments = loopData->getArrays();
+			list<Instruction *>  localArgumentsAndReturnVals = loopData->getReturnValues();
+
+			list<Value *> arrayAndLocalStructElements;
+
+			//create IR for loading the required argument values into the function
+			unsigned int p;
+			BasicBlock *writeTo = BasicBlock::Create(context, "loads", loopFunction);
+			IRBuilder<> loadBuilder(writeTo);
+			Value *castArgVal = loadBuilder.CreateBitOrPointerCast(loopFunction->arg_begin(), threadStruct->getPointerTo());
+
+			//store the loaded array instructions
+			for (p = 0; p < arrayArguments.size(); p++) {
+				Value *arrayVal = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p);
+				LoadInst *loadInst = loadBuilder.CreateLoad(arrayVal);
+				arrayAndLocalStructElements.push_back(loadInst);
+			}
+
+			//create IR for obtaining pointers to where return values must be stored
+			Value *localReturns = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p + 2);
+			localReturns = loadBuilder.CreateLoad(localReturns);
+			int retValCounter = 0;
+			for (p = 0; p < localArgumentsAndReturnVals.size(); p++) {
+				Value *retVal = loadBuilder.CreateStructGEP(returnStruct, localReturns, p);
+				arrayAndLocalStructElements.push_back(retVal);
+			}
+
+			//load the start and end iteration values
+			p = arrayArguments.size();
+			Value *val = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p);
+			LoadInst *startIt = loadBuilder.CreateLoad(val);
+			val = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p + 1);
+			LoadInst *endIt = loadBuilder.CreateLoad(val);
+
+			//place them in the loop
+			PHINode *phi = cast<PHINode>(loopData->getInductionPhi());
+			Instruction *exitCnd = loopData->getExitCondNode();
+			User::op_iterator operands = phi->op_begin();
+			StringRef phiName = phi->getName();
+			int op;
+			for (op = 0; op < 2; op++) {
+				if (!(strncmp((phiName).data(), phi->getIncomingValue(op)->getName().data(), 8) == 0)){
+					//initial entry edge, this is the position of the value we want to replace
+					//i.e not the one that matches the phi value in name with next on the end
+					operands[op] = startIt;
 					break;
 				}
 			}
+			operands = exitCnd->op_begin();
+			operands[1] = endIt;
+			
+			return arrayAndLocalStructElements;
+		}
 
-			cerr << "extracted loop:\n";
-			newLoopFunc->dump();
-			cerr << "calling function:\n";
-			F.dump();
+		void replaceLoopValues(LoopDependencyData *loopData, LLVMContext &context, Function *loopFunction, list<Value *> loadedArrayAndLocalValues, Loop *loop, list<Instruction *> arrayValues, list<Instruction *> retValues) {
+			list<Value *>::iterator loadedVal = loadedArrayAndLocalValues.begin();
+			//replace arrays
+			for (auto a : arrayValues) {
+				BasicBlock::iterator toReplace(a);
+				for (auto &bb : loop->getBlocks()) {
+					ReplaceInstWithValue(bb->getInstList(), toReplace, *loadedVal);
+				}
+				loadedVal++;
+			}
 
-			//Mark the function to avoid infinite extraction
-			newLoopFunc->addFnAttr("Extracted", "true");
-			extractedLoop->addFnAttr("Extracted", "true");
-			F.addFnAttr("Extracted", "true");
-			return true;
+			//store each retVal in the corresponding local value position, and return from the to-be function
+			BasicBlock *stores = BasicBlock::Create(context, "store", loopFunction);
+			IRBuilder<> builder(stores);
+			for (auto v : retValues) {
+				builder.CreateStore(v, *loadedVal);
+				loadedVal++;
+			}
+			builder.CreateRetVoid();
+
+			Instruction *cndNode = loopData->getExitCondNode();
+			for (auto u : cndNode->users()) {
+				if (isa<BranchInst>(u)) {
+					User::op_iterator operand = u->op_begin();
+					while (operand != u->op_end()) {
+						if (!loop->contains(operand)) {
+							cerr << "replacing loop exit branch to new basic block\n";
+							*operand = stores;
+						}
+						operand++;
+					}
+				}
+			}
+		}
+
+		void extractTheLoop(Loop *loop, Function *function, Function *callingFunction) {
+			BasicBlock &insertBefore = function->back();
+			BasicBlock *loopEntry;
+			BasicBlock *toInsert;
+			int i = 0;
+			//copy loop into new function
+			for (auto &bb : loop->getBlocks()) {
+				toInsert = CloneBasicBlock(bb, ValueToValueMapTy(), false);
+				if (i == 0) {
+					loopEntry = toInsert;
+				}
+				toInsert->insertInto(function, &insertBefore);
+				i++;
+			}
+
+			//create entry to the loop
+			BasicBlock *loads = function->begin();
+			IRBuilder<> builder(loads->end());
+			builder.CreateBr(loopEntry);
+
+			//change suitable predecessor basic blocks in the calling function
+			for (auto &bb : callingFunction->getBasicBlockList()) {
+				bb.removePredecessor(loop->getBlocks().back());
+			}
+			//remove branches to the loop
+			BasicBlock *predecessor = loop->getLoopPredecessor();
+			for (auto &inst : predecessor->getInstList()) {
+				if (isa<BranchInst>(inst)) {
+					User::op_iterator operand = inst.op_begin();
+					while (operand != inst.op_end()) {
+						if (*operand == loopEntry) {
+							cerr << "removing branch to old loop\n";
+							inst.removeFromParent();
+							break;
+						}
+						operand++;
+					}
+				}
+			}
+
+			for (auto &bb : loop->getBlocks()) {
+				//delete original loop from calling function
+				bb->removeFromParent();
+			}
 		}
 
 		void addHelperFunctionDeclarations(LLVMContext &context, Module *mod) {
@@ -545,6 +634,7 @@ namespace {
 			}
 			return false;
 		}
+
 	};
 }
 

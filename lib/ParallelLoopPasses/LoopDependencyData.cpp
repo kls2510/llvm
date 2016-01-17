@@ -109,3 +109,7 @@ Instruction *LoopDependencyData::getInductionPhi() {
 Instruction *LoopDependencyData::getExitCondNode() {
 	return end;
 }
+
+list<Instruction *> LoopDependencyData::getArrays() {
+	return this->arrays;
+}

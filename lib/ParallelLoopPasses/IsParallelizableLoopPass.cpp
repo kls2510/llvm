@@ -397,12 +397,14 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	}
 	delete dependentInstructions;
 	
+	set<Value *> arrays;
 	vector<Value *> readwriteinstructions;
 	for (auto bb : L->getBlocks()) {
 		for (auto &i : bb->getInstList()) {
 			if (i.mayReadOrWriteMemory()) {
 				for (auto &op : i.operands()) {
 					if (isa<PointerType>(op->getType())){
+						arrays.insert(op);
 						for (auto other : readwriteinstructions) {
 							if (!(other == op)) {
 								cerr << "looking for alias between:\n";
@@ -421,6 +423,21 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 					}
 				}
 			}
+		}
+	}
+
+	list<Instruction *> arrayArgs;
+	//remove arrays that are global (i.e. won't need to be passed as argument)
+	for (auto v : arrays) {
+		if (isa<GlobalValue>(v)) {
+			cerr << "array is global so removing from args\n";
+			v->dump();
+			arrays.erase(v);
+		}
+		else {
+			cerr << "array must be passed as an argument\n";
+			v->dump();
+			arrayArgs.push_back(cast<Instruction>(v));
 		}
 	}
 
@@ -459,7 +476,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	}
 
 	//store results of analysis
-	LoopDependencyData *data = new LoopDependencyData(phi, exitCond, L, dependencies, noOfPhiNodes, startIt, finalIt, tripCount, parallelizable, returnValues, accumulativePhiNodes);
+	LoopDependencyData *data = new LoopDependencyData(phi, arrayArgs, exitCond, L, dependencies, noOfPhiNodes, startIt, finalIt, tripCount, parallelizable, returnValues, accumulativePhiNodes);
 	results.push_back(data);
 	
 	return parallelizable;
