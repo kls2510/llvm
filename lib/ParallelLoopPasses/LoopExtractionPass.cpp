@@ -448,7 +448,7 @@ namespace {
 			Value *val = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p, namePrefix);
 			loadedVal++;
 			sprintf(namePrefix, "loadVal_%d", loadedVal);
-			LoadInst *startIt = loadBuilder.CreateLoad(val, namePrefix + loadedVal);
+			LoadInst *startIt = loadBuilder.CreateLoad(val, namePrefix);
 			loadedVal++;
 			sprintf(namePrefix, "loadVal_%d", loadedVal);
 			val = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p + 1, namePrefix);
@@ -543,10 +543,16 @@ namespace {
 				if (i == 0) {
 					loopEntry = toInsert;
 				}
+				//remap instructions
+				for (auto pair : vvmap) {
+					const Value *v1 = pair.first;
+					Value *v2 = pair.second;
+				}
 				toInsert->insertInto(function, &insertBefore);
 				i++;
 			}
-
+			
+			
 			//create entry to the loop
 			BasicBlock *loads = function->begin();
 			IRBuilder<> builder(loads);
