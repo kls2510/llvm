@@ -573,11 +573,6 @@ namespace {
 			IRBuilder<> builder(loads);
 			builder.CreateBr(loopEntry);
 
-			//change suitable predecessor basic blocks in the calling function
-			for (auto &bb : callingFunction->getBasicBlockList()) {
-				bb.removePredecessor(loop->getBlocks().back());
-			}
-
 			for (auto &bb : loop->getBlocks()) {
 				//delete original loop from calling function
 				bb->removeFromParent();
