@@ -405,7 +405,7 @@ namespace {
 
 			//name all values so they don't conflict with value names in the loop later
 			int loadedVal = 0;
-			char *namePrefix = "loadVal";
+			char namePrefix[20];
 
 			list<Value *> arrayAndLocalStructElements;
 
@@ -413,38 +413,48 @@ namespace {
 			unsigned int p;
 			IRBuilder<> loadBuilder(loadBlock);
 			
-			Value *castArgVal = loadBuilder.CreateBitOrPointerCast(loopFunction->arg_begin(), threadStruct->getPointerTo(), namePrefix + loadedVal);
+			sprintf(namePrefix, "loadVal_%d", loadedVal);
+			Value *castArgVal = loadBuilder.CreateBitOrPointerCast(loopFunction->arg_begin(), threadStruct->getPointerTo(), namePrefix);
 			loadedVal++;
+			sprintf(namePrefix, "loadVal_%d", loadedVal);
 
 			//store the loaded array instructions
 			for (p = 0; p < arrayArguments.size(); p++) {
-				Value *arrayVal = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p, namePrefix + loadedVal);
+				Value *arrayVal = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p, namePrefix);
 				loadedVal++;
-				LoadInst *loadInst = loadBuilder.CreateLoad(arrayVal, namePrefix + loadedVal);
+				sprintf(namePrefix, "loadVal_%d", loadedVal);
+				LoadInst *loadInst = loadBuilder.CreateLoad(arrayVal, namePrefix);
 				loadedVal++;
+				sprintf(namePrefix, "loadVal_%d", loadedVal);
 				arrayAndLocalStructElements.push_back(loadInst);
 			}
 
 			//create IR for obtaining pointers to where return values must be stored
-			Value *localReturns = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p + 2, namePrefix + loadedVal);
+			Value *localReturns = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p + 2, namePrefix);
 			loadedVal++;
-			localReturns = loadBuilder.CreateLoad(localReturns, namePrefix + loadedVal);
+			sprintf(namePrefix, "loadVal_%d", loadedVal);
+			localReturns = loadBuilder.CreateLoad(localReturns, namePrefix);
 			loadedVal++;
+			sprintf(namePrefix, "loadVal_%d", loadedVal);
 			for (p = 0; p < localArgumentsAndReturnVals.size(); p++) {
-				Value *retVal = loadBuilder.CreateStructGEP(returnStruct, localReturns, p, namePrefix + loadedVal);
+				Value *retVal = loadBuilder.CreateStructGEP(returnStruct, localReturns, p, namePrefix);
 				loadedVal++;
+				sprintf(namePrefix, "loadVal_%d", loadedVal);
 				arrayAndLocalStructElements.push_back(retVal);
 			}
 
 			//load the start and end iteration values
 			p = arrayArguments.size();
-			Value *val = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p, namePrefix + loadedVal);
+			Value *val = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p, namePrefix);
 			loadedVal++;
+			sprintf(namePrefix, "loadVal_%d", loadedVal);
 			LoadInst *startIt = loadBuilder.CreateLoad(val, namePrefix + loadedVal);
 			loadedVal++;
-			val = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p + 1, namePrefix + loadedVal);
+			sprintf(namePrefix, "loadVal_%d", loadedVal);
+			val = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p + 1, namePrefix);
 			loadedVal++;
-			LoadInst *endIt = loadBuilder.CreateLoad(val, namePrefix + loadedVal);
+			sprintf(namePrefix, "loadVal_%d", loadedVal);
+			LoadInst *endIt = loadBuilder.CreateLoad(val, namePrefix);
 
 			//place them in the loop
 			PHINode *phi = cast<PHINode>(loopData->getInductionPhi());
