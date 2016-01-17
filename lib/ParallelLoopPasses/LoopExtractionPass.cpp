@@ -406,7 +406,7 @@ namespace {
 			//name all values so they don't conflict with value names in the loop later
 			int loadedVal = 0;
 			char *namePrefix = "loadVal";
-			char *labelSuffix;
+			char labelSuffix[10];
 
 			list<Value *> arrayAndLocalStructElements;
 
