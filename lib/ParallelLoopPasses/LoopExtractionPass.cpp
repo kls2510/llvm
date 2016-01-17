@@ -41,6 +41,7 @@ namespace {
 		StructType *threadStruct;
 		StructType *returnStruct;
 		BasicBlock *setupBlock;
+		BasicBlock *loadBlock;
 
 		//ID of the pass
 		static char ID;
@@ -52,62 +53,6 @@ namespace {
 		void getAnalysisUsage(AnalysisUsage &AU) const {
 			AU.addRequired<IsParallelizableLoopPass>();
 			AU.addRequired<DominatorTreeWrapperPass>();
-		}
-
-		Instruction *inductionPhiNode(Instruction &i, Loop *L) {
-			if (isa<PHINode>(i)) {
-				PHINode *potentialPhi = cast<PHINode>(&i);
-				BasicBlock *phiBB = potentialPhi->getParent();
-				//check for a back edge with the phi node variable
-				for (auto inst : potentialPhi->users()) {
-					if (isa<CmpInst>(inst)) {
-						for (auto u : inst->users()) {
-							if (isa<BranchInst>(u)) {
-								BranchInst *br = cast<BranchInst>(u);
-								Value *bb = br->getOperand(1);
-								Value *bb2 = br->getOperand(2);
-								if (bb == phiBB || bb2 == phiBB) {
-									//we have found the phi node
-									cerr << "found a loop induction variable\n";
-									i.dump();
-									cerr << "\n";
-									return cast<Instruction>(inst);
-								}
-							}
-						}
-					}
-				}
-				//If one doesn't exist, check for a back edge with the next phi node variable
-				int op;
-				BasicBlock *initialEntry = L->getLoopPredecessor();
-				for (op = 0; op < 2; op++) {
-					//if (potentialPhi->getIncomingBlock(op) == initialEntry){
-						//initial entry edge, do nothing
-					//}
-					//else {
-						Value *nextVal = potentialPhi->getOperand(op);
-						for (auto inst : nextVal->users()) {
-							if (isa<CmpInst>(inst)) {
-								for (auto u : inst->users()) {
-									if (isa<BranchInst>(u)) {
-										BranchInst *br = cast<BranchInst>(u);
-										Value *bb = br->getOperand(1);
-										Value *bb2 = br->getOperand(2);
-										if (bb == phiBB || bb2 == phiBB) {
-											//we have found the phi node
-											cerr << "found a loop induction variable\n";
-											i.dump();
-											cerr << "\n";
-											return cast<Instruction>(inst);
-										}
-									}
-								}
-							}
-						}
-					//}
-				}
-			}
-			return nullptr;
 		}
 
 		bool extract(Function &F, LoopDependencyData *loopData, DominatorTree &DT, LLVMContext &context) {
@@ -315,6 +260,9 @@ namespace {
 			//insert the branch to the IR
 			builder.CreateCondBr(completeCond, cont, terminate);
 
+			//add basic block to the new function
+			loadBlock = BasicBlock::Create(context, "load", newLoopFunc);
+
 			return newLoopFunc;
 		}
 
@@ -401,6 +349,7 @@ namespace {
 					unsigned int opcode = loopData->getPhiNodeOpCode(cast<PHINode>(accumulativePhi));
 					User::op_iterator operand = accumulativePhi->op_begin();
 					Value *initialValue = nullptr;
+					int i = 0;
 					while (operand != accumulativePhi->op_end()) {
 						if (!(*operand == retVal)) {
 							//this is the position the initial value will be in, replace it with the identity
@@ -414,8 +363,12 @@ namespace {
 							cerr << "\n";
 							break;
 						}
+						i++;
 						operand++;
 					}
+					//replace entry BB
+					accumulativePhi->setIncomingBlock(i, loadBlock);
+
 					Value *accumulatedValue = initialValue;
 					for (auto retStruct : returnStructs) {
 						Value *nextReturnedValue = cleanup.CreateStructGEP(returnStruct, retStruct, retValNo);
@@ -449,35 +402,58 @@ namespace {
 			list<Instruction *> arrayArguments = loopData->getArrays();
 			list<Instruction *>  localArgumentsAndReturnVals = loopData->getReturnValues();
 
+			//name all values so they don't conflict with value names in the loop later
+			int loadedVal = 0;
+			char *namePrefix = "loadVal";
+			char *labelSuffix;
+
 			list<Value *> arrayAndLocalStructElements;
 
 			//create IR for loading the required argument values into the function
 			unsigned int p;
-			BasicBlock *writeTo = BasicBlock::Create(context, "loads", loopFunction);
-			IRBuilder<> loadBuilder(writeTo);
-			Value *castArgVal = loadBuilder.CreateBitOrPointerCast(loopFunction->arg_begin(), threadStruct->getPointerTo());
+			IRBuilder<> loadBuilder(loadBlock);
+			
+			itoa(loadedVal, labelSuffix, 10);
+			loadedVal++;
+			Value *castArgVal = loadBuilder.CreateBitOrPointerCast(loopFunction->arg_begin(), threadStruct->getPointerTo(), strcat(namePrefix, labelSuffix));
 
 			//store the loaded array instructions
 			for (p = 0; p < arrayArguments.size(); p++) {
-				Value *arrayVal = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p);
-				LoadInst *loadInst = loadBuilder.CreateLoad(arrayVal);
+				itoa(loadedVal, labelSuffix, 10);
+				loadedVal++;
+				Value *arrayVal = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p, strcat(namePrefix, labelSuffix));
+				itoa(loadedVal, labelSuffix, 10);
+				loadedVal++;
+				LoadInst *loadInst = loadBuilder.CreateLoad(arrayVal, strcat(namePrefix, labelSuffix));
 				arrayAndLocalStructElements.push_back(loadInst);
 			}
 
 			//create IR for obtaining pointers to where return values must be stored
-			Value *localReturns = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p + 2);
+			itoa(loadedVal, labelSuffix, 10);
+			loadedVal++;
+			Value *localReturns = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p + 2, strcat(namePrefix, labelSuffix));
 			localReturns = loadBuilder.CreateLoad(localReturns);
 			for (p = 0; p < localArgumentsAndReturnVals.size(); p++) {
-				Value *retVal = loadBuilder.CreateStructGEP(returnStruct, localReturns, p);
+				itoa(loadedVal, labelSuffix, 10);
+				loadedVal++;
+				Value *retVal = loadBuilder.CreateStructGEP(returnStruct, localReturns, p, strcat(namePrefix, labelSuffix));
 				arrayAndLocalStructElements.push_back(retVal);
 			}
 
 			//load the start and end iteration values
 			p = arrayArguments.size();
-			Value *val = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p);
-			LoadInst *startIt = loadBuilder.CreateLoad(val);
-			val = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p + 1);
-			LoadInst *endIt = loadBuilder.CreateLoad(val);
+			itoa(loadedVal, labelSuffix, 10);
+			loadedVal++;
+			Value *val = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p, strcat(namePrefix, labelSuffix));
+			itoa(loadedVal, labelSuffix, 10);
+			loadedVal++;
+			LoadInst *startIt = loadBuilder.CreateLoad(val, strcat(namePrefix, labelSuffix));
+			itoa(loadedVal, labelSuffix, 10);
+			loadedVal++;
+			val = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p + 1, strcat(namePrefix, labelSuffix));
+			itoa(loadedVal, labelSuffix, 10);
+			loadedVal++;
+			LoadInst *endIt = loadBuilder.CreateLoad(val, strcat(namePrefix, labelSuffix));
 
 			//place them in the loop
 			PHINode *phi = cast<PHINode>(loopData->getInductionPhi());
@@ -493,6 +469,8 @@ namespace {
 					break;
 				}
 			}
+			//replace entry BB
+			phi->setIncomingBlock(op, loadBlock);
 			operands = exitCnd->op_begin();
 			operands[1] = endIt;
 			
