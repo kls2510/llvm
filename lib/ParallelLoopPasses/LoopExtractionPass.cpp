@@ -524,7 +524,7 @@ namespace {
 			//copy loop into new function
 			ValueToValueMapTy vvmap;
 			for (auto &bb : loop->getBlocks()) {
-				toInsert = CloneBasicBlock(bb, vvmap, false);
+				toInsert = CloneBasicBlock(bb, vvmap, nullptr, false);
 				if (i == 0) {
 					loopEntry = toInsert;
 				}
