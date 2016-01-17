@@ -125,7 +125,7 @@ namespace {
 			ValueSymbolTable &symTab = mod->getValueSymbolTable();
 
 			//Setup structs to pass data to/from the threads
-			list<Value *> threadStructs = setupStructs(context, loopData, startIt, finalIt, symTab);
+			list<Value *> threadStructs = setupStructs(&F, context, loopData, startIt, finalIt, symTab);
 
 			//create the thread function and calls to it, and setup the return of local variables afterwards
 			Function *threadFunction = createThreadFunction(threadStructs.front()->getType()->getPointerTo(), context, mod, symTab, loopData, threadStructs, &F);
@@ -146,7 +146,7 @@ namespace {
 			
 		}
 
-		list<Value *> setupStructs(LLVMContext &context, LoopDependencyData *loopData, Value *startIt, Value *finalIt, ValueSymbolTable &symTab) {
+		list<Value *> setupStructs(Function *callingFunction, LLVMContext &context, LoopDependencyData *loopData, Value *startIt, Value *finalIt, ValueSymbolTable &symTab) {
 			Function *integerDiv = cast<Function>(symTab.lookup(StringRef("integerDivide")));
 
 			//Obtain the array and local argument values required for passing to/from the function
@@ -177,8 +177,24 @@ namespace {
 			}
 			returnStruct->setBody(retElts);
 			
+			//setup a new basic block
+			BasicBlock *structSetup = BasicBlock::Create(context, "structSetup", callingFunction);
+			BasicBlock *oldPredecessor = loopData->getLoop()->getLoopPredecessor();
+			BasicBlock *loopBegin = *(loopData->getLoop()->block_begin());
+			for (auto &inst : oldPredecessor->getInstList()) {
+				if (isa<BranchInst>(inst)) {
+					User::op_iterator operand = inst.op_begin();
+					while (operand != inst.op_end()) {
+						if (*operand == loopBegin) {
+							//replace block with new one
+							*operand = structSetup;
+						}
+						operand++;
+				}
+			}
+
 			//setup structs in basic block before the loop
-			IRBuilder<> builder(loopData->getLoop()->getLoopPredecessor());
+			IRBuilder<> builder(structSetup);
 
 			//store all struct values created in IR
 			list<Value *> threadStructs;
