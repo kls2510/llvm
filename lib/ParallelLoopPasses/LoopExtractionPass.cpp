@@ -416,28 +416,28 @@ namespace {
 			
 			sprintf(labelSuffix, "%d", loadedVal);
 			loadedVal++;
-			Value *castArgVal = loadBuilder.CreateBitOrPointerCast(loopFunction->arg_begin(), threadStruct->getPointerTo(), strcat(namePrefix, labelSuffix));
+			Value *castArgVal = loadBuilder.CreateBitOrPointerCast(loopFunction->arg_begin(), threadStruct->getPointerTo(), strcat(namePrefix, (char *)labelSuffix));
 
 			//store the loaded array instructions
 			for (p = 0; p < arrayArguments.size(); p++) {
 				sprintf(labelSuffix, "%d", loadedVal);
 				loadedVal++;
-				Value *arrayVal = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p, strcat(namePrefix, labelSuffix));
+				Value *arrayVal = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p, strcat(namePrefix, (char *)labelSuffix));
 				sprintf(labelSuffix, "%d", loadedVal);
 				loadedVal++;
-				LoadInst *loadInst = loadBuilder.CreateLoad(arrayVal, strcat(namePrefix, labelSuffix));
+				LoadInst *loadInst = loadBuilder.CreateLoad(arrayVal, strcat(namePrefix, (char *)labelSuffix));
 				arrayAndLocalStructElements.push_back(loadInst);
 			}
 
 			//create IR for obtaining pointers to where return values must be stored
 			sprintf(labelSuffix, "%d", loadedVal);
 			loadedVal++;
-			Value *localReturns = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p + 2, strcat(namePrefix, labelSuffix));
+			Value *localReturns = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p + 2, strcat(namePrefix, (char *)labelSuffix));
 			localReturns = loadBuilder.CreateLoad(localReturns);
 			for (p = 0; p < localArgumentsAndReturnVals.size(); p++) {
 				sprintf(labelSuffix, "%d", loadedVal);
 				loadedVal++;
-				Value *retVal = loadBuilder.CreateStructGEP(returnStruct, localReturns, p, strcat(namePrefix, labelSuffix));
+				Value *retVal = loadBuilder.CreateStructGEP(returnStruct, localReturns, p, strcat(namePrefix, (char *)labelSuffix));
 				arrayAndLocalStructElements.push_back(retVal);
 			}
 
@@ -445,16 +445,16 @@ namespace {
 			p = arrayArguments.size();
 			sprintf(labelSuffix, "%d", loadedVal);
 			loadedVal++;
-			Value *val = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p, strcat(namePrefix, labelSuffix));
+			Value *val = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p, strcat(namePrefix, (char *)labelSuffix));
 			sprintf(labelSuffix, "%d", loadedVal);
 			loadedVal++;
-			LoadInst *startIt = loadBuilder.CreateLoad(val, strcat(namePrefix, labelSuffix));
+			LoadInst *startIt = loadBuilder.CreateLoad(val, strcat(namePrefix, (char *)labelSuffix));
 			sprintf(labelSuffix, "%d", loadedVal);
 			loadedVal++;
-			val = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p + 1, strcat(namePrefix, labelSuffix));
+			val = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p + 1, strcat(namePrefix, (char *)labelSuffix));
 			sprintf(labelSuffix, "%d", loadedVal);
 			loadedVal++;
-			LoadInst *endIt = loadBuilder.CreateLoad(val, strcat(namePrefix, labelSuffix));
+			LoadInst *endIt = loadBuilder.CreateLoad(val, strcat(namePrefix, (char *)labelSuffix));
 
 			//place them in the loop
 			PHINode *phi = cast<PHINode>(loopData->getInductionPhi());
