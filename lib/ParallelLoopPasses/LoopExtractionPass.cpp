@@ -535,7 +535,6 @@ namespace {
 			BasicBlock &insertBefore = function->back();
 			BasicBlock *loopEntry;
 			BasicBlock *toInsert;
-			int i = 0;
 			map<Value *, Value *> valuemap;
 			BasicBlock *current;
 			//copy loop into new function
