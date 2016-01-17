@@ -503,7 +503,6 @@ namespace {
 			list<Value *>::iterator loadedVal = loadedArrayAndLocalValues.begin();
 			//replace arrays
 			for (auto a : arrayValues) {
-				BasicBlock::iterator toReplace(a);
 				for (auto &bb : loop->getBlocks()) {
 					for (auto &inst : bb->getInstList()) {
 						User::op_iterator operand = inst.op_begin();
@@ -532,10 +531,20 @@ namespace {
 				if (isa<BranchInst>(u)) {
 					User::op_iterator operand = u->op_begin();
 					while (operand != u->op_end()) {
-						Instruction *inst = cast<Instruction>(operand);
-						if (!loop->contains(inst)) {
-							cerr << "replacing loop exit branch to new basic block\n";
-							*operand = stores;
+						if (isa<BasicBlock>(operand)) {
+							BasicBlock *toBranchTo = cast<BasicBlock>(operand);
+							bool inLoop = false;
+							for (auto bb : loop->getBlocks()) {
+								if (toBranchTo == bb) {
+									//bb in loop so not an exiting branch - don't replace
+									inLoop = true;
+									break;
+								}
+							}
+							if (!inLoop) {
+								cerr << "replacing loop exit branch to new basic block\n";
+								*operand = stores;
+							}
 						}
 						operand++;
 					}
