@@ -698,7 +698,8 @@ namespace {
 					}
 				}
 				cerr << "Loop extraction for function complete\n";
-				return true;
+				//return true;
+				return false;
 			}
 			return false;
 		}
