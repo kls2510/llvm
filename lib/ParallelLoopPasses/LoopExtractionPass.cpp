@@ -414,28 +414,28 @@ namespace {
 			unsigned int p;
 			IRBuilder<> loadBuilder(loadBlock);
 			
-			itoa(loadedVal, labelSuffix, 10);
+			sprintf(labelSuffix, "%d", loadedVal);
 			loadedVal++;
 			Value *castArgVal = loadBuilder.CreateBitOrPointerCast(loopFunction->arg_begin(), threadStruct->getPointerTo(), strcat(namePrefix, labelSuffix));
 
 			//store the loaded array instructions
 			for (p = 0; p < arrayArguments.size(); p++) {
-				itoa(loadedVal, labelSuffix, 10);
+				sprintf(labelSuffix, "%d", loadedVal);
 				loadedVal++;
 				Value *arrayVal = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p, strcat(namePrefix, labelSuffix));
-				itoa(loadedVal, labelSuffix, 10);
+				sprintf(labelSuffix, "%d", loadedVal);
 				loadedVal++;
 				LoadInst *loadInst = loadBuilder.CreateLoad(arrayVal, strcat(namePrefix, labelSuffix));
 				arrayAndLocalStructElements.push_back(loadInst);
 			}
 
 			//create IR for obtaining pointers to where return values must be stored
-			itoa(loadedVal, labelSuffix, 10);
+			sprintf(labelSuffix, "%d", loadedVal);
 			loadedVal++;
 			Value *localReturns = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p + 2, strcat(namePrefix, labelSuffix));
 			localReturns = loadBuilder.CreateLoad(localReturns);
 			for (p = 0; p < localArgumentsAndReturnVals.size(); p++) {
-				itoa(loadedVal, labelSuffix, 10);
+				sprintf(labelSuffix, "%d", loadedVal);
 				loadedVal++;
 				Value *retVal = loadBuilder.CreateStructGEP(returnStruct, localReturns, p, strcat(namePrefix, labelSuffix));
 				arrayAndLocalStructElements.push_back(retVal);
@@ -443,16 +443,16 @@ namespace {
 
 			//load the start and end iteration values
 			p = arrayArguments.size();
-			itoa(loadedVal, labelSuffix, 10);
+			sprintf(labelSuffix, "%d", loadedVal);
 			loadedVal++;
 			Value *val = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p, strcat(namePrefix, labelSuffix));
-			itoa(loadedVal, labelSuffix, 10);
+			sprintf(labelSuffix, "%d", loadedVal);
 			loadedVal++;
 			LoadInst *startIt = loadBuilder.CreateLoad(val, strcat(namePrefix, labelSuffix));
-			itoa(loadedVal, labelSuffix, 10);
+			sprintf(labelSuffix, "%d", loadedVal);
 			loadedVal++;
 			val = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p + 1, strcat(namePrefix, labelSuffix));
-			itoa(loadedVal, labelSuffix, 10);
+			sprintf(labelSuffix, "%d", loadedVal);
 			loadedVal++;
 			LoadInst *endIt = loadBuilder.CreateLoad(val, strcat(namePrefix, labelSuffix));
 
