@@ -554,9 +554,9 @@ namespace {
 				i++;
 			}
 
-			auto newInst = loopEntry->begin();
 			for (auto &bb : loop->getBlocks()) {
 				for (auto &inst : bb->getInstList()) {
+					Instruction *newInst = cast<Instruction>(valuemap.find(&inst)->second);
 					if (!isa<PHINode>(inst)) {
 						User::op_iterator oldoperand = inst.op_begin();
 						User::op_iterator newoperand = newInst->op_begin();
@@ -572,10 +572,22 @@ namespace {
 						}
 					}
 					else {
-						
+						PHINode *phi = cast<PHINode>(&inst);
+						PHINode *newPhi = cast<PHINode>(newInst);
+						map<Value *, Value *>::iterator pos = valuemap.find(phi->getIncomingValue(0));
+						if (pos != valuemap.end()) {
+							Value *mappedOp = pos->second;
+							//replace in new instruction with new value
+							newPhi->setIncomingValue(0, mappedOp);
+						}
+						pos = valuemap.find(phi->getIncomingValue(1));
+						if (pos != valuemap.end()) {
+							Value *mappedOp = pos->second;
+							//replace in new instruction with new value
+							newPhi->setIncomingValue(1, mappedOp);
+						}
 					}
 				}
-				newInst++;
 			}
 			/*
 			for (auto)
