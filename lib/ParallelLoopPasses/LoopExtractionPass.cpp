@@ -40,6 +40,7 @@ namespace {
 		int noThreads = ThreadLimit.getValue();
 		StructType *threadStruct;
 		StructType *returnStruct;
+		BasicBlock *setupBlock;
 
 		//ID of the pass
 		static char ID;
@@ -179,6 +180,7 @@ namespace {
 			
 			//setup a new basic block
 			BasicBlock *structSetup = BasicBlock::Create(context, "structSetup", callingFunction);
+			setupBlock = structSetup;
 			BasicBlock *oldPredecessor = loopData->getLoop()->getLoopPredecessor();
 			BasicBlock *loopBegin = *(loopData->getLoop()->block_begin());
 			for (auto &inst : oldPredecessor->getInstList()) {
@@ -275,7 +277,7 @@ namespace {
 			Function *newLoopFunc = Function::Create(FT, Function::ExternalLinkage, "", mod);
 
 			//add calls to it, one per thread
-			IRBuilder<> builder(loopData->getLoop()->getLoopPredecessor());
+			IRBuilder<> builder(setupBlock);
 			Value *groupCall = builder.CreateCall(createGroup, SmallVector<Value *, 0>());
 			for (list<Value*>::iterator it = threadStructs.begin(); it != threadStructs.end(); ++it) {
 				SmallVector<Value *, 3> argsForDispatch;
