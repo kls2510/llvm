@@ -570,6 +570,7 @@ namespace {
 						newoperand++;
 					}
 				}
+				newInst++;
 			}
 			/*
 			for (auto)
