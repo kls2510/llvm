@@ -272,7 +272,7 @@ namespace {
 			SmallVector<Type *, 1> paramTypes;
 			paramTypes.push_back(threadStructPointerType);
 			FunctionType *FT = FunctionType::get(Type::getVoidTy(context), paramTypes, false);
-			Function *newLoopFunc = Function::Create(FT, Function::ExternalLinkage, nullptr, mod);
+			Function *newLoopFunc = Function::Create(FT, Function::ExternalLinkage, "", mod);
 
 			//add calls to it, one per thread
 			IRBuilder<> builder(loopData->getLoop()->getLoopPredecessor());
