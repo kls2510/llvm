@@ -249,6 +249,9 @@ namespace {
 			Value *ret = termBuilder.CreateLoad(retPtr);
 			termBuilder.CreateRet(ret);
 
+			//add basic block to the new function
+			loadBlock = BasicBlock::Create(context, "load", newLoopFunc);
+
 			//If threads returned, delete the thread group and add in local value loads, then continue as before
 			BasicBlock *cont = BasicBlock::Create(context, "continue", callingFunction);
 			SmallVector<Value *, 1> releaseArgs;
@@ -260,9 +263,6 @@ namespace {
 
 			//insert the branch to the IR
 			builder.CreateCondBr(completeCond, cont, terminate);
-
-			//add basic block to the new function
-			loadBlock = BasicBlock::Create(context, "load", newLoopFunc);
 
 			return newLoopFunc;
 		}
