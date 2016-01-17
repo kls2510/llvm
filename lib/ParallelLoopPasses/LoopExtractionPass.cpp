@@ -554,6 +554,7 @@ namespace {
 				i++;
 			}
 
+			//replace old values with new ones in the loop
 			for (auto &bb : loop->getBlocks()) {
 				for (auto &inst : bb->getInstList()) {
 					Instruction *newInst = cast<Instruction>(valuemap.find(&inst)->second);
@@ -585,6 +586,18 @@ namespace {
 							Value *mappedOp = pos->second;
 							//replace in new instruction with new value
 							newPhi->setIncomingValue(1, mappedOp);
+						}
+						pos = valuemap.find(phi->getIncomingBlock(0));
+						if (pos != valuemap.end()) {
+							Value *mappedOp = pos->second;
+							//replace in new instruction with new value
+							newPhi->setIncomingBlock(0, cast<BasicBlock>(mappedOp));
+						}
+						pos = valuemap.find(phi->getIncomingBlock(1));
+						if (pos != valuemap.end()) {
+							Value *mappedOp = pos->second;
+							//replace in new instruction with new value
+							newPhi->setIncomingBlock(1, cast<BasicBlock>(mappedOp));
 						}
 					}
 				}
