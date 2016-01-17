@@ -623,10 +623,10 @@ namespace {
 			IRBuilder<> builder(loads);
 			builder.CreateBr(loopEntry);
 
-			for (auto &bb : loop->getBlocks()) {
+			/* for (auto &bb : loop->getBlocks()) {
 				//delete original loop from calling function
 				bb->removeFromParent();
-			}
+			} */
 		}
 
 		void addHelperFunctionDeclarations(LLVMContext &context, Module *mod) {
