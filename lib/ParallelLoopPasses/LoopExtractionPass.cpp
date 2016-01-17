@@ -554,6 +554,23 @@ namespace {
 				i++;
 			}
 
+			auto newInst = loopEntry->begin();
+			for (auto &bb : loop->getBlocks()) {
+				for (auto &inst : bb->getInstList()) {
+					User::op_iterator oldoperand = inst.op_begin();
+					User::op_iterator newoperand = newInst->op_begin();
+					while (oldoperand != inst.op_end()) {
+						map<Value *, Value *>::iterator pos = valuemap.find(*oldoperand);
+						if (pos != valuemap.end()) {
+							Value *mappedOp = pos->second;
+							//replace in new instruction with new value
+							*newoperand = mappedOp;
+						}
+						oldoperand++;
+						newoperand++;
+					}
+				}
+			}
 			/*
 			for (auto)
 				toInsert = CloneBasicBlock(bb, vvmap);
