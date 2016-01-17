@@ -589,35 +589,21 @@ namespace {
 					}
 				}
 			}
-			/*
-			for (auto)
-				toInsert = CloneBasicBlock(bb, vvmap);
-				if (i == 0) {
-					loopEntry = toInsert;
-				}
-				//remap instructions
-				for (auto pair : vvmap) {
-					const Value *v1 = pair->first;
-					Value *v2 = pair->second;
-				}
-				toInsert->insertInto(function, &insertBefore);
-				i++;
 
-			ValueToValueMapTy vvmap;
-			for (auto &bb : loop->getBlocks()) {
-				toInsert = CloneBasicBlock(bb, vvmap);
-				if (i == 0) {
-					loopEntry = toInsert;
+			//replace values to store in the last BB too
+			for (auto &inst : insertBefore.getInstList()) {
+				Instruction *newInst = &inst;
+				User::op_iterator newoperand = newInst->op_begin();
+				while (newoperand != inst.op_end()) {
+					map<Value *, Value *>::iterator pos = valuemap.find(*newoperand);
+					if (pos != valuemap.end()) {
+						Value *mappedOp = pos->second;
+						//replace in new instruction with new value
+						*newoperand = mappedOp;
+					}
+					newoperand++;
 				}
-				//remap instructions
-				for (auto pair : vvmap) {
-					const Value *v1 = pair->first;
-					Value *v2 = pair->second;
-				}
-				toInsert->insertInto(function, &insertBefore);
-				i++;
-			} */
-			
+			}
 			
 			//create entry to the loop
 			BasicBlock *loads = function->begin();
