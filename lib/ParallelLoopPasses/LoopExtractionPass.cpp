@@ -381,7 +381,7 @@ namespace {
 					cerr << "accumulating values\n";
 					unsigned int opcode = loopData->getPhiNodeOpCode(cast<PHINode>(accumulativePhi));
 					User::op_iterator operand = accumulativePhi->op_begin();
-					Value *initialValue;
+					Value *initialValue = nullptr;
 					while (operand != accumulativePhi->op_end()) {
 						if (!(*operand == retVal)) {
 							//this is the position the initial value will be in, replace it with the identity
@@ -395,6 +395,7 @@ namespace {
 							cerr << "\n";
 							break;
 						}
+						operand++;
 					}
 					Value *accumulatedValue = initialValue;
 					for (auto retStruct : returnStructs) {
@@ -447,7 +448,6 @@ namespace {
 			//create IR for obtaining pointers to where return values must be stored
 			Value *localReturns = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p + 2);
 			localReturns = loadBuilder.CreateLoad(localReturns);
-			int retValCounter = 0;
 			for (p = 0; p < localArgumentsAndReturnVals.size(); p++) {
 				Value *retVal = loadBuilder.CreateStructGEP(returnStruct, localReturns, p);
 				arrayAndLocalStructElements.push_back(retVal);
@@ -505,7 +505,8 @@ namespace {
 				if (isa<BranchInst>(u)) {
 					User::op_iterator operand = u->op_begin();
 					while (operand != u->op_end()) {
-						if (!loop->contains(operand)) {
+						Instruction *inst = cast<Instruction>(operand);
+						if (!loop->contains(inst)) {
 							cerr << "replacing loop exit branch to new basic block\n";
 							*operand = stores;
 						}
@@ -521,8 +522,9 @@ namespace {
 			BasicBlock *toInsert;
 			int i = 0;
 			//copy loop into new function
+			ValueToValueMapTy vvmap;
 			for (auto &bb : loop->getBlocks()) {
-				toInsert = CloneBasicBlock(bb, ValueToValueMapTy(), false);
+				toInsert = CloneBasicBlock(bb, vvmap, false);
 				if (i == 0) {
 					loopEntry = toInsert;
 				}
