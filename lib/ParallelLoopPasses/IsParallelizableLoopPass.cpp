@@ -431,9 +431,8 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	//remove arrays that are global (i.e. won't need to be passed as argument)
 	for (auto v : arrays) {
 		if (isa<GlobalValue>(v)) {
-			cerr << "array is global so removing from args\n";
+			cerr << "array is global so not adding to args\n";
 			v->dump();
-			arrays.erase(v);
 		}
 		else {
 			cerr << "array must be passed as an argument\n";
