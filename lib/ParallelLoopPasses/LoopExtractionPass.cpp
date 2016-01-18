@@ -640,7 +640,7 @@ namespace {
 				}
 			}
 			for (auto &bb : loop->getBlocks()) {
-				bb->eraseFromParent();
+				bb->removeFromParent();
 			}
 		}
 
