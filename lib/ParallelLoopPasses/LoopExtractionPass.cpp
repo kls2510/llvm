@@ -270,6 +270,7 @@ namespace {
 			cleanup.CreateCall(release, releaseArgs);
 			loadAndReplaceLocals(cleanup, loopData, threadStructs, context);
 			cleanup.CreateBr(loopData->getLoop()->getExitBlock());
+			(*(--loopData->getLoop()->block_end()))->replaceAllUsesWith(cont);
 
 			//insert the branch to the IR
 			builder.CreateCondBr(completeCond, cont, terminate);
