@@ -634,6 +634,7 @@ namespace {
 			insertBefore.removePredecessor(*(--loop->block_end()));
 
 			for (auto &bb : loop->getBlocks()) {
+				bb->dropAllReferences();
 				for (auto &i : bb->getInstList()) {
 					i.dropAllReferences();
 				}
