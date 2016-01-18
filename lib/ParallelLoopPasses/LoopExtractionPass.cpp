@@ -274,12 +274,14 @@ namespace {
 			//cleanup old uses
 			BasicBlock *toReplace = loopData->getLoop()->getExitingBlock();
 			for (auto &i : loopData->getLoop()->getExitBlock()->getInstList()) {
-				User::op_iterator operand = i.op_begin();
-				while (operand != i.op_end()) {
-					if (*operand == toReplace) {
-						*operand = cont;
+				if (isa<PHINode>(i)) {
+					PHINode *phi = cast<PHINode>(&i);
+					int i;
+					for (i = 0; i < 2; i++) {
+						if (phi->getIncomingBlock(i) == toReplace) {
+							phi->setIncomingBlock(i, cont);
+						}
 					}
-					operand++;
 				}
 			}
 
