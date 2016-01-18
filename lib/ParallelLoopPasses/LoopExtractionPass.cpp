@@ -638,6 +638,8 @@ namespace {
 				for (auto &i : bb->getInstList()) {
 					i.dropAllReferences();
 				}
+			}
+			for (auto &bb : loop->getBlocks()) {
 				bb->eraseFromParent();
 			}
 		}
