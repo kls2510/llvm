@@ -43,7 +43,6 @@ namespace {
 		StructType *returnStruct;
 		BasicBlock *setupBlock;
 		BasicBlock *loadBlock;
-		BasicBlock *cont;
 
 		//ID of the pass
 		static char ID;
@@ -264,13 +263,25 @@ namespace {
 			termBuilder.CreateRet(ret);
 
 			//If threads returned, delete the thread group and add in local value loads, then continue as before
-			cont = BasicBlock::Create(context, "continue", callingFunction);
+			BasicBlock *cont = BasicBlock::Create(context, "continue", callingFunction);
 			SmallVector<Value *, 1> releaseArgs;
 			releaseArgs.push_back(groupCall);
 			IRBuilder<> cleanup(cont);
 			cleanup.CreateCall(release, releaseArgs);
 			loadAndReplaceLocals(cleanup, loopData, threadStructs, context);
 			cleanup.CreateBr(loopData->getLoop()->getExitBlock());
+
+			//cleanup old uses
+			BasicBlock *toReplace = loopData->getLoop()->getExitingBlock();
+			for (auto &i : loopData->getLoop()->getExitBlock()->getInstList()) {
+				User::op_iterator operand = i.op_begin();
+				while (operand != i.op_end()) {
+					if (*operand == toReplace) {
+						*operand = cont;
+					}
+					operand++;
+				}
+			}
 
 			//insert the branch to the IR
 			builder.CreateCondBr(completeCond, cont, terminate);
@@ -632,9 +643,6 @@ namespace {
 			BasicBlock *loads = function->begin();
 			IRBuilder<> builder(loads);
 			builder.CreateBr(loopEntry);
-
-			//cleanup old uses
-			(*(loop->block_end()))->replaceAllUsesWith(cont);
 
 			//remove old bb from predecessors
 			insertBefore.removePredecessor(*(--loop->block_end()));
