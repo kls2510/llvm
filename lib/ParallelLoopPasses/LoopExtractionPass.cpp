@@ -228,7 +228,7 @@ namespace {
 			BasicBlock *dummyBlock = BasicBlock::Create(context, "dummy", callingFunction);
 			IRBuilder<> builderdummy(dummyBlock);
 			SmallVector<Value *, 1> dummyarg;
-			Value *ptr = builderdummy.CreateAlloca(Type::getInt8PtrTy(context));
+			Value *ptr = builderdummy.CreateAlloca(Type::getInt8Ty(context));
 			dummyarg.push_back(ptr);
 			builderdummy.CreateCall(newLoopFunc, dummyarg);
 
