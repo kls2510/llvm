@@ -68,7 +68,6 @@ namespace {
 
 			//setup helper functions so declararations are there to be linked later
 			Module * mod = (F.getParent());
-			addHelperFunctionDeclarations(context, mod);
 			ValueSymbolTable &symTab = mod->getValueSymbolTable();
 
 			//Setup structs to pass data to/from the threads
@@ -224,6 +223,14 @@ namespace {
 
 			//add basic block to the new function
 			loadBlock = BasicBlock::Create(context, "load", newLoopFunc);
+
+			//add dummy calls to try and prevent its deletion
+			BasicBlock *dummyBlock = BasicBlock::Create(context, "dummy", callingFunction);
+			IRBuilder<> builderdummy(dummyBlock);
+			SmallVector<Value *, 1> dummyarg;
+			Value *ptr = builderdummy.CreateAlloca(Type::getInt8PtrTy(context));
+			dummyarg.push_back(ptr);
+			builderdummy.CreateCall(newLoopFunc, dummyarg);
 
 			//add calls to it, one per thread
 			IRBuilder<> builder(setupBlock);
@@ -625,7 +632,8 @@ namespace {
 
 			for (auto &bb : loop->getBlocks()) {
 				//delete original loop from calling function
-				bb->removeFromParent();
+				bb->replaceAllUsesWith(UndefValue::get(bb->getType()));
+				bb->eraseFromParent();
 			}
 		}
 
@@ -683,10 +691,12 @@ namespace {
 			if (!F.hasFnAttribute("Extracted") && noThreads > DEFAULT_THREAD_COUNT) {
 				list<LoopDependencyData *> loopData = IP.getResultsForFunction(F);
 				cerr << "In function " << (F.getName()).data() << "\n";
+				Module * mod = (F.getParent());
+				LLVMContext &context = mod->getContext();
+				addHelperFunctionDeclarations(context, mod);
 				for (list<LoopDependencyData *>::iterator i = loopData.begin(); i != loopData.end(); i++) {
 					cerr << "Found a loop\n";
 					LoopDependencyData *loopData = *i;
-					LLVMContext &context = (loopData->getLoop())->getHeader()->getContext();
 
 					if ((loopData->getDependencies()).size() == 0) {
 						if (loopData->isParallelizable()) {
@@ -698,8 +708,7 @@ namespace {
 					}
 				}
 				cerr << "Loop extraction for function complete\n";
-				//return true;
-				return false;
+				return true;
 			}
 			return false;
 		}
