@@ -630,6 +630,9 @@ namespace {
 			IRBuilder<> builder(loads);
 			builder.CreateBr(loopEntry);
 
+			//remove old bb from predecessors
+			insertBefore.removePredecessor(*(--loop->block_end()));
+
 			for (auto &bb : loop->getBlocks()) {
 				//delete original loop from calling function
 				//bb->replaceAllUsesWith(UndefValue::get(bb->getType()));
