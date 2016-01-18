@@ -547,7 +547,7 @@ namespace {
 			//copy loop into new function
 			int i = 0;
 			for (auto &bb : loop->getBlocks()) {
-				current = BasicBlock::Create(context, bb->getName(), function, &insertBefore);
+				current = BasicBlock::Create(context, bb->getName() + "_", function, &insertBefore);
 				if (i == 0) {
 					loopEntry = current;
 				}
