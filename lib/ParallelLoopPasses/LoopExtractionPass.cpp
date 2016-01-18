@@ -634,7 +634,7 @@ namespace {
 			builder.CreateBr(loopEntry);
 
 			//cleanup old uses
-			(*(--loop->block_end()))->replaceAllUsesWith(cont);
+			(*(loop->block_end()))->replaceAllUsesWith(cont);
 
 			//remove old bb from predecessors
 			insertBefore.removePredecessor(*(--loop->block_end()));
