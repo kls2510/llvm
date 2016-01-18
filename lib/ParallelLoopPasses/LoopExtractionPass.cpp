@@ -231,6 +231,9 @@ namespace {
 			Value *ptr = builderdummy.CreateAlloca(Type::getInt8Ty(context));
 			dummyarg.push_back(ptr);
 			builderdummy.CreateCall(newLoopFunc, dummyarg);
+			Value *ret = builderdummy.CreateAlloca(callingFunction->getReturnType());
+			ret = builderdummy.CreateLoad(ret);
+			builderdummy.CreateRet(ret);
 
 			//add calls to it, one per thread
 			IRBuilder<> builder(setupBlock);
