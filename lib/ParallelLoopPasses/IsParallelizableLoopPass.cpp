@@ -369,7 +369,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	}
 
 	//find loop start iteration value
-	Value *startIt;
+	Value *startIt = nullptr;
 	int op;
 	BasicBlock *initialEntry = L->getLoopPredecessor();
 	for (op = 0; op < 2; op++) {
@@ -378,6 +378,10 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 			startIt = phi->getOperand(op);
 			break;
 		}
+	}
+	if (startIt == nullptr) {
+		cerr << "start iteration could not be found\n";
+		return false;
 	}
 
 	//attempt to find trip count
@@ -491,6 +495,7 @@ PHINode *IsParallelizableLoopPass::findOuterLoopInductionPhi(Loop *L) {
 			}
 		}
 	}
+	return phi;
 }
 
 bool IsParallelizableLoopPass::checkNestedLoops(Loop *L, int &noLoops) {
@@ -519,7 +524,6 @@ bool IsParallelizableLoopPass::checkAccumulativePhiIsValid(Instruction &inst, Lo
 	//find what the repeated operation is - only accept commutative operations
 	//i.e. case Add, case FAdd, case Mul, case FMul, case And, case Or, case Xor
 	int op;
-	BasicBlock *currentBB = phi->getParent();
 	BasicBlock *initialEntry = L->getLoopPredecessor();
 
 	for (op = 0; op < 2; op++) {
@@ -584,6 +588,7 @@ bool IsParallelizableLoopPass::checkAccumulativePhiIsValid(Instruction &inst, Lo
 			}
 		}
 	}
+	return false;
 }
 
 list<Dependence *> IsParallelizableLoopPass::findDistanceVectors(set<Instruction *> *dependentInstructions, DependenceAnalysis *DA) {

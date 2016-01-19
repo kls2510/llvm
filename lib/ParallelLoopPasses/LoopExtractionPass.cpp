@@ -711,7 +711,6 @@ namespace {
 		virtual bool runOnFunction(Function &F) {
 			//get data from the IsParallelizableLoopPass analysis
 			IsParallelizableLoopPass &IP = getAnalysis<IsParallelizableLoopPass>();
-			DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
 
 			if (!F.hasFnAttribute("Extracted") && noThreads > DEFAULT_THREAD_COUNT) {
 				list<LoopDependencyData *> loopData = IP.getResultsForFunction(F);
