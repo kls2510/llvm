@@ -392,7 +392,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	return true;
 }
 
-bool isDependentOnInductionVariable(Instruction *ptr, Instruction *phi, bool read) {
+bool IsParallelizableLoopPass::isDependentOnInductionVariable(Instruction *ptr, Instruction *phi, bool read) {
 	set<Instruction *> opsToCheck;
 	for (auto &op : ptr->operands()) {
 		if (isa<Instruction>(op)) {
@@ -466,7 +466,7 @@ bool IsParallelizableLoopPass::getDependencies(Loop *L, PHINode *phi, set<Instru
 	return parallelizable;
 }
 
-PHINode *findOuterLoopInductionPhi(Loop *L) {
+PHINode *IsParallelizableLoopPass::findOuterLoopInductionPhi(Loop *L) {
 	PHINode *phi = L->getCanonicalInductionVariable();
 
 	if (phi == nullptr) {
@@ -493,7 +493,7 @@ PHINode *findOuterLoopInductionPhi(Loop *L) {
 	}
 }
 
-bool checkNestedLoops(Loop *L, int &noLoops) {
+bool IsParallelizableLoopPass::checkNestedLoops(Loop *L, int &noLoops) {
 	vector<Loop *> currentSubloops = L->getSubLoops();
 	while (currentSubloops.size() != 0) {
 		if (currentSubloops.size() == 1) {
@@ -510,7 +510,7 @@ bool checkNestedLoops(Loop *L, int &noLoops) {
 	return true;
 }
 
-bool checkAccumulativePhiIsValid(Instruction &inst, Loop *L, int &opcode){
+bool IsParallelizableLoopPass::checkAccumulativePhiIsValid(Instruction &inst, Loop *L, int &opcode){
 	//if it's in the outer loop we are parallelizing we must accumulate
 	cerr << "non-induction phi-node found in outer loop\n";
 	inst.dump();
@@ -586,7 +586,7 @@ bool checkAccumulativePhiIsValid(Instruction &inst, Loop *L, int &opcode){
 	}
 }
 
-list<Dependence *> findDistanceVectors(set<Instruction *> *dependentInstructions, DependenceAnalysis *DA) {
+list<Dependence *> IsParallelizableLoopPass::findDistanceVectors(set<Instruction *> *dependentInstructions, DependenceAnalysis *DA) {
 	//find distance vectors for loop induction dependent read/write instructions
 	list<Dependence *> dependencies;
 	for (set<Instruction *>::iterator si = dependentInstructions->begin(); si != dependentInstructions->end(); si++) {

@@ -52,6 +52,17 @@ namespace parallelize {
 		bool isParallelizable(Loop *L, Function &F, ScalarEvolution &SE);
 
 		bool getDependencies(Loop *L, PHINode *phi, set<Instruction *> *dependents);
+
+		bool isDependentOnInductionVariable(Instruction *ptr, Instruction *phi, bool read);		
+
+		PHINode *findOuterLoopInductionPhi(Loop *L);
+
+		bool checkNestedLoops(Loop *L, int &noLoops);
+
+		bool checkAccumulativePhiIsValid(Instruction &inst, Loop *L, int &opcode);
+
+		list<Dependence *> findDistanceVectors(set<Instruction *> *dependentInstructions, DependenceAnalysis *DA);
+
 	};
 }
 
