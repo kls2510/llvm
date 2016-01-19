@@ -164,6 +164,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 				inductionPhi = inductionPhiNode(i, subloop);
 				if (inductionPhi != nullptr) {
 					foundPhiNodes.insert(inductionPhi);
+					noOfPhiNodes++;
 					break;
 				}
 			}
@@ -254,7 +255,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 					br->dump();
 					cerr << "\n";
 					branchNo++;
-					if (branchNo > (2*noLoops) - 1) {
+					if (branchNo > noLoops) {
 						cerr << "Too many conditional branches found\n";
 						return false;
 					}
