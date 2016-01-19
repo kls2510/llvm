@@ -53,10 +53,9 @@ namespace {
 		//Set LoopInfo pass to run before this one so we can access its results
 		void getAnalysisUsage(AnalysisUsage &AU) const {
 			AU.addRequired<IsParallelizableLoopPass>();
-			AU.addRequired<DominatorTreeWrapperPass>();
 		}
 
-		bool extract(Function &F, LoopDependencyData *loopData, DominatorTree &DT, LLVMContext &context) {
+		bool extract(Function &F, LoopDependencyData *loopData, LLVMContext &context) {
 			//extract the loop
 			//cerr << "This loop has no dependencies so can be extracted\n";
 
@@ -398,6 +397,9 @@ namespace {
 					for (auto retStruct : returnStructs) {
 						Value *nextReturnedValue = cleanup.CreateStructGEP(returnStruct, retStruct, retValNo);
 						nextReturnedValue = cleanup.CreateLoad(nextReturnedValue);
+						if (!(nextReturnedValue->getType() == accumulatedValue->getType())) {
+							nextReturnedValue = cleanup.CreateBitOrPointerCast(nextReturnedValue, accumulatedValue->getType());
+						}
 						accumulatedValue = cleanup.CreateBinOp(Instruction::BinaryOps(opcode), accumulatedValue, nextReturnedValue);
 					}
 					for (auto inst : loopData->getReplaceReturnValueIn(retVal)) {
@@ -723,7 +725,7 @@ namespace {
 
 					if ((loopData->getDependencies()).size() == 0) {
 						if (loopData->isParallelizable()) {
-							bool success = extract(F, loopData, DT, context);
+							bool success = extract(F, loopData, context);
 						}
 					}
 					else {
