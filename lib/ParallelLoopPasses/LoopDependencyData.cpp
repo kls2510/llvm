@@ -68,9 +68,9 @@ int LoopDependencyData::getTripCount() {
 	return tripCount;
 }
 
-list<Instruction *> LoopDependencyData::getReturnValues() {
-	list<Instruction *> toReturn;
-	set<Instruction *> returnSet;
+list<Value *> LoopDependencyData::getReturnValues() {
+	list<Value *> toReturn;
+	set<Value *> returnSet;
 	for (auto p : returnValues) {
 		returnSet.insert(p.first);
 	}
@@ -80,10 +80,10 @@ list<Instruction *> LoopDependencyData::getReturnValues() {
 	return toReturn;
 }
 
-list<Instruction *> LoopDependencyData::getReplaceReturnValueIn(Instruction *returnValue) {
-	list<Instruction *> toReturn;
-	pair <multimap<Instruction *, Instruction *>::iterator, multimap<Instruction *, Instruction *>::iterator> range = returnValues.equal_range(returnValue);
-	multimap<Instruction *, Instruction *>::iterator i;
+list<Value *> LoopDependencyData::getReplaceReturnValueIn(Value *returnValue) {
+	list<Value *> toReturn;
+	pair <multimap<Value *, Value *>::iterator, multimap<Value *, Value *>::iterator> range = returnValues.equal_range(returnValue);
+	multimap<Value *, Value *>::iterator i;
 	for (i = range.first; i != range.second; i++) {
 		toReturn.push_back(i->second);
 	}
@@ -110,6 +110,6 @@ Instruction *LoopDependencyData::getExitCondNode() {
 	return end;
 }
 
-list<Instruction *> LoopDependencyData::getArrays() {
+list<Value *> LoopDependencyData::getArrays() {
 	return this->arrays;
 }

@@ -128,7 +128,7 @@ PHINode *inductionPhiNode(Instruction &i, Loop *L) {
 //runs the actual analysis
 bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvolution &SE) {
 	list<Dependence *> dependencies;
-	multimap<Instruction *, Instruction *> returnValues;
+	multimap<Value *, Value *> returnValues;
 	map<PHINode *, unsigned int> accumulativePhiNodes;
 	set<PHINode *> foundPhiNodes;
 	int noOfPhiNodes = 0;
@@ -268,8 +268,8 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 				if (!L->contains(use)) {
 					//we don't want duplicates
 					bool first = true;
-					pair <multimap<Instruction *, Instruction *>::iterator, multimap<Instruction *, Instruction *>::iterator> range = returnValues.equal_range(&inst);
-					for (multimap<Instruction *, Instruction *>::iterator it = range.first; it != range.second; ++it) {
+					pair <multimap<Value *, Value *>::iterator, multimap<Value *, Value *>::iterator> range = returnValues.equal_range(&inst);
+					for (multimap<Value *, Value *>::iterator it = range.first; it != range.second; ++it) {
 						if (it->second == use) {
 							first = false;
 							break;
@@ -363,11 +363,11 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	}
 
 	//store array args in list for extractor to use
-	list<Instruction *> arrayArgs;
+	list<Value *> arrayArgs;
 	for (auto v : localarrays) {
 		cerr << "array must be passed as an argument\n";
 		v->dump();
-		arrayArgs.push_back(cast<Instruction>(v));
+		arrayArgs.push_back(v);
 	}
 
 	//find loop start iteration value

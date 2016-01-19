@@ -95,8 +95,8 @@ namespace {
 			Function *integerDiv = cast<Function>(symTab.lookup(StringRef("integerDivide")));
 
 			//Obtain the array and local argument values required for passing to/from the function
-			list<Instruction *> arrayArguments = loopData->getArrays();
-			list<Instruction *>  localArgumentsAndReturnVals = loopData->getReturnValues();
+			list<Value *> arrayArguments = loopData->getArrays();
+			list<Value *>  localArgumentsAndReturnVals = loopData->getReturnValues();
 
 			//create the struct we'll use to pass data to the threads
 			threadStruct = StructType::create(context, "ThreadPasser");
@@ -321,8 +321,8 @@ namespace {
 
 		void loadAndReplaceLocals(IRBuilder<> cleanup, LoopDependencyData *loopData, list<Value *> threadStructs, LLVMContext &context) {
 			//Obtain the array and local argument values required for passing to/from the function
-			list<Instruction *> arrayArguments = loopData->getArrays();
-			list<Instruction *>  localArgumentsAndReturnVals = loopData->getReturnValues();
+			list<Value *> arrayArguments = loopData->getArrays();
+			list<Value *>  localArgumentsAndReturnVals = loopData->getReturnValues();
 
 			list<Value *> returnStructs;
 
@@ -363,18 +363,25 @@ namespace {
 					Value *returnedValue = cleanup.CreateStructGEP(returnStruct, lastReturnStruct, retValNo);
 					returnedValue = cleanup.CreateLoad(returnedValue);
 					for (auto inst : loopData->getReplaceReturnValueIn(retVal)) {
-						User::op_iterator operand = inst->op_begin();
-						while (operand != inst->op_end()) {
-							if (*operand == retVal) {
-								cerr << "Replacing a returned value in instruction: \n";
-								inst->dump();
-								cerr << "with\n";
-								returnedValue->dump();
-								cerr << "\n";
-								
-								*operand = returnedValue;
+						if (isa<Instruction>(inst)) {
+							Instruction *inst = cast<Instruction>(inst);
+							User::op_iterator operand = inst->op_begin();
+							while (operand != inst->op_end()) {
+								if (*operand == retVal) {
+									cerr << "Replacing a returned value in instruction: \n";
+									inst->dump();
+									cerr << "with\n";
+									returnedValue->dump();
+									cerr << "\n";
+
+									*operand = returnedValue;
+								}
+								operand++;
 							}
-							operand++;
+						}
+						else {
+							//replace the value???
+							cerr << "DANGER REACHED HERE\n";
 						}
 					}
 				}
@@ -414,18 +421,25 @@ namespace {
 						accumulatedValue = cleanup.CreateBinOp(Instruction::BinaryOps(opcode), accumulatedValue, nextReturnedValue);
 					}
 					for (auto inst : loopData->getReplaceReturnValueIn(retVal)) {
-						User::op_iterator operand = inst->op_begin();
-						while (operand != inst->op_end()) {
-							if (*operand == retVal) {
-								cerr << "Replacing a returned value in instruction: \n";
-								inst->dump();
-								cerr << "with\n";
-								accumulatedValue->dump();
-								cerr << "\n";
+						if (isa<Instruction>(inst)) {
+							Instruction *inst = cast<Instruction>(inst);
+							User::op_iterator operand = inst->op_begin();
+							while (operand != inst->op_end()) {
+								if (*operand == retVal) {
+									cerr << "Replacing a returned value in instruction: \n";
+									inst->dump();
+									cerr << "with\n";
+									accumulatedValue->dump();
+									cerr << "\n";
 
-								*operand = accumulatedValue;
+									*operand = accumulatedValue;
+								}
+								operand++;
 							}
-							operand++;
+						}
+						else {
+							//replace the value???
+							cerr << "DANGER REACHED HERE\n";
 						}
 					}
 				}
@@ -437,8 +451,8 @@ namespace {
 
 		list<Value *> loadStructValuesInFunctionForLoop(Function *loopFunction, LLVMContext &context, LoopDependencyData *loopData) {
 			//Obtain the array and local argument values required for passing to/from the function
-			list<Instruction *> arrayArguments = loopData->getArrays();
-			list<Instruction *>  localArgumentsAndReturnVals = loopData->getReturnValues();
+			list<Value *> arrayArguments = loopData->getArrays();
+			list<Value *>  localArgumentsAndReturnVals = loopData->getReturnValues();
 
 			//name all values so they don't conflict with value names in the loop later
 			int loadedVal = 0;
@@ -515,7 +529,7 @@ namespace {
 			return arrayAndLocalStructElements;
 		}
 
-		void replaceLoopValues(LoopDependencyData *loopData, LLVMContext &context, Function *loopFunction, list<Value *> loadedArrayAndLocalValues, Loop *loop, list<Instruction *> arrayValues, list<Instruction *> retValues) {
+		void replaceLoopValues(LoopDependencyData *loopData, LLVMContext &context, Function *loopFunction, list<Value *> loadedArrayAndLocalValues, Loop *loop, list<Value *> arrayValues, list<Value *> retValues) {
 			list<Value *>::iterator loadedVal = loadedArrayAndLocalValues.begin();
 			//replace arrays
 			for (auto a : arrayValues) {
