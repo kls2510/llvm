@@ -259,11 +259,6 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 						return false;
 					}
 				}
-				else {
-					//branch isn't conditional so not parallelizable
-					cerr << "non-conditional branch found, not parallelizable\n";
-					return false;
-				}
 			}
 
 			//check for users of values calculated inside the loop, outside the loop
