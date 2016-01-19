@@ -345,9 +345,12 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 			}
 			else {
 				for (auto &op : i.operands()) {
-					if (!L->contains(&op) && !isa<GlobalValue>(&op)) {
-						//must pass in local value as arg so it is available
-						localvalues.insert(cast<Value>(&op));
+					if (isa<Instruction>(op)) {
+						Instruction *inst = cast<Instruction>(&op);
+						if (!L->contains(inst) && !isa<GlobalValue>(inst)) {
+							//must pass in local value as arg so it is available
+							localvalues.insert(cast<Value>(inst));
+						}
 					}
 				}
 			}
@@ -373,7 +376,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	//store array args in list for extractor to use
 	list<Value *> localArgs;
 	for (auto v : localvalues) {
-		cerr << "array must be passed as an argument\n";
+		cerr << "value must be passed as an argument\n";
 		v->dump();
 		localArgs.push_back(v);
 	}
