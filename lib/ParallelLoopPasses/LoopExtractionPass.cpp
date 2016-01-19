@@ -240,6 +240,7 @@ namespace {
 				retdum = builderdummy.CreateRetVoid();
 			}
 
+
 			//add calls to it, one per thread
 			IRBuilder<> builder(setupBlock);
 			Value *groupCall = builder.CreateCall(createGroup, SmallVector<Value *, 0>());
