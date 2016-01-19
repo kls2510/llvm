@@ -324,9 +324,9 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	}
 	delete dependentInstructions;
 	
-	//set to store all local array declarations accessed in the loop (will need to be passed to thread function as argument)
-	set<Value *> localarrays;
-	//loop through all read/write instructions and find all arrays accessed
+	//set to store all local array declarations and variables accessed in the loop (will need to be passed to thread function as argument)
+	set<Value *> localvalues;
+	//loop through all read/write instructions and find all arrays accessed and variables used that aren't defined in the loop
 	set<Value *> allarrays;
 	for (auto bb : L->getBlocks()) {
 		for (auto &i : bb->getInstList()) {
@@ -337,9 +337,17 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 						Instruction *gep = cast<Instruction>(op);
 						//Array declaration will be the first argument of the GEP instruction
 						if (!isa<GlobalValue>(gep->op_begin())) {
-							localarrays.insert(cast<Value>(gep->op_begin()));
+							localvalues.insert(cast<Value>(gep->op_begin()));
 						}
 						allarrays.insert(cast<Value>(gep->op_begin()));
+					}
+				}
+			}
+			else {
+				for (auto &op : i.operands()) {
+					if (!L->contains(&op) && !isa<GlobalValue>(&op)) {
+						//must pass in local value as arg so it is available
+						localvalues.insert(cast<Value>(&op));
 					}
 				}
 			}
@@ -363,11 +371,11 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	}
 
 	//store array args in list for extractor to use
-	list<Value *> arrayArgs;
-	for (auto v : localarrays) {
+	list<Value *> localArgs;
+	for (auto v : localvalues) {
 		cerr << "array must be passed as an argument\n";
 		v->dump();
-		arrayArgs.push_back(v);
+		localArgs.push_back(v);
 	}
 
 	//find loop start iteration value
@@ -392,7 +400,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 
 	//store results of analysis
 	bool parallelizable = true;
-	LoopDependencyData *data = new LoopDependencyData(phi, arrayArgs, exitCnd, L, dependencies, noOfPhiNodes, startIt, finalIt, tripCount, parallelizable, returnValues, accumulativePhiNodes);
+	LoopDependencyData *data = new LoopDependencyData(phi, localArgs, exitCnd, L, dependencies, noOfPhiNodes, startIt, finalIt, tripCount, parallelizable, returnValues, accumulativePhiNodes);
 	results.push_back(data);
 	
 	return true;
