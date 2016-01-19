@@ -164,7 +164,11 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 				inductionPhi = inductionPhiNode(i, subloop);
 				if (inductionPhi != nullptr) {
 					foundPhiNodes.insert(inductionPhi);
+					break;
 				}
+			}
+			if (inductionPhi != nullptr) {
+				break;
 			}
 		}
 		currentSubloops = subloop->getSubLoops();
@@ -235,7 +239,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 				}
 			}
 
-			//don't want to parallelize if branch instructions that aren't phi node branches exist in the outer loop (i.e. if's) - to be safe
+			//don't want to parallelize if branch instructions that aren't phi node branches exist in the outer loop or to the next BB in the loop (i.e. if's) - to be safe
 			else if (isa<BranchInst>(inst)) {
 				BranchInst *br = cast<BranchInst>(&inst);
 				if (br->isConditional()) {
@@ -250,7 +254,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 					br->dump();
 					cerr << "\n";
 					branchNo++;
-					if (branchNo > noLoops) {
+					if (branchNo > (2*noLoops) - 1) {
 						cerr << "Too many conditional branches found\n";
 						return false;
 					}
