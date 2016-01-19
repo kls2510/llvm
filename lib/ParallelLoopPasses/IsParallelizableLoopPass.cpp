@@ -212,7 +212,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 						int opcode;
 						bool phiIsValid = checkAccumulativePhiIsValid(inst, L, opcode);
 						if (phiIsValid) {
-							accumulativePhiNodes.insert(make_pair(phi, opcode));
+							accumulativePhiNodes.insert(make_pair(cast<PHINode>(&inst), opcode));
 						}
 						else {
 							return false;
