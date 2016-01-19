@@ -362,9 +362,9 @@ namespace {
 					//replace uses of value with the value loaded from the last return struct if there isn't an associated phi node
 					Value *returnedValue = cleanup.CreateStructGEP(returnStruct, lastReturnStruct, retValNo);
 					returnedValue = cleanup.CreateLoad(returnedValue);
-					for (auto inst : loopData->getReplaceReturnValueIn(retVal)) {
-						if (isa<Instruction>(inst)) {
-							Instruction *inst = cast<Instruction>(inst);
+					for (auto v : loopData->getReplaceReturnValueIn(retVal)) {
+						if (isa<Instruction>(v)) {
+							Instruction *inst = cast<Instruction>(v);
 							User::op_iterator operand = inst->op_begin();
 							while (operand != inst->op_end()) {
 								if (*operand == retVal) {
@@ -420,9 +420,9 @@ namespace {
 						}
 						accumulatedValue = cleanup.CreateBinOp(Instruction::BinaryOps(opcode), accumulatedValue, nextReturnedValue);
 					}
-					for (auto inst : loopData->getReplaceReturnValueIn(retVal)) {
-						if (isa<Instruction>(inst)) {
-							Instruction *inst = cast<Instruction>(inst);
+					for (auto v : loopData->getReplaceReturnValueIn(retVal)) {
+						if (isa<Instruction>(v)) {
+							Instruction *inst = cast<Instruction>(v);
 							User::op_iterator operand = inst->op_begin();
 							while (operand != inst->op_end()) {
 								if (*operand == retVal) {
