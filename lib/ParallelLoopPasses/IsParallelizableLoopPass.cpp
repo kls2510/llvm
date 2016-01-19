@@ -248,8 +248,8 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 					Value *bb = br->getOperand(1);
 					Value *bb2 = br->getOperand(2);
 					if (bb == phiBB || bb2 == phiBB) {
-						//we have found the condition to exit the outer loop
-						exitCnd = &inst;
+						//we have found the branch to exit the outer loop
+						exitCnd = cast<Instruction>(inst.getOperand(0));
 					}
 					cerr << "loop contains a conditional branch:\n";
 					br->dump();
@@ -293,7 +293,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 		return false;
 	}
 	else {
-		finalIt = exitCnd->getOperand(2);
+		finalIt = exitCnd->getOperand(1);
 	}
 
 	cerr << "total number of induction phi nodes = " << noOfPhiNodes << "\n";
