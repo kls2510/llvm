@@ -293,6 +293,8 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 		return false;
 	}
 	else {
+		cerr << "found exit condition instruction :\n";
+		exitCnd->dump();
 		finalIt = exitCnd->getOperand(1);
 	}
 
