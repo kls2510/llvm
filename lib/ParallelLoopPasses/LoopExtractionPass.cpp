@@ -230,9 +230,15 @@ namespace {
 			Value *ptr = builderdummy.CreateAlloca(Type::getInt8Ty(context));
 			dummyarg.push_back(ptr);
 			builderdummy.CreateCall(newLoopFunc, dummyarg);
-			Value *retdum = builderdummy.CreateAlloca(callingFunction->getReturnType());
-			retdum = builderdummy.CreateLoad(retdum);
-			builderdummy.CreateRet(retdum);
+			Value *retdum;
+			if (callingFunction->getReturnType() != Type::getVoidTy(context)) {
+				retdum = builderdummy.CreateAlloca(callingFunction->getReturnType());
+				retdum = builderdummy.CreateLoad(retdum);
+				builderdummy.CreateRet(retdum);
+			}
+			else {
+				retdum = builderdummy.CreateRetVoid();
+			}
 
 			//add calls to it, one per thread
 			IRBuilder<> builder(setupBlock);
