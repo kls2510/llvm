@@ -240,7 +240,6 @@ namespace {
 				retdum = builderdummy.CreateRetVoid();
 			}
 
-
 			//add calls to it, one per thread
 			IRBuilder<> builder(setupBlock);
 			Value *groupCall = builder.CreateCall(createGroup, SmallVector<Value *, 0>());
@@ -264,9 +263,14 @@ namespace {
 			BasicBlock *terminate = BasicBlock::Create(context, "terminate", callingFunction);
 			IRBuilder<> termBuilder(terminate);
 			termBuilder.CreateCall(exit);
-			Value *retPtr = termBuilder.CreateAlloca(callingFunction->getReturnType());
-			Value *ret = termBuilder.CreateLoad(retPtr);
-			termBuilder.CreateRet(ret);
+			if (callingFunction->getReturnType() != Type::getVoidTy(context)) {
+				Value *retPtr = termBuilder.CreateAlloca(callingFunction->getReturnType());
+				Value *ret = termBuilder.CreateLoad(retPtr);
+				termBuilder.CreateRet(ret);
+			}
+			else {
+				termBuilder.CreateRetVoid();
+			}
 
 			//If threads returned, delete the thread group and add in local value loads, then continue as before
 			BasicBlock *cont = BasicBlock::Create(context, "continue", callingFunction);
