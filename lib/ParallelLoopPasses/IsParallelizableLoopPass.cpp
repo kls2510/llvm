@@ -577,6 +577,15 @@ bool IsParallelizableLoopPass::checkAccumulativePhiIsValid(Instruction &inst, Lo
 	inst.dump();
 	cerr << "\n";
 	PHINode *phi = cast<PHINode>(&inst);
+
+	//check the phi node is only used for the accumulating value, not in any other loop computation
+	for (auto u : phi->users()) {
+		if (!(phi->getIncomingValue(0) == u) && !(phi->getIncomingValue(1) == u)) {
+			cerr << "accumualtive phi not just used for accumulation, not parallelizable\n";
+			return false;
+		}
+	}
+
 	//find what the repeated operation is - only accept commutative operations
 	//i.e. case Add, case FAdd, case Mul, case FMul, case And, case Or, case Xor
 	int op;
