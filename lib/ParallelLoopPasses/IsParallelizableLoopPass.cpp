@@ -369,6 +369,10 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 								localvalues.insert(cast<Value>(inst));
 							}
 						}
+						else {
+							//it's a function argument we need
+							localvalues.insert(cast<Value>(op));
+						}
 					}
 				}
 			//}
