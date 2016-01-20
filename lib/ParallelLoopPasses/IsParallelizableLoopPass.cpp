@@ -337,10 +337,19 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 						if (isa<Instruction>(op)) {
 							Instruction *gep = cast<Instruction>(op);
 							//Array declaration will be the first argument of the GEP instruction
-							if (!isa<GlobalValue>(gep->op_begin()) && !L->contains(cast<Instruction>(gep->op_begin()))) {
-								localvalues.insert(cast<Value>(gep->op_begin()));
+							Value *array = cast<Value>(gep->op_begin());
+							if (isa<Instruction>(array)) {
+								if (!isa<GlobalValue>(gep->op_begin()) && !L->contains(cast<Instruction>(array))) {
+									localvalues.insert(cast<Value>(gep->op_begin()));
+								}
+								allarrays.insert(cast<Value>(gep->op_begin()));
 							}
-							allarrays.insert(cast<Value>(gep->op_begin()));
+							else {
+								if (!isa<GlobalValue>(gep->op_begin())) {
+									localvalues.insert(cast<Value>(gep->op_begin()));
+								}
+								allarrays.insert(cast<Value>(gep->op_begin()));
+							}
 						}
 						else {
 							//Array declaration
