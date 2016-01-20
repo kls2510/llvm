@@ -305,11 +305,17 @@ namespace {
 			}
 
 			//replace all initial entries in phi nodes with the new load block in the new function
-			toReplace = loopData->getLoop()->getLoopPredecessor();
 			for (auto i : loopData->getOuterLoopNonInductionPHIs()) {
 				int j;
 				for (j = 0; j < 2; j++) {
-					if (i->getIncomingBlock(j) == toReplace) {
+					BasicBlock *entryBlock = i->getIncomingBlock(j);
+					bool fromLoop = false;
+					for (auto &bb : loopData->getLoop()->getBlocks()) {
+						if (bb == entryBlock) {
+							fromLoop = true;
+						}
+					}
+					if (!fromLoop) {
 						i->setIncomingBlock(j, loadBlock);
 					}
 				}
@@ -430,7 +436,7 @@ namespace {
 						operand++;
 					}
 					//replace entry BB
-					accumulativePhi->setIncomingBlock(i, loadBlock);
+					//accumulativePhi->setIncomingBlock(i, loadBlock);
 
 					Value *accumulatedValue = initialValue;
 					for (auto retStruct : returnStructs) {
