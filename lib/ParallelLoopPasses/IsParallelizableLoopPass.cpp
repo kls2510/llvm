@@ -349,7 +349,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	for (auto bb : L->getBlocks()) {
 		for (auto &i : bb->getInstList()) {
 			for (auto &op : i.operands()) {
-				if (isa<ArrayType>(op->getType()) || isa<ArrayType>(op->getType()->getPointerElementType())){
+				if (isa<ArrayType>(op->getType()) || (isa<PointerType>(op->getType()) && isa<ArrayType>(op->getType()->getPointerElementType()))){
 					Value *arr = cast<Value>(&op);
 					if (argValues.find(arr) == argValues.end() && !isa<GlobalValue>(arr)) {
 						if (isa<Instruction>(arr)) {
