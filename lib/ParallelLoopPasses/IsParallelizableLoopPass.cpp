@@ -367,11 +367,13 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 					//If the variable is global then loop is not parallelizable
 					if (isa<GlobalValue>(&op)) {
 						//POTENTIAL TODO: must pass copy of value in so if it is changed we can store it back
-						cerr << "accesses to global variable made in loop, not parallelizable\n";
-						op->dump();
-						op->getType()->dump();
-						cerr << "%n";
-						return false;
+						if (i.mayWriteToMemory()) {
+							cerr << "write to global variable not an array in loop, not parallelizable\n";
+							op->dump();
+							op->getType()->dump();
+							cerr << "%n";
+							return false;
+						}
 					}
 					//also get local values that are required to be known in the loop
 					else if (isa<Instruction>(op)) {

@@ -304,6 +304,17 @@ namespace {
 				}
 			}
 
+			//replace all initial entries in phi nodes with the new load block in the new function
+			toReplace = loopData->getLoop()->getLoopPredecessor();
+			for (auto i : loopData->getOuterLoopNonInductionPHIs()) {
+				int j;
+				for (j = 0; j < 2; j++) {
+					if (i->getIncomingBlock(j) == toReplace) {
+						i->setIncomingBlock(j, loadBlock);
+					}
+				}
+			}
+
 			//insert the branch to the IR
 			builder.CreateCondBr(completeCond, cont, terminate);
 
