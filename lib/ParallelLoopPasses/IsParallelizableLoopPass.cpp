@@ -324,58 +324,68 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	}
 	delete dependentInstructions;
 	
-	//set to store all local array declarations and variables accessed in the loop (will need to be passed to thread function as argument)
-	set<Value *> localvalues;
-	//loop through all read/write instructions and find all arrays accessed and variables used that aren't defined in the loop
+	//store all arrays accessed in the loop to check for aliasing
 	set<Value *> allarrays;
+	//store all values passed to the function that are used in the loop
+	set<Value *> argValues;
+	//check function arguments for use in the loop - if they are they must be loaded first before being passed to the thread function
+	for (auto arg : F.getArgumentList()) {
+		for (auto bb : L->getBlocks()) {
+			if (arg.isUsedInBasicBlock(bb)) {
+				if (isa<PointerType>(arg.getType())) {
+					//array is passed to function as argument and used in loop
+					allarrays.insert(&arg);
+				}
+				//value is passed to function as argument and used in loop
+				argValues.insert(&arg);
+				break;
+			}
+		}
+	}
+
+	//set to store all local array and value declarations within the function used in the loop (will need to be passed to thread function as argument)
+	set<Value *> localvalues;
+	//loop through all instructions and find all arrays and variables used that aren't defined in the loop
 	for (auto bb : L->getBlocks()) {
 		for (auto &i : bb->getInstList()) {
 			for (auto &op : i.operands()) {
-				if (isa<PointerType>(op->getType())){
-					//GEP for the read/write location
-					if (isa<Instruction>(op)) {
-						Instruction *gep = cast<Instruction>(op);
-						//Array declaration will be the first argument of the GEP instruction
-						Value *array = cast<Value>(gep->op_begin());
-						if (isa<Instruction>(array)) {
-							if (!isa<GlobalValue>(gep->op_begin()) && !L->contains(cast<Instruction>(array))) {
-								localvalues.insert(cast<Value>(gep->op_begin()));
+				if (isa<ArrayType>(op->getType())){
+					Value *arr = cast<Value>(&op);
+					if (argValues.find(arr) == argValues.end() && !isa<GlobalValue>(arr)) {
+						if (isa<Instruction>(arr)) {
+							if (!L->contains(cast<Instruction>(arr))) {
+								localvalues.insert(arr);
 							}
-							allarrays.insert(cast<Value>(gep->op_begin()));
 						}
 						else {
-							if (!isa<GlobalValue>(gep->op_begin())) {
-								localvalues.insert(cast<Value>(gep->op_begin()));
-							}
-							allarrays.insert(cast<Value>(gep->op_begin()));
+							localvalues.insert(arr);
 						}
 					}
-					else {
-						//Array declaration
-						if (!isa<GlobalValue>(op)) {
-							localvalues.insert(cast<Value>(op));
-						}
-						allarrays.insert(cast<Value>(op));
-					}
+					allarrays.insert(arr);
 				}
 				else {
+					//If the variable is global then loop is not parallelizable
+					if (isa<GlobalValue>(&op)) {
+						//POTENTIAL TODO: must pass copy of value in so if it is changed we can store it back
+						cerr << "accesses to global variable made in loop, not parallelizable\n";
+						return false;
+					}
 					//also get local values that are required to be known in the loop
-					if (isa<Instruction>(op)) {
+					else if (isa<Instruction>(op)) {
 						Instruction *inst = cast<Instruction>(&op);
 						//global values accessed and written to in loop must be returned and stored back
-						if (!L->contains(inst) && !isa<GlobalValue>(inst)) {
+						if (!L->contains(inst)) {
 							//must pass in local value as arg so it is available
-							localvalues.insert(cast<Value>(inst));
+							if (argValues.find(inst) == argValues.end()) {
+								localvalues.insert(cast<Value>(inst));
+							}
 						}
-					}
-					else {
-						//it's a function argument we need
-						localvalues.insert(cast<Value>(op));
 					}
 				}
 			}
 		}
 	}
+
 
 	//check for aliasing between any two arrays in the loop
 	for (auto arr1 : allarrays) {
@@ -386,19 +396,27 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 				arr2->dump();
 				//found an alias so can't parallelize
 				if (!(AA->isNoAlias(arr1, arr2))) {
-					cerr << "potential alias found, can't paralellize\n";
+					cerr << "potential alias found, can't parallelize\n";
 					return false;
 				}
 			}
 		}
 	}
 
-	//store array args in list for extractor to use
+	//store local args in list for extractor to use
 	list<Value *> localArgs;
 	for (auto v : localvalues) {
 		cerr << "value must be passed as an argument\n";
 		v->dump();
 		localArgs.push_back(v);
+	}
+
+	//store argument args in list for extractor to use
+	list<Value *> argArgs;
+	for (auto v : argValues) {
+		cerr << "value must be passed as an argument\n";
+		v->dump();
+		argArgs.push_back(v);
 	}
 
 	//find loop start iteration value
@@ -423,7 +441,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 
 	//store results of analysis
 	bool parallelizable = true;
-	LoopDependencyData *data = new LoopDependencyData(phi, localArgs, exitCnd, L, dependencies, noOfPhiNodes, startIt, finalIt, tripCount, parallelizable, returnValues, accumulativePhiNodes);
+	LoopDependencyData *data = new LoopDependencyData(phi, localArgs, argArgs, exitCnd, L, dependencies, noOfPhiNodes, startIt, finalIt, tripCount, parallelizable, returnValues, accumulativePhiNodes);
 	results.push_back(data);
 	
 	return true;

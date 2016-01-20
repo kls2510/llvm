@@ -110,6 +110,10 @@ Instruction *LoopDependencyData::getExitCondNode() {
 	return end;
 }
 
-list<Value *> LoopDependencyData::getArrays() {
-	return this->arrays;
+list<Value *> LoopDependencyData::getLocalArgValues() {
+	return this->localValues;
+}
+
+list<Value *> LoopDependencyData::getArgumentArgValues() {
+	return this->argValues;
 }

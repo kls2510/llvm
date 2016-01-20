@@ -27,14 +27,15 @@ private:
 	map<PHINode *, unsigned int> accumulativePhiNodes;
 	Instruction *phi;
 	Instruction *end;
-	list<Value *> arrays;
+	list<Value *> localValues;
+	list<Value *> argValues;
 
 public:
-	LoopDependencyData(Instruction *IndPhi, list<Value *> arrays, Instruction *end, Loop *L, list<Dependence *> d, int phi, Value *startIt, Value *finalIt, int tripCount, 
+	LoopDependencyData(Instruction *IndPhi, list<Value *> locvals, list<Value *> argValues, Instruction *end, Loop *L, list<Dependence *> d, int phi, Value *startIt, Value *finalIt, int tripCount,
 		bool parallelizable, multimap<Value *, Value *> returnValues, map<PHINode *, unsigned int> accumulativePhiNodes) {
 		loop = L, dependencies = d, noOfPhiNodes = phi, this->parallelizable = parallelizable, this->startIt = startIt,
 			this->finalIt = finalIt, this->tripCount = tripCount, this->returnValues = returnValues, this->accumulativePhiNodes = accumulativePhiNodes,
-			this->phi = IndPhi, this->end = end, this->arrays = arrays;
+			this->phi = IndPhi, this->end = end, this->localValues = locvals, this->argValues = argValues;
 	}
 
 	Loop *getLoop();
@@ -67,7 +68,10 @@ public:
 
 	Instruction *getExitCondNode();
 
-	list<Value *> getArrays();
+	list<Value *> getLocalArgValues();
+
+	list<Value *> getArgumentArgValues();
+
 };
 
 #endif

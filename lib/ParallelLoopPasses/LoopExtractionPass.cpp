@@ -79,7 +79,7 @@ namespace {
 			list<Value *> loadedArrayAndLocalValues = loadStructValuesInFunctionForLoop(threadFunction, context, loopData);
 
 			//replace the array and local value Values in the loop with the ones loaded from the struct
-			replaceLoopValues(loopData, context, threadFunction, loadedArrayAndLocalValues, loopData->getLoop(), loopData->getArrays(), loopData->getReturnValues());
+			replaceLoopValues(loopData, context, threadFunction, loadedArrayAndLocalValues, loopData->getLoop(), loopData->getLocalArgValues(), loopData->getReturnValues());
 
 			//copy loop blocks into the function and delete them from the caller
 			extractTheLoop(loopData->getLoop(), threadFunction, &F, context);
@@ -95,7 +95,8 @@ namespace {
 			Function *integerDiv = cast<Function>(symTab.lookup(StringRef("integerDivide")));
 
 			//Obtain the array and local argument values required for passing to/from the function
-			list<Value *> arrayArguments = loopData->getArrays();
+			list<Value *> localArguments = loopData->getLocalArgValues();
+			list<Value *> argArguments = loopData->getArgumentArgValues();
 			list<Value *>  localArgumentsAndReturnVals = loopData->getReturnValues();
 
 			//create the struct we'll use to pass data to the threads
@@ -105,7 +106,10 @@ namespace {
 			vector<Type *> elts;
 
 			//setup thread passer
-			for (auto a : arrayArguments) {
+			for (auto a : argArguments) {
+				elts.push_back(a->getType());
+			}
+			for (auto a : localArguments) {
 				elts.push_back(a->getType());
 			}
 
@@ -183,7 +187,12 @@ namespace {
 				AllocaInst *allocateReturns = builder.CreateAlloca(returnStruct);
 				//store original array arguments in struct
 				int k = 0;
-				for (auto op : arrayArguments) {
+				for (auto op : argArguments) {
+					Value *getPTR = builder.CreateStructGEP(threadStruct, allocateInst, k);
+					builder.CreateStore(op, getPTR);
+					k++;
+				}
+				for (auto op : localArguments) {
 					Value *getPTR = builder.CreateStructGEP(threadStruct, allocateInst, k);
 					builder.CreateStore(op, getPTR);
 					k++;
