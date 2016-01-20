@@ -336,7 +336,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 						//GEP for the read/write location
 						Instruction *gep = cast<Instruction>(op);
 						//Array declaration will be the first argument of the GEP instruction
-						if (!L->contains(gep->op_begin()) && !isa<GlobalValue>(gep->op_begin())) {
+						if (!isa<GlobalValue>(gep->op_begin()) && !L->contains(cast<Instruction>(gep->op_begin()))) {
 							localvalues.insert(cast<Value>(gep->op_begin()));
 						}
 						allarrays.insert(cast<Value>(gep->op_begin()));
@@ -345,6 +345,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 						//also get local values that are required to be known in the loop
 						if (isa<Instruction>(op)) {
 							Instruction *inst = cast<Instruction>(&op);
+							//global values accessed and written to in loop must be returned and stored back
 							if (!L->contains(inst) && !isa<GlobalValue>(inst)) {
 								//must pass in local value as arg so it is available
 								localvalues.insert(cast<Value>(inst));
