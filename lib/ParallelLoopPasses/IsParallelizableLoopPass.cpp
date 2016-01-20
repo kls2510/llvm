@@ -334,12 +334,21 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 				for (auto &op : i.operands()) {
 					if (isa<PointerType>(op->getType())){
 						//GEP for the read/write location
-						Instruction *gep = cast<Instruction>(op);
-						//Array declaration will be the first argument of the GEP instruction
-						if (!isa<GlobalValue>(gep->op_begin()) && !L->contains(cast<Instruction>(gep->op_begin()))) {
-							localvalues.insert(cast<Value>(gep->op_begin()));
+						if (isa<Instruction>(op)) {
+							Instruction *gep = cast<Instruction>(op);
+							//Array declaration will be the first argument of the GEP instruction
+							if (!isa<GlobalValue>(gep->op_begin()) && !L->contains(cast<Instruction>(gep->op_begin()))) {
+								localvalues.insert(cast<Value>(gep->op_begin()));
+							}
+							allarrays.insert(cast<Value>(gep->op_begin()));
 						}
-						allarrays.insert(cast<Value>(gep->op_begin()));
+						else {
+							//Array declaration
+							if (!isa<GlobalValue>(op)) {
+								localvalues.insert(cast<Value>(op));
+							}
+							allarrays.insert(cast<Value>(op));
+						}
 					}
 					else {
 						//also get local values that are required to be known in the loop
