@@ -369,6 +369,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 						//POTENTIAL TODO: must pass copy of value in so if it is changed we can store it back
 						cerr << "accesses to global variable made in loop, not parallelizable\n";
 						op->dump();
+						op->getType()->dump();
 						cerr << "%n";
 						return false;
 					}
