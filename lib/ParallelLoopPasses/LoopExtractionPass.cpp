@@ -748,7 +748,7 @@ namespace {
 		void addHelperFunctionDeclarations(LLVMContext &context, Module *mod) {
 			//Integer divide
 			SmallVector<Type *, 2> divParamTypes1;
-			divParamTypes1.push_back(Type::getInt32Ty(context));
+			divParamTypes1.push_back(Type::getInt64Ty(context));
 			divParamTypes1.push_back(Type::getInt64Ty(context));
 			FunctionType *intDivFunctionType1 = FunctionType::get(Type::getInt64Ty(context), divParamTypes1, false);
 			mod->getOrInsertFunction("integerDivide", intDivFunctionType1);
