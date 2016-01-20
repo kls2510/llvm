@@ -159,8 +159,8 @@ namespace {
 			Value *loadedEndIt = builder.CreateLoad(end);
 			Value *noIterations = builder.CreateBinOp(Instruction::Sub, loadedEndIt, loadedStartIt);
 			SmallVector<Value *, 2> divArgs;
-			divArgs.push_back(builder.CreateBitOrPointerCast(noIterations, Type::getInt64Ty(context)));
-			divArgs.push_back(ConstantInt::get(Type::getInt64Ty(context), noThreads));
+			divArgs.push_back(builder.CreateBitCast(noIterations, Type::getInt32Ty(context)));
+			divArgs.push_back(ConstantInt::get(Type::getInt32Ty(context), noThreads));
 			Value *iterationsEach = builder.CreateCall(integerDiv, divArgs);
 			for (int i = 0; i < noThreads; i++) {
 				Value *threadStartIt;
@@ -748,8 +748,8 @@ namespace {
 		void addHelperFunctionDeclarations(LLVMContext &context, Module *mod) {
 			//Integer divide
 			SmallVector<Type *, 2> divParamTypes1;
-			divParamTypes1.push_back(Type::getInt64Ty(context));
-			divParamTypes1.push_back(Type::getInt64Ty(context));
+			divParamTypes1.push_back(Type::getInt32Ty(context));
+			divParamTypes1.push_back(Type::getInt32Ty(context));
 			FunctionType *intDivFunctionType1 = FunctionType::get(Type::getInt64Ty(context), divParamTypes1, false);
 			mod->getOrInsertFunction("integerDivide", intDivFunctionType1);
 
