@@ -159,7 +159,7 @@ namespace {
 			Value *loadedEndIt = builder.CreateLoad(end);
 			Value *noIterations = builder.CreateBinOp(Instruction::Sub, loadedEndIt, loadedStartIt);
 			SmallVector<Value *, 2> divArgs;
-			divArgs.push_back(noIterations);
+			divArgs.push_back(builder.CreateBitOrPointerCast(noIterations, Type::getInt64Ty(context)));
 			divArgs.push_back(ConstantInt::get(Type::getInt64Ty(context), noThreads));
 			Value *iterationsEach = builder.CreateCall(integerDiv, divArgs);
 			for (int i = 0; i < noThreads; i++) {
@@ -548,18 +548,23 @@ namespace {
 			PHINode *phi = cast<PHINode>(loopData->getInductionPhi());
 			Instruction *exitCnd = loopData->getExitCondNode();
 			User::op_iterator operands = phi->op_begin();
-			StringRef phiName = phi->getName();
-			int op;
-			for (op = 0; op < 2; op++) {
-				if (!(strncmp((phiName).data(), phi->getIncomingValue(op)->getName().data(), 8) == 0)){
-					//initial entry edge, this is the position of the value we want to replace
-					//i.e not the one that matches the phi value in name with next on the end
-					operands[op] = startIt;
+			//replace initial entry block in the phi node + place initial value
+			int j;
+			for (j = 0; j < 2; j++) {
+				BasicBlock *entryBlock = phi->getIncomingBlock(j);
+				bool fromLoop = false;
+				for (auto &bb : loopData->getLoop()->getBlocks()) {
+					if (bb == entryBlock) {
+						fromLoop = true;
+					}
+				}
+				if (!fromLoop) {
+					phi->setIncomingBlock(j, loadBlock);
+					phi->setIncomingValue(j, startIt);
 					break;
 				}
 			}
 			//replace entry BB
-			phi->setIncomingBlock(op, loadBlock);
 			operands = exitCnd->op_begin();
 			operands[1] = endIt;
 			
