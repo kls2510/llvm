@@ -79,7 +79,7 @@ namespace {
 			list<Value *> loadedArrayAndLocalValues = loadStructValuesInFunctionForLoop(threadFunction, context, loopData);
 
 			//replace the array and local value Values in the loop with the ones loaded from the struct
-			replaceLoopValues(loopData, context, threadFunction, loadedArrayAndLocalValues, loopData->getLoop(), loopData->getLocalArgValues(), loopData->getReturnValues());
+			replaceLoopValues(loopData, context, threadFunction, loadedArrayAndLocalValues, loopData->getLoop(), loopData->getLocalArgValues(), loopData->getArgumentArgValues(), loopData->getReturnValues());
 
 			//copy loop blocks into the function and delete them from the caller
 			extractTheLoop(loopData->getLoop(), threadFunction, &F, context);
@@ -330,13 +330,14 @@ namespace {
 
 		void loadAndReplaceLocals(IRBuilder<> cleanup, LoopDependencyData *loopData, list<Value *> threadStructs, LLVMContext &context) {
 			//Obtain the array and local argument values required for passing to/from the function
-			list<Value *> arrayArguments = loopData->getArrays();
+			list<Value *> localArguments = loopData->getLocalArgValues();
+			list<Value *> argArguments = loopData->getArgumentArgValues();
 			list<Value *>  localArgumentsAndReturnVals = loopData->getReturnValues();
 
 			list<Value *> returnStructs;
 
 			//load the return struct for each thread
-			int structIndex = arrayArguments.size() + 2;
+			int structIndex = argArguments.size() + localArguments.size() + 2;
 			for (auto s : threadStructs) {
 				Value *structx = s;
 				structx = cleanup.CreateBitOrPointerCast(structx, threadStruct->getPointerTo());
@@ -460,7 +461,8 @@ namespace {
 
 		list<Value *> loadStructValuesInFunctionForLoop(Function *loopFunction, LLVMContext &context, LoopDependencyData *loopData) {
 			//Obtain the array and local argument values required for passing to/from the function
-			list<Value *> arrayArguments = loopData->getArrays();
+			list<Value *> localArguments = loopData->getLocalArgValues();
+			list<Value *> argArguments = loopData->getArgumentArgValues();
 			list<Value *>  localArgumentsAndReturnVals = loopData->getReturnValues();
 
 			//name all values so they don't conflict with value names in the loop later
@@ -478,8 +480,17 @@ namespace {
 			loadedVal++;
 			sprintf(namePrefix, "loadVal_%d", loadedVal);
 
-			//store the loaded array instructions
-			for (p = 0; p < arrayArguments.size(); p++) {
+			//load argument and local instructions
+			for (p = 0; p < argArguments.size(); p++) {
+				Value *arrayVal = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p, namePrefix);
+				loadedVal++;
+				sprintf(namePrefix, "loadVal_%d", loadedVal);
+				LoadInst *loadInst = loadBuilder.CreateLoad(arrayVal, namePrefix);
+				loadedVal++;
+				sprintf(namePrefix, "loadVal_%d", loadedVal);
+				arrayAndLocalStructElements.push_back(loadInst);
+			}
+			for (p = argArguments.size(); p < argArguments.size() + localArguments.size(); p++) {
 				Value *arrayVal = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p, namePrefix);
 				loadedVal++;
 				sprintf(namePrefix, "loadVal_%d", loadedVal);
@@ -504,7 +515,7 @@ namespace {
 			}
 
 			//load the start and end iteration values
-			p = arrayArguments.size();
+			p = argArguments.size() + localArguments.size();
 			Value *val = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p, namePrefix);
 			loadedVal++;
 			sprintf(namePrefix, "loadVal_%d", loadedVal);
@@ -538,10 +549,26 @@ namespace {
 			return arrayAndLocalStructElements;
 		}
 
-		void replaceLoopValues(LoopDependencyData *loopData, LLVMContext &context, Function *loopFunction, list<Value *> loadedArrayAndLocalValues, Loop *loop, list<Value *> arrayValues, list<Value *> retValues) {
+		void replaceLoopValues(LoopDependencyData *loopData, LLVMContext &context, Function *loopFunction, list<Value *> loadedArrayAndLocalValues, Loop *loop, list<Value *> localValues, list<Value *> argValues, list<Value *> retValues) {
 			list<Value *>::iterator loadedVal = loadedArrayAndLocalValues.begin();
-			//replace arrays
-			for (auto a : arrayValues) {
+
+			//replace arg values
+			for (auto a : argValues) {
+				for (auto &bb : loop->getBlocks()) {
+					for (auto &inst : bb->getInstList()) {
+						User::op_iterator operand = inst.op_begin();
+						while (operand != inst.op_end()) {
+							if (*operand == a) {
+								*operand = *loadedVal;
+							}
+							operand++;
+						}
+					}
+				}
+				loadedVal++;
+			}
+			//replace local values
+			for (auto a : localValues) {
 				for (auto &bb : loop->getBlocks()) {
 					for (auto &inst : bb->getInstList()) {
 						User::op_iterator operand = inst.op_begin();

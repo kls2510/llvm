@@ -329,8 +329,8 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	//store all values passed to the function that are used in the loop
 	set<Value *> argValues;
 	//check function arguments for use in the loop - if they are they must be loaded first before being passed to the thread function
-	for (auto arg : F.getArgumentList()) {
-		for (auto bb : L->getBlocks()) {
+	for (auto &arg : F.getArgumentList()) {
+		for (auto &bb : L->getBlocks()) {
 			if (arg.isUsedInBasicBlock(bb)) {
 				if (isa<PointerType>(arg.getType())) {
 					//array is passed to function as argument and used in loop
