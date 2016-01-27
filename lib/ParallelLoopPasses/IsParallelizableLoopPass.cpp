@@ -449,7 +449,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 			for (auto &op : i.operands()) {
 				if (isa<Instruction>(op)) {
 					Instruction *inst = cast<Instruction>(&op);
-					//if the instruction is declared outside the loop
+					//if the value is an instruction declared outside the loop
 					if (!(L->contains(inst))) {
 						//must pass in local value as arg so it is available
 						if (argValues.find(inst) == argValues.end()) {
@@ -458,10 +458,10 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 					}
 				}
 				else {
-					//it is a Value declared as an argument or global variable that must be passed as a thread argument
+					//if it is a Value declared as an argument or global variable
 					if (isa<Value>(op)) {
 						Value *val = cast<Value>(&op);
-						if (isa<GlobalValue>(op) || (!isa<Constant>(val) && val->getType() != Type::getLabelTy(F.getContext()))) {
+						if (isa<GlobalValue>(op) || find(F.getArgumentList().begin(), F.getArgumentList().end(), val) != F.getArgumentList().end()) {
 							val->getType()->dump();
 							argValues.insert(val);
 						}
