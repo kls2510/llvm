@@ -461,8 +461,13 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 					//if it is a Value declared as an argument or global variable
 					if (isa<Value>(op)) {
 						Value *val = cast<Value>(&op);
-						if (isa<GlobalValue>(op) || find(F.getArgumentList().begin(), F.getArgumentList().end(), val) != F.getArgumentList().end()) {
-							val->getType()->dump();
+						bool functionArg = false;
+						for (auto arg : F.getArgumentList()) {
+							if (val == cast<Value>(&arg)) {
+								functionArg = true;
+							}
+						}
+						if (isa<GlobalValue>(op) || functionArg) {
 							argValues.insert(val);
 						}
 					}
