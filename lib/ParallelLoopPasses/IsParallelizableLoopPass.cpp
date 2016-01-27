@@ -163,6 +163,12 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 		}
 	}
 	PHINode *outerPhi = phiNodes.front();
+	//check outer phi can only be integer-based - for now
+	//TODO: add support for floating point - will need to update extraction too
+	if (!outerPhi->getType()->isIntegerTy()) {
+		cerr << "outer phi node not integer value - not parallelizable\n";
+		return false;
+	}
 	Instruction *outerBranch = branchInstructions.front();
 	// if phi nodes found = number of loops, continue
 	if (noOfInductionPhiNodes == noLoops) {
@@ -444,6 +450,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 		}
 	}
 
+	//TODO: avoid functions being found here
 	//ARGUMENT VALUES
 	// Find all values that must be provided to each thread of the loop
 	set<Value *> argValues;
@@ -471,7 +478,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 								functionArg = true;
 							}
 						}
-						if (isa<GlobalValue>(op) || functionArg) {
+						if ((isa<GlobalValue>(op) && !op->getType()->isFunctionTy()) || functionArg) {
 							argValues.insert(val);
 						}
 					}
