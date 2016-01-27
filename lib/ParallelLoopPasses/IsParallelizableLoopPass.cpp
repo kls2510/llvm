@@ -68,61 +68,49 @@ list<LoopDependencyData *> IsParallelizableLoopPass::getResultsForFunction(Funct
 	return results;
 }
 
-PHINode *inductionPhiNode(Instruction &i, Loop *L) {
-	if (isa<PHINode>(i)) {
-		PHINode *potentialPhi = cast<PHINode>(&i);
-		//check for only 2 operands
-		BasicBlock *phiBB = potentialPhi->getParent();
-		//check for a back edge with the phi node variable
-		for (auto inst : potentialPhi->users()) {
-			if (isa<CmpInst>(inst)) {
-				for (auto u : inst->users()) {
-					if (isa<BranchInst>(u)) {
-						BranchInst *br = cast<BranchInst>(u);
-						Value *bb = br->getOperand(1);
-						Value *bb2 = br->getOperand(2);
-						if (bb == phiBB || bb2 == phiBB) {
-							//we have found the phi node
-							cerr << "found a loop induction variable\n";
-							i.dump();
-							cerr << "\n";
-							return cast<PHINode>(potentialPhi);
-						}
-					}
-				}
-			}
-		}
-		//If one doesn't exist, check for a back edge with the next phi node variable
-		int op;
-		BasicBlock *initialEntry = L->getLoopPredecessor();
-		for (op = 0; op < 2; op++) {
-			if (potentialPhi->getIncomingBlock(op) == initialEntry){
-				//initial entry edge, do nothing
-			}
-			else {
-				Value *nextVal = potentialPhi->getOperand(op);
-				for (auto inst : nextVal->users()) {
-					if (isa<CmpInst>(inst)) {
-						for (auto u : inst->users()) {
-							if (isa<BranchInst>(u)) {
-								BranchInst *br = cast<BranchInst>(u);
-								Value *bb = br->getOperand(1);
-								Value *bb2 = br->getOperand(2);
-								if (bb == phiBB || bb2 == phiBB) {
-									//we have found the phi node
-									cerr << "found a loop induction variable\n";
-									i.dump();
-									cerr << "\n";
-									return cast<PHINode>(potentialPhi);
-								}
-							}
-						}
+Instruction *IsParallelizableLoopPass::findCorrespondingBranch(Value *potentialPhi, BasicBlock *backedgeBlock) {
+	for (auto inst : potentialPhi->users()) {
+		if (isa<CmpInst>(inst)) {
+			for (auto u : inst->users()) {
+				if (isa<BranchInst>(u)) {
+					BranchInst *br = cast<BranchInst>(u);
+					Value *bb = br->getOperand(1);
+					Value *bb2 = br->getOperand(2);
+					if (bb == backedgeBlock || bb2 == backedgeBlock) {
+						return cast<Instruction>(&u);
 					}
 				}
 			}
 		}
 	}
-	return nullptr;
+}
+
+pair<PHINode *, Instruction *> IsParallelizableLoopPass::inductionPhiNode(PHINode *potentialPhi, Loop *L) {
+	Value *currentPhiVal = potentialPhi;
+	Value *nextPhiVal = nullptr;
+	int op;
+	for (op = 0; op < 2; op++) {
+		if (potentialPhi->getIncomingBlock(op) == L->getLoopPredecessor()){
+			//initial entry edge, do nothing
+		}
+		else {
+			nextPhiVal = potentialPhi->getIncomingValue(op);
+		}
+	}
+	Instruction *branchInstruction = nullptr;
+	branchInstruction = findCorrespondingBranch(currentPhiVal, potentialPhi->getParent());
+	if (branchInstruction == nullptr) {
+		branchInstruction = findCorrespondingBranch(nextPhiVal, potentialPhi->getParent());
+	}
+	if (branchInstruction != nullptr) {
+		cerr << "found induction phi with branch instruction:\n";
+		potentialPhi->dump();
+		branchInstruction->dump();
+		return make_pair(potentialPhi, branchInstruction);
+	}
+	else {
+		return make_pair(nullptr, nullptr);
+	}
 }
 
 //runs the actual analysis
@@ -131,144 +119,238 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	multimap<Value *, Value *> returnValues;
 	map<PHINode *, unsigned int> accumulativePhiNodes;
 	set<PHINode *> foundPhiNodes;
-	int noOfPhiNodes = 0;
+	int noOfInductionPhiNodes = 0;
 
-	//parallelize just outer loops for now
-	PHINode *phi = findOuterLoopInductionPhi(L);
-	if (phi == nullptr) {
-		cerr << "no induction variable exists\n";
-		return false;
+	// INDUCTION PHI NODES:
+	//check all phi nodes only take two operands
+	for (auto &bb : L->getBlocks()) {
+		for (auto &i : bb->getInstList()) {
+			if (isa<PHINode>(i)) {
+				if (i.getNumOperands() != 2) {
+					cerr << "found phi node without 2 operands - not parallelizable\n";
+					i.dump();
+					cerr << "\n";
+					return false;
+				}
+			}
+		}
 	}
-	foundPhiNodes.insert(phi);
-
-	noOfPhiNodes++;
-	cerr << "set loop induction variable to\n";
-	phi->dump();
-	cerr << "\n";
-
-	//check only max one nested loop within each loop and count how many there are
+	// get number of loops + subloops we're dealing with
 	int noLoops = 1;
 	bool nested = checkNestedLoops(L, noLoops);
 	if (!nested) {
+		// >1 subloop per loop level found
+		return false;
+	}
+	// attempt to find phi node for each loop
+	list<PHINode *> phiNodes;
+	list<Instruction *> branchInstructions;
+	Loop *currentLoop = L;
+	for (auto &bb : L->getBlocks()) {
+		for (auto &i : bb->getInstList()) {
+			if (isa<PHINode>(i)) {
+				pair<PHINode *, Instruction *> p = inductionPhiNode(cast<PHINode>(&i), currentLoop);
+				if (p.first != nullptr) {
+					phiNodes.push_back(p.first);
+					branchInstructions.push_back(p.second);
+					noOfInductionPhiNodes++;
+					currentLoop = currentLoop->getSubLoops().front();
+					break;
+				}
+			}
+		}
+	}
+	PHINode *outerPhi = phiNodes.front();
+	Instruction *outerBranch = branchInstructions.front();
+	// if phi nodes found = number of loops, continue
+	if (noOfInductionPhiNodes == noLoops) {
+		cerr << "no of found induction phis equals number of loops (" << noOfInductionPhiNodes << ")\n";
+	}
+	// else not parallelizable
+	else {
+		cerr << "no of found induction phis does not equal number of loops (" << noOfInductionPhiNodes << ", "<< noLoops << ")\n";
+		cerr << "loop not parallelizable\n";
 		return false;
 	}
 
-	//find all inductive phi nodes in the loop and its subloops
-	vector<Loop *> currentSubloops = L->getSubLoops();
-	while (currentSubloops.size() != 0) {
-		//we know there is only one subloop in each loop; find their phi nodes
-		Loop *subloop = *currentSubloops.begin();
-		PHINode *inductionPhi;
-		for (auto &bb : subloop->getBlocks()) {
-			for (auto &i : bb->getInstList()) {
-				inductionPhi = inductionPhiNode(i, subloop);
-				if (inductionPhi != nullptr) {
-					foundPhiNodes.insert(inductionPhi);
-					noOfPhiNodes++;
-					break;
-				}
-			}
-			if (inductionPhi != nullptr) {
-				break;
-			}
+	cerr << "set outer loop induction variable to\n";
+	outerPhi->dump();
+	cerr << "\n";
+
+	//START AND END ITERATIONS
+	// for outer loop phi node, obtain start and end values from the phi node and corresponding compare instruction
+	int op;
+	Value *startIt = nullptr;
+	Value *finalIt = nullptr;
+	for (op = 0; op < 2; op++) {
+		if (outerPhi->getIncomingBlock(op) == L->getLoopPredecessor()){
+			//initial entry edge, get start iteration value
+			startIt = outerPhi->getIncomingValue(op);
+			break;
 		}
-		currentSubloops = subloop->getSubLoops();
+	}
+	Instruction *outerCompare = cast<Instruction>(outerBranch->getOperand(0));
+	finalIt = outerCompare->getOperand(1);
+
+	if (startIt == nullptr || finalIt == nullptr) {
+		cerr << "start/end iteration bounds could not be established - not parallelizable\n";
+		return false;
 	}
 
-	int branchNo = 0;
-	Instruction *exitCnd = nullptr;
-	//loop through all instructions to:
-	// - ensure all outer loop phi nodes only use 2 operands
-	// - find non-induction phi nodes in the outer loop
-	// - find calls to non thread-safe functions
-	// - find variables live outside the loop (and so will need to be returned)
-	// - doesn't contain any select statements
-	// - find the exit branch condition for the outer loop
+	//ACCUMULATOR PHI NODES
+	//If there are any other phi nodes in the outer loop that aren't induction phis
 	for (auto &bb : L->getBlocks()) {
-		for (auto &inst : bb->getInstList()) {
-			bool inOuterLoop = true;
-			currentSubloops = L->getSubLoops();
-			while (currentSubloops.size() != 0) {
-				Loop *subloop = *currentSubloops.begin();
-				if (subloop->contains(&inst)) {
-					inOuterLoop = false;
-					break;
-				}
-				currentSubloops = subloop->getSubLoops();
-			}
-
-			if (isa<PHINode>(inst)) {
-				//we are only interested in phi nodes in the outermost loop
-
-				if (inOuterLoop) {
-					if (cast<PHINode>(&inst)->getNumOperands() != 2) {
-						//We assume there are only 2 operands, so the loop is not parallelizable if not
-						cerr << "Phi node with too many operands found, not parallelizable\n";
-						return false;
-					}
-
-					if (foundPhiNodes.find(cast<PHINode>(&inst)) == foundPhiNodes.end()) {
-						//we have found a non-loop-induction phi node variable
+		for (auto &i : bb->getInstList()) {
+			if (isa<PHINode>(i)) {
+				PHINode *potentialAccumulator;
+				if (find(phiNodes.begin(), phiNodes.end(), potentialAccumulator) == phiNodes.end()) {
+					if (!(*((L->getSubLoops()).begin()))->contains(potentialAccumulator)) {
+						Value *nextValue = nullptr;
+						for (op = 0; op < 2; op++) {
+							if (potentialAccumulator->getIncomingBlock(op) == L->getLoopPredecessor()){
+								//initial entry edge, do nothing
+							}
+							else {
+								nextValue = potentialAccumulator->getIncomingValue(op);
+							}
+						}
+						//if the actual phi name is used in the loop for something other than accumualation->not parallelizable
+						//(i.e.x += x * y possible and this wouldn't be correct)
+						if (potentialAccumulator->getNumUses() > 1) {
+							cerr << "accumulative phi node has too many users: " << potentialAccumulator->getNumUses() << " - not parallelizable\n";
+							return false;
+						}
+						//if the next value it's assigned is used elsewhere in the loop then not parallelizable (as we change this value between threads in transform)
+						for (auto u : nextValue->users()) {
+							if (isa<Instruction>(u)) {
+								if (L->contains(cast<Instruction>(u))) {
+									cerr << "accumulative value used in loop - not parallelizable\n";
+									return false;
+								}
+							}
+							else {
+								//TEMPORARY
+								cerr << "found use not an instruction\n";
+								u->dump();
+								cerr << "\n";
+							}
+						}
+						//Check it is valid i.e. if the one place the phi's non-initial operand value is used is for a commutable operation
 						int opcode;
-						bool phiIsValid = checkAccumulativePhiIsValid(inst, L, opcode);
-						if (phiIsValid) {
-							accumulativePhiNodes.insert(make_pair(cast<PHINode>(&inst), opcode));
+						bool isValid = checkPhiIsAccumulative(potentialAccumulator, L, opcode);
+						if (!isValid) {
+							return false;
 						}
 						else {
+							accumulativePhiNodes.insert(make_pair(potentialAccumulator, opcode));
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// FUNCTION CALLS
+	// If there are any call instructions that may have side - effects -> not parallelizable
+	for (auto &bb : L->getBlocks()) {
+		for (auto &i : bb->getInstList()) {
+			if (isa<CallInst>(i)) {
+				CallInst *call = cast<CallInst>(&i);
+				Function *callee = call->getCalledFunction();
+				if (callee->onlyReadsMemory()) {
+					cerr << "call to function found but it doesn't write to memory\n";
+				}
+				else {
+					cerr << "call to function that may write to memory found - not parallelizable\n";
+					callee->dump();
+					cerr << "\n";
+					return false;
+				}
+			}
+		}
+	}
+
+	// UNEXPECTED BRANCHING
+	// Check there aren't any unexpected branches out of the loop (can't parallelize those with returns / breaks in the middle of them)
+	vector<BasicBlock *> loopBBs = L->getBlocks();
+	for (auto &bb : L->getBlocks()) {
+		for (auto &i : bb->getInstList()) {
+			// all branches that can go to a basic block outside the outer loops basic blocks should only be those with a corresponding phi node
+			if (isa<BranchInst>(i)) {
+				BranchInst *branch = cast<BranchInst>(&i);
+				if (branch->isConditional()) {
+					// no conditional branches to out of the loop unless associated with a phi node
+					BasicBlock *t1 = nullptr;
+					BasicBlock *t2 = nullptr;
+					if (isa<BasicBlock>(branch->getOperand(1)) && isa<BasicBlock>(branch->getOperand(2))) {
+						t1 = cast<BasicBlock>(branch->getOperand(1));
+						t2 = cast<BasicBlock>(branch->getOperand(2));
+					}
+					else {
+						cerr << "Basic block values expected in branch instruction but not found - not parallelizable\n";
+						return false;
+					}
+					if (find(branchInstructions.begin(), branchInstructions.end(), branch) == branchInstructions.end()) {
+						//the branch has no associated phi node
+						if (find(loopBBs.begin(), loopBBs.end(), t1) == loopBBs.end()) {
+							//can branch to outside the loop
+							cerr << "unexpected branch instruction found - not parallelizable\n";
+							branch->dump();
+							cerr << "\n";
+							return false;
+						}
+						if (find(loopBBs.begin(), loopBBs.end(), t2) == loopBBs.end()) {
+							//can branch to outside the loop
+							cerr << "unexpected branch instruction found - not parallelizable\n";
+							branch->dump();
+							cerr << "\n";
 							return false;
 						}
 					}
 				}
-			}
-
-			//also, say the function is not parallelizable if it calls a function that accesses memory and causes side effects (an overestimation)
-			else if (isa<CallInst>(inst)) {
-				CallInst *call = cast<CallInst>(&inst);
-				if (call->mayHaveSideEffects()) {
-					cerr << "call found in loop that may write to memory, so not parallelizable\n";
-					return false;
-				}
-			}
-
-			//Dont parallelize if the outer loop contains a select statement
-			else if (isa<SelectInst>(inst)) {
-				if (inOuterLoop) {
-					cerr << "Outer loop contains a conditional value select, not parallelizable:\n";
-					inst.dump();
-					cerr << "\n";
-					return false;
-				}
-			}
-
-			//don't want to parallelize if branch instructions that aren't phi node branches exist in the outer loop or to the next BB in the loop (i.e. if's) - to be safe
-			else if (isa<BranchInst>(inst)) {
-				BranchInst *br = cast<BranchInst>(&inst);
-				if (br->isConditional()) {
-					BasicBlock *phiBB = phi->getParent();
-					Value *bb = br->getOperand(1);
-					Value *bb2 = br->getOperand(2);
-					if (bb == phiBB || bb2 == phiBB) {
-						//we have found the branch to exit the outer loop
-						exitCnd = cast<Instruction>(inst.getOperand(0));
-					}
-					cerr << "loop contains a conditional branch:\n";
-					br->dump();
-					cerr << "\n";
-					branchNo++;
-					if (branchNo > noLoops) {
-						cerr << "Too many conditional branches found\n";
+				else {
+					// no unconditional branches out of the outer loop
+					Value *t1 = branch->getOperand(0);
+					if (find(loopBBs.begin(), loopBBs.end(), t1) == loopBBs.end()) {
+						//can branch to outside the loop
+						cerr << "unexpected branch instruction found - not parallelizable\n";
+						branch->dump();
+						cerr << "\n";
 						return false;
 					}
 				}
 			}
+			if (isa<ReturnInst>(i)) {
+				// no return instructions in any of the loops
+				cerr << "unexpected return instruction found - not parallelizable\n";
+				i.dump();
+				cerr << "\n";
+				return false;
+			}
+			if (isa<SwitchInst>(i) || isa<IndirectBrInst>(i)) {
+				// no switch or indirect branch statements
+				cerr << "unrecognised branch instruction found - not parallelizable\n";
+				i.dump();
+				cerr << "\n";
+				return false;
+			}
+		}
+	}
 
+	//TODO: Check for switch instructions?
+
+	// Find all values that will need to be returned by each thread
+    // for each instruction in loop, test to see whether there are uses outside the loop
+	// add these to the return list along with instructions to replace it in
+	for (auto &bb : L->getBlocks()) {
+		for (auto &i : bb->getInstList()) {
 			//check for users of values calculated inside the loop, outside the loop
-			for (auto u : inst.users()) {
+			for (auto u : i.users()) {
 				Instruction *use = cast<Instruction>(u);
 				if (!L->contains(use)) {
 					//we don't want duplicates
 					bool first = true;
-					pair <multimap<Value *, Value *>::iterator, multimap<Value *, Value *>::iterator> range = returnValues.equal_range(&inst);
+					pair <multimap<Value *, Value *>::iterator, multimap<Value *, Value *>::iterator> range = returnValues.equal_range(&i);
 					for (multimap<Value *, Value *>::iterator it = range.first; it != range.second; ++it) {
 						if (it->second == use) {
 							first = false;
@@ -277,45 +359,25 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 					}
 					if (first) {
 						cerr << "use of value in loop that is also used after:\n";
-						inst.dump();
+						i.dump();
 						use->dump();
-						returnValues.insert(make_pair(&inst, use));
+						returnValues.insert(make_pair(&i, use));
 					}
 				}
 			}
 		}
 	}
 
-	Value *finalIt;
-	//if exit condition wasn't found, not parallelizable
-	if (exitCnd == nullptr) {
-		cerr << "exit condition can't be established, not parallelizable\n";
-		return false;
-	}
-	else {
-		cerr << "found exit condition instruction :\n";
-		exitCnd->dump();
-		finalIt = exitCnd->getOperand(1);
-	}
-
-	cerr << "total number of induction phi nodes = " << noOfPhiNodes << "\n";
-	cerr << "total number of loops = " << noLoops << "\n";
-	//only parallelizable if the number of discovered induction phi nodes match the number of loops found
-	if (noOfPhiNodes != noLoops) {
-		cerr << "No of phi nodes don't match no of loops - not parallelizable\n";
-		return false;
-	}
-
-	//loop through instructions to find all read/write instructions dependent on the outer phi node
+	//DEPENDENCY ANALYSIS
 	set<Instruction *> *dependentInstructions = new set<Instruction *>();
-	bool allWriteDependentOnPhi = getDependencies(L, phi, dependentInstructions);
+    // get all read / write instructions in the loop and check that all write indexes depend on the outer phi value
+	bool allWriteDependentOnPhi = getDependencies(L, outerPhi, dependentInstructions);
 	if (!allWriteDependentOnPhi) {
 		//writes to the same location across threads will cause error
 		cerr << "not parallelizable as write to array found not dependent on i\n";
 		return false;
 	}
-
-	//find inter-loop dependencies between the reads and writes found above
+	// get dependency information for all found read / write instructions - any non - zero ->not parallelizable
 	dependencies = findDistanceVectors(dependentInstructions, DA);
 	if (dependencies.size() > 0) {
 		cerr << "Has dependencies so not parallelizable\n";
@@ -323,75 +385,45 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 		return false;
 	}
 	delete dependentInstructions;
-	
+
+	//ALIAS ANALYSIS
 	//store all arrays accessed in the loop to check for aliasing
 	set<Value *> allarrays;
-	//store all values passed to the function that are used in the loop
-	set<Value *> argValues;
-	//check function arguments for use in the loop - if they are they must be loaded first before being passed to the thread function
-	for (auto &arg : F.getArgumentList()) {
-		for (auto &bb : L->getBlocks()) {
-			if (arg.isUsedInBasicBlock(bb)) {
-				if (isa<PointerType>(arg.getType())) {
-					//array is passed to function as argument and used in loop
-					allarrays.insert(&arg);
-				}
-				//value is passed to function as argument and used in loop
-				argValues.insert(&arg);
-				break;
-			}
-		}
-	}
-
-	//set to store all local array and value declarations within the function used in the loop (will need to be passed to thread function as argument)
-	set<Value *> localvalues;
-	//loop through all instructions and find all arrays and variables used that aren't defined in the loop
-	for (auto bb : L->getBlocks()) {
+	for (auto &bb : L->getBlocks()) {
 		for (auto &i : bb->getInstList()) {
-			for (auto &op : i.operands()) {
-				if (isa<ArrayType>(op->getType()) || (isa<PointerType>(op->getType()) && isa<ArrayType>(op->getType()->getPointerElementType()))){
-					Value *arr = cast<Value>(&op);
-					if (argValues.find(arr) == argValues.end() && !isa<GlobalValue>(arr)) {
-						if (isa<Instruction>(arr)) {
-							if (!L->contains(cast<Instruction>(arr))) {
-								localvalues.insert(arr);
-							}
-						}
-						else {
-							localvalues.insert(arr);
-						}
+			if (isa<LoadInst>(i) || isa<StoreInst>(i)) {
+				//corresponding GEP
+				Value *memAddress = nullptr;
+				//and array
+				Value *arrayVal = nullptr;
+				if (isa<LoadInst>(i)) {
+					memAddress = i.getOperand(0);
+					if (isa<Instruction>(memAddress)) {
+						arrayVal = cast<Instruction>(memAddress)->getOperand(0);
 					}
-					allarrays.insert(arr);
-				}
-				else {
-					//If the variable is global then loop is not parallelizable
-					if (isa<GlobalValue>(&op)) {
-						//POTENTIAL TODO: must pass copy of value in so if it is changed we can store it back
-						if (i.mayWriteToMemory()) {
-							cerr << "write to global variable not an array in loop, not parallelizable\n";
-							op->dump();
-							op->getType()->dump();
-							cerr << "%n";
-							return false;
-						}
-					}
-					//also get local values that are required to be known in the loop
-					else if (isa<Instruction>(op)) {
-						Instruction *inst = cast<Instruction>(&op);
-						//global values accessed and written to in loop must be returned and stored back
-						if (!L->contains(inst)) {
-							//must pass in local value as arg so it is available
-							if (argValues.find(inst) == argValues.end()) {
-								localvalues.insert(cast<Value>(inst));
-							}
-						}
+					else {
+						cerr << "Unexpected value in load instruction - not parallelizable\n";
+						i.dump();
+						cerr << "\n";
+						return false;
 					}
 				}
+				if (isa<StoreInst>(i)) {
+					memAddress = i.getOperand(1);
+					if (isa<Instruction>(memAddress)) {
+						arrayVal = cast<Instruction>(memAddress)->getOperand(0);
+					}
+					else {
+						cerr << "Unexpected value in store instruction - not parallelizable\n";
+						i.dump();
+						cerr << "\n";
+						return false;
+					}
+				}
+				allarrays.insert(arrayVal);
 			}
 		}
 	}
-
-
 	//check for aliasing between any two arrays in the loop
 	for (auto arr1 : allarrays) {
 		for (auto arr2 : allarrays) {
@@ -408,7 +440,34 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 		}
 	}
 
+	//ARGUMENT VALUES
+	// Find all values that must be provided to each thread of the loop
+	set<Value *> argValues;
+	for (auto bb : L->getBlocks()) {
+		for (auto &i : bb->getInstList()) {
+			// find all operands used in every instruction in the loop
+			for (auto &op : i.operands()) {
+				if (isa<Instruction>(op)) {
+					Instruction *inst = cast<Instruction>(&op);
+					//if the instruction is declared outside the loop
+					if (!L->contains(inst)) {
+						//must pass in local value as arg so it is available
+						if (argValues.find(inst) == argValues.end()) {
+							argValues.insert(inst);
+						}
+					}
+				}
+				else {
+					//it is a Value declared as an argument or global variable that must be passed as a thread argument
+					argValues.insert(&i);
+				}
+			}
+		}
+	}
+
 	//store local args in list for extractor to use
+	//TEMPORARY: To avoid refactoring for now
+	set<Value *> localvalues;
 	list<Value *> localArgs;
 	for (auto v : localvalues) {
 		cerr << "value must be passed as an argument\n";
@@ -424,34 +483,20 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 		argArgs.push_back(v);
 	}
 
-	//find loop start iteration value
-	Value *startIt = nullptr;
-	int op;
-	BasicBlock *initialEntry = L->getLoopPredecessor();
-	for (op = 0; op < 2; op++) {
-		if (phi->getIncomingBlock(op) == initialEntry){
-			//initial entry edge, replace here
-			startIt = phi->getOperand(op);
-			break;
-		}
-	}
-	if (startIt == nullptr) {
-		cerr << "start iteration could not be found\n";
-		return false;
-	}
-
 	//attempt to find trip count
 	unsigned int tripCount = SE.getSmallConstantTripCount(L);
 	cerr << "trip count is: " << tripCount << "\n";
 
 	//store results of analysis
 	bool parallelizable = true;
-	LoopDependencyData *data = new LoopDependencyData(phi, localArgs, argArgs, exitCnd, L, dependencies, noOfPhiNodes, startIt, finalIt, tripCount, parallelizable, returnValues, accumulativePhiNodes);
+	LoopDependencyData *data = new LoopDependencyData(outerPhi, localArgs, argArgs, cast<Instruction>(outerBranch->getOperand(0)), L, dependencies, noOfInductionPhiNodes, 
+														startIt, finalIt, tripCount, parallelizable, returnValues, accumulativePhiNodes);
 	results.push_back(data);
 	
 	return true;
 }
 
+//Follow operands back from a pointer instruction to find out whether a GEP index depends on the phi node
 bool IsParallelizableLoopPass::isDependentOnInductionVariable(Instruction *ptr, Instruction *phi, bool read) {
 	set<Instruction *> opsToCheck;
 	for (auto &op : ptr->operands()) {
@@ -487,7 +532,9 @@ bool IsParallelizableLoopPass::isDependentOnInductionVariable(Instruction *ptr, 
 }
 
 //function puts all instructions whose memory access depends on the induction variable in the set. And returns false if
-//there is write instruction not dependent on the induction variable (i.e. can't parallelize)
+//there is write instruction not dependent on the induction variable (i.e. can't parallelize
+// for a write, in each index position of the corresponding GEP instruction, there must be at least one that depends on the outer loop induction phi node
+// (otherwise many threads could write to the same place at the same time - not parallelizable)
 bool IsParallelizableLoopPass::getDependencies(Loop *L, PHINode *phi, set<Instruction *> *dependents) {
 	bool parallelizable = true;
 	bool dependent;
@@ -526,34 +573,6 @@ bool IsParallelizableLoopPass::getDependencies(Loop *L, PHINode *phi, set<Instru
 	return parallelizable;
 }
 
-PHINode *IsParallelizableLoopPass::findOuterLoopInductionPhi(Loop *L) {
-	PHINode *phi = L->getCanonicalInductionVariable();
-
-	if (phi == nullptr) {
-		//loop has no cannonical induction variable but may have a normal phi node
-		for (auto bb : L->getBlocks()) {
-			for (auto &i : bb->getInstList()) {
-				if (isa<PHINode>(i)) {
-					phi = inductionPhiNode(i, L);
-				}
-				if (phi != nullptr) {
-					cerr << "found phi node is the outer loop induction variable, continuing...\n";
-					break;
-				}
-				/* else {
-				cerr << "first found phi node is not the outer loop induction variable; not parallelizable...\n";
-				parallelizable = false;
-				return false;
-				} */
-			}
-			if (phi != nullptr) {
-				break;
-			}
-		}
-	}
-	return phi;
-}
-
 bool IsParallelizableLoopPass::checkNestedLoops(Loop *L, int &noLoops) {
 	vector<Loop *> currentSubloops = L->getSubLoops();
 	while (currentSubloops.size() != 0) {
@@ -571,20 +590,12 @@ bool IsParallelizableLoopPass::checkNestedLoops(Loop *L, int &noLoops) {
 	return true;
 }
 
-bool IsParallelizableLoopPass::checkAccumulativePhiIsValid(Instruction &inst, Loop *L, int &opcode){
-	//if it's in the outer loop we are parallelizing we must accumulate
+bool IsParallelizableLoopPass::checkPhiIsAccumulative(PHINode *inst, Loop *L, int &opcode){
 	cerr << "non-induction phi-node found in outer loop\n";
-	inst.dump();
+	inst->dump();
 	cerr << "\n";
-	PHINode *phi = cast<PHINode>(&inst);
 
-	//check the phi node is only used for the accumulating value, not in any other loop computation
-	for (auto u : phi->users()) {
-		if (!(phi->getIncomingValue(0) == u) && !(phi->getIncomingValue(1) == u)) {
-			cerr << "accumualtive phi not just used for accumulation, not parallelizable\n";
-			return false;
-		}
-	}
+	PHINode *phi = inst;
 
 	//find what the repeated operation is - only accept commutative operations
 	//i.e. case Add, case FAdd, case Mul, case FMul, case And, case Or, case Xor
@@ -605,42 +616,7 @@ bool IsParallelizableLoopPass::checkAccumulativePhiIsValid(Instruction &inst, Lo
 				cerr << "\n";
 				opcode = incomingInstruction->getOpcode();
 				if (Instruction::isCommutative(opcode)) {
-					//check it doesn't use it's own value in the evaluation e.g. k += X*k
-					bool isValid = true;
-					set<Value *> usedInstructions;
-					User::op_iterator operand = incomingInstruction->op_begin();
-					while (operand != incomingInstruction->op_end()) {
-						if (isa<Instruction>(operand)) {
-							usedInstructions.insert(*operand);
-						}
-						operand++;
-					}
-					while (!usedInstructions.empty()) {
-						Value *op = *usedInstructions.begin();
-						if (op == incomingInstruction) {
-							isValid = false;
-							cerr << "Accumulation dependent on itself, not parallelizable\n";
-							break;
-						}
-						else if (isa<PHINode>(op)) {
-							//stop searching on this branch
-							usedInstructions.erase(op);
-						}
-						else {
-							for (auto &newop : cast<Instruction>(op)->operands()) {
-								if (isa<Instruction>(newop)) {
-									usedInstructions.insert(newop);
-								}
-							}
-							usedInstructions.erase(op);
-						}
-					}
-					if (isValid) {
-						return true;
-					}
-					else {
-						return false;
-					}
+					return true;
 				}
 				else {
 					cerr << "phi variable op not commutative so can't be parallelized\n";
@@ -648,8 +624,11 @@ bool IsParallelizableLoopPass::checkAccumulativePhiIsValid(Instruction &inst, Lo
 				}
 			}
 			else {
+				//TEMPORARY
+				cerr << "next phi node value that's not an instruction found\n";
+				incomingNewValue->dump();
+				cerr << "\n";
 				return false;
-				//TODO: Not parallelizable?
 			}
 		}
 	}
@@ -659,22 +638,15 @@ bool IsParallelizableLoopPass::checkAccumulativePhiIsValid(Instruction &inst, Lo
 list<Dependence *> IsParallelizableLoopPass::findDistanceVectors(set<Instruction *> *dependentInstructions, DependenceAnalysis *DA) {
 	//find distance vectors for loop induction dependent read/write instructions
 	list<Dependence *> dependencies;
-	for (set<Instruction *>::iterator si = dependentInstructions->begin(); si != dependentInstructions->end(); si++) {
+	for (set<Instruction *>::iterator si = dependentInstructions->begin(); si != dependentInstructions->end(); ++si) {
 		Instruction *i1 = (*si);
-		for (set<Instruction *>::iterator si2 = dependentInstructions->begin(); si2 != dependentInstructions->end(); si2++) {
+		auto si2 = si++;
+		while (si2 != dependentInstructions->end()) {
 			Instruction *i2 = (*si2);
 			unique_ptr<Dependence> d = DA->depends(i1, i2, true);
 
 			if (d != nullptr) {
-				/*  direction:
-				NONE = 0,
-				LT = 1,
-				EQ = 2,
-				LE = 3,
-				GT = 4,
-				NE = 5,
-				GE = 6,
-				ALL = 7 */
+				// direction: NONE = 0, LT = 1, EQ = 2, LE = 3, GT = 4, NE = 5, GE = 6, ALL = 7
 				const SCEV *scev = (d->getDistance(1));
 				int direction = d->getDirection(1);
 				int distance;
@@ -688,9 +660,14 @@ list<Dependence *> IsParallelizableLoopPass::findDistanceVectors(set<Instruction
 
 				//decide whether this dependency makes the loop not parallelizable
 				if (distance != 0) {
+					cerr << "dependency found between:\n";
+					i1->dump();
+					i2->dump();
+					cerr << "\n";
 					dependencies.push_back(d.release());
 				}
 			}
+			si2++;
 		}
 	}
 	return dependencies;
