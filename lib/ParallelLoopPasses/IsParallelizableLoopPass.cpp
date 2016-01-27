@@ -206,7 +206,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 		return false;
 	}
 
-	//ACCUMULATOR PHI NODES
+	//ACCUMULATOR/NON-INDUCTION PHI NODES
 	//If there are any other phi nodes in the outer loop that aren't induction phis
 	for (auto &bb : L->getBlocks()) {
 		for (auto &i : bb->getInstList()) {
@@ -227,6 +227,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 						//(i.e.x += x * y possible and this wouldn't be correct)
 						if (potentialAccumulator->getNumUses() > 1) {
 							cerr << "accumulative phi node has too many users: " << potentialAccumulator->getNumUses() << " - not parallelizable\n";
+							potentialAccumulator->dump();
 							for (auto u : potentialAccumulator->users()) {
 								u->dump();
 							}
@@ -451,7 +452,6 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 		}
 	}
 
-	//TODO: avoid functions being found here
 	//ARGUMENT VALUES
 	// Find all values that must be provided to each thread of the loop
 	set<Value *> argValues;
