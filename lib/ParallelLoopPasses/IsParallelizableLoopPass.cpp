@@ -462,7 +462,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 					if (isa<Value>(op)) {
 						Value *val = cast<Value>(&op);
 						bool functionArg = false;
-						for (auto arg : F.getArgumentList()) {
+						for (auto &arg : F.getArgumentList()) {
 							if (val == cast<Value>(&arg)) {
 								functionArg = true;
 							}
