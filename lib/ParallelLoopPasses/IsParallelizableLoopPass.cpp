@@ -45,7 +45,6 @@ bool IsParallelizableLoopPass::runOnFunction(Function &F) {
 		//initialize iterators and loop counter
 		LoopInfo::iterator i = LI.begin();
 		LoopInfo::iterator e = LI.end();
-		int LoopCounter = 1;
 
 		//iterate through all the OUTER loops found and run anaysis to see whether they are parallelizable
 		while (i != e) {
@@ -77,12 +76,13 @@ Instruction *IsParallelizableLoopPass::findCorrespondingBranch(Value *potentialP
 					Value *bb = br->getOperand(1);
 					Value *bb2 = br->getOperand(2);
 					if (bb == backedgeBlock || bb2 == backedgeBlock) {
-						return cast<Instruction>(&u);
+						return cast<Instruction>(u);
 					}
 				}
 			}
 		}
 	}
+	return nullptr;
 }
 
 pair<PHINode *, Instruction *> IsParallelizableLoopPass::inductionPhiNode(PHINode *potentialPhi, Loop *L) {
@@ -202,7 +202,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	for (auto &bb : L->getBlocks()) {
 		for (auto &i : bb->getInstList()) {
 			if (isa<PHINode>(i)) {
-				PHINode *potentialAccumulator;
+				PHINode *potentialAccumulator = cast<PHINode>(&i);
 				if (find(phiNodes.begin(), phiNodes.end(), potentialAccumulator) == phiNodes.end()) {
 					if (!(*((L->getSubLoops()).begin()))->contains(potentialAccumulator)) {
 						Value *nextValue = nullptr;
