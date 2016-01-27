@@ -222,11 +222,12 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 							cerr << "accumulative phi node has too many users: " << potentialAccumulator->getNumUses() << " - not parallelizable\n";
 							return false;
 						}
-						//if the next value it's assigned is used elsewhere in the loop then not parallelizable (as we change this value between threads in transform)
+						//if the next value it's assigned is used elsewhere in the loop (except in an inner loop's phi node) 
+						//then not parallelizable (as we change this value between threads in transform)
 						for (auto u : nextValue->users()) {
 							if (isa<Instruction>(u)) {
-								if (L->contains(cast<Instruction>(u))) {
-									cerr << "accumulative value used in loop - not parallelizable\n";
+								if (L->contains(cast<Instruction>(u)) && !isa<PHINode>(u)) {
+									cerr << "accumulative value used in loop (and not in inner accumulative phi) - not parallelizable\n";
 									return false;
 								}
 							}
@@ -493,6 +494,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 		v->dump();
 		argArgs.push_back(v);
 	}
+	cerr << "\n";
 
 	//attempt to find trip count
 	unsigned int tripCount = SE.getSmallConstantTripCount(L);
