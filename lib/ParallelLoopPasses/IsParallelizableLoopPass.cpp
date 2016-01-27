@@ -154,7 +154,9 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 					phiNodes.push_back(p.first);
 					branchInstructions.push_back(p.second);
 					noOfInductionPhiNodes++;
-					currentLoop = currentLoop->getSubLoops().front();
+					if (currentLoop->getSubLoops().size() > 0) {
+						currentLoop = currentLoop->getSubLoops().front();
+					}
 					break;
 				}
 			}
