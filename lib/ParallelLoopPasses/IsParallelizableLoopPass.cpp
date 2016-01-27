@@ -371,7 +371,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	}
 
 	//DEPENDENCY ANALYSIS
-	set<Instruction *> *dependentInstructions = new set<Instruction *>();
+	set<Instruction *> dependentInstructions;
     // get all read / write instructions in the loop and check that all write indexes depend on the outer phi value
 	bool allWriteDependentOnPhi = getDependencies(L, outerPhi, dependentInstructions);
 	if (!allWriteDependentOnPhi) {
@@ -383,10 +383,8 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	dependencies = findDistanceVectors(dependentInstructions, DA);
 	if (dependencies.size() > 0) {
 		cerr << "Has dependencies so not parallelizable\n";
-		delete dependentInstructions;
 		return false;
 	}
-	delete dependentInstructions;
 
 	//ALIAS ANALYSIS
 	//store all arrays accessed in the loop to check for aliasing
@@ -537,7 +535,7 @@ bool IsParallelizableLoopPass::isDependentOnInductionVariable(Instruction *ptr, 
 //there is write instruction not dependent on the induction variable (i.e. can't parallelize
 // for a write, in each index position of the corresponding GEP instruction, there must be at least one that depends on the outer loop induction phi node
 // (otherwise many threads could write to the same place at the same time - not parallelizable)
-bool IsParallelizableLoopPass::getDependencies(Loop *L, PHINode *phi, set<Instruction *> *dependents) {
+bool IsParallelizableLoopPass::getDependencies(Loop *L, PHINode *phi, set<Instruction *> dependents) {
 	bool parallelizable = true;
 	bool dependent;
 	for (auto &bb : L->getBlocks()) {
@@ -568,7 +566,7 @@ bool IsParallelizableLoopPass::getDependencies(Loop *L, PHINode *phi, set<Instru
 				}
 			}
 			if (dependent) {
-				dependents->insert(&i);
+				dependents.insert(&i);
 			}
 		}
 	}
@@ -637,14 +635,14 @@ bool IsParallelizableLoopPass::checkPhiIsAccumulative(PHINode *inst, Loop *L, in
 	return false;
 }
 
-list<Dependence *> IsParallelizableLoopPass::findDistanceVectors(set<Instruction *> *dependentInstructions, DependenceAnalysis *DA) {
+list<Dependence *> IsParallelizableLoopPass::findDistanceVectors(set<Instruction *> dependentInstructions, DependenceAnalysis *DA) {
 	//find distance vectors for loop induction dependent read/write instructions
 	list<Dependence *> dependencies;
-	if (dependentInstructions->size() > 1) {
-		for (set<Instruction *>::iterator si = dependentInstructions->begin(); si != dependentInstructions->end(); ++si) {
+	if (dependentInstructions.size() > 1) {
+		for (set<Instruction *>::iterator si = dependentInstructions.begin(); si != dependentInstructions.end(); ++si) {
 			Instruction *i1 = (*si);
 			auto si2 = si++;
-			while (si2 != dependentInstructions->end()) {
+			while (si2 != dependentInstructions.end()) {
 				Instruction *i2 = (*si2);
 				unique_ptr<Dependence> d = DA->depends(i1, i2, true);
 
@@ -673,8 +671,8 @@ list<Dependence *> IsParallelizableLoopPass::findDistanceVectors(set<Instruction
 				si2++;
 			}
 		}
-		return dependencies;
 	}
+	return dependencies;
 }
 
 

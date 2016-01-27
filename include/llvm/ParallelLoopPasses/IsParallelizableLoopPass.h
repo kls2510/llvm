@@ -51,7 +51,7 @@ namespace parallelize {
 		//runs the actual analysis
 		bool isParallelizable(Loop *L, Function &F, ScalarEvolution &SE);
 
-		bool getDependencies(Loop *L, PHINode *phi, set<Instruction *> *dependents);
+		bool getDependencies(Loop *L, PHINode *phi, set<Instruction *> dependents);
 
 		Instruction *findCorrespondingBranch(Value *potentialPhi, BasicBlock *backedgeBlock);
 
@@ -63,7 +63,7 @@ namespace parallelize {
 
 		bool checkPhiIsAccumulative(PHINode *inst, Loop *L, int &opcode);
 
-		list<Dependence *> findDistanceVectors(set<Instruction *> *dependentInstructions, DependenceAnalysis *DA);
+		list<Dependence *> findDistanceVectors(set<Instruction *> dependentInstructions, DependenceAnalysis *DA);
 
 	};
 }
