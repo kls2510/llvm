@@ -119,9 +119,9 @@ namespace {
 
 			//setup return struct type with all values discovered by the analysis pass
 			for (auto i : localArgumentsAndReturnVals) {
-				cerr << "adding local return value to return struct with type:\n";
-				i->getType()->dump();
-				cerr << "\n";
+				//cerr << "adding local return value to return struct with type:\n";
+				//i->getType()->dump();
+				//cerr << "\n";
 				retElts.push_back(i->getType());
 			}
 			returnStruct->setBody(retElts);
@@ -395,11 +395,11 @@ namespace {
 							User::op_iterator operand = inst->op_begin();
 							while (operand != inst->op_end()) {
 								if (*operand == retVal) {
-									cerr << "Replacing a returned value in instruction: \n";
-									inst->dump();
-									cerr << "with\n";
-									returnedValue->dump();
-									cerr << "\n";
+									//cerr << "Replacing a returned value in instruction: \n";
+									//inst->dump();
+									//cerr << "with\n";
+									//returnedValue->dump();
+									//cerr << "\n";
 
 									*operand = returnedValue;
 								}
@@ -414,7 +414,7 @@ namespace {
 				}
 				else {
 					//loop through every return struct and do whatever accumulation need to be done, then replace values
-					cerr << "accumulating values\n";
+					//cerr << "accumulating values\n";
 					unsigned int opcode = loopData->getPhiNodeOpCode(cast<PHINode>(accumulativePhi));
 					User::op_iterator operand = accumulativePhi->op_begin();
 					Value *initialValue = nullptr;
@@ -424,12 +424,12 @@ namespace {
 							//this is the position the initial value will be in, replace it with the identity
 							initialValue = *operand;
 							*operand = replaceValue(opcode, context, initialValue->getType());
-							cerr << "initial value to acc later = \n";
-							initialValue->dump();
-							cerr << "\n";
-							cerr << "and has been replaced by = \n";
-							(*operand)->dump();
-							cerr << "\n";
+							//cerr << "initial value to acc later = \n";
+							//initialValue->dump();
+							//cerr << "\n";
+							//cerr << "and has been replaced by = \n";
+							//(*operand)->dump();
+							//cerr << "\n";
 							break;
 						}
 						i++;
@@ -453,11 +453,11 @@ namespace {
 							User::op_iterator operand = inst->op_begin();
 							while (operand != inst->op_end()) {
 								if (*operand == retVal) {
-									cerr << "Replacing a returned value in instruction: \n";
-									inst->dump();
-									cerr << "with\n";
-									accumulatedValue->dump();
-									cerr << "\n";
+									//cerr << "Replacing a returned value in instruction: \n";
+									//inst->dump();
+									//cerr << "with\n";
+									//accumulatedValue->dump();
+									//cerr << "\n";
 
 									*operand = accumulatedValue;
 								}
@@ -630,7 +630,7 @@ namespace {
 								}
 							}
 							if (!inLoop) {
-								cerr << "replacing loop exit branch to new basic block\n";
+								//cerr << "replacing loop exit branch to new basic block\n";
 								*operand = stores;
 							}
 						}
@@ -797,12 +797,12 @@ namespace {
 
 			if (!F.hasFnAttribute("Extracted") && noThreads > DEFAULT_THREAD_COUNT) {
 				list<LoopDependencyData *> loopData = IP.getResultsForFunction(F);
-				cerr << "In function " << (F.getName()).data() << "\n";
+				//cerr << "In function " << (F.getName()).data() << "\n";
 				Module * mod = (F.getParent());
 				LLVMContext &context = mod->getContext();
 				addHelperFunctionDeclarations(context, mod);
 				for (list<LoopDependencyData *>::iterator i = loopData.begin(); i != loopData.end(); i++) {
-					cerr << "Found a loop\n";
+					//cerr << "Found a loop\n";
 					LoopDependencyData *loopData = *i;
 
 					if ((loopData->getDependencies()).size() == 0) {

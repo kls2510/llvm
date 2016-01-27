@@ -220,6 +220,9 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 						//(i.e.x += x * y possible and this wouldn't be correct)
 						if (potentialAccumulator->getNumUses() > 1) {
 							cerr << "accumulative phi node has too many users: " << potentialAccumulator->getNumUses() << " - not parallelizable\n";
+							for (auto u : potentialAccumulator->users()) {
+								u->dump();
+							}
 							return false;
 						}
 						//if the next value it's assigned is used elsewhere in the loop (except in an inner loop's phi node) 
