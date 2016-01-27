@@ -461,7 +461,8 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 					//it is a Value declared as an argument or global variable that must be passed as a thread argument
 					if (isa<Value>(op)) {
 						Value *val = cast<Value>(&op);
-						if (!isa<Constant>(val)) {
+						if (isa<GlobalValue>(op) || (!isa<Constant>(val) && val->getType() != Type::getLabelTy(F.getContext()))) {
+							val->getType()->dump();
 							argValues.insert(val);
 						}
 					}
