@@ -640,39 +640,41 @@ bool IsParallelizableLoopPass::checkPhiIsAccumulative(PHINode *inst, Loop *L, in
 list<Dependence *> IsParallelizableLoopPass::findDistanceVectors(set<Instruction *> *dependentInstructions, DependenceAnalysis *DA) {
 	//find distance vectors for loop induction dependent read/write instructions
 	list<Dependence *> dependencies;
-	for (set<Instruction *>::iterator si = dependentInstructions->begin(); si != dependentInstructions->end(); ++si) {
-		Instruction *i1 = (*si);
-		auto si2 = si++;
-		while (si2 != dependentInstructions->end()) {
-			Instruction *i2 = (*si2);
-			unique_ptr<Dependence> d = DA->depends(i1, i2, true);
+	if (dependentInstructions->size() > 1) {
+		for (set<Instruction *>::iterator si = dependentInstructions->begin(); si != dependentInstructions->end(); ++si) {
+			Instruction *i1 = (*si);
+			auto si2 = si++;
+			while (si2 != dependentInstructions->end()) {
+				Instruction *i2 = (*si2);
+				unique_ptr<Dependence> d = DA->depends(i1, i2, true);
 
-			if (d != nullptr) {
-				// direction: NONE = 0, LT = 1, EQ = 2, LE = 3, GT = 4, NE = 5, GE = 6, ALL = 7
-				const SCEV *scev = (d->getDistance(1));
-				int direction = d->getDirection(1);
-				int distance;
-				if (scev != nullptr && isa<SCEVConstant>(scev)) {
-					const SCEVConstant *scevConst = cast<SCEVConstant>(scev);
-					distance = *(int *)(scevConst->getValue()->getValue()).getRawData();
-				}
-				else {
-					distance = 0;
-				}
+				if (d != nullptr) {
+					// direction: NONE = 0, LT = 1, EQ = 2, LE = 3, GT = 4, NE = 5, GE = 6, ALL = 7
+					const SCEV *scev = (d->getDistance(1));
+					int direction = d->getDirection(1);
+					int distance;
+					if (scev != nullptr && isa<SCEVConstant>(scev)) {
+						const SCEVConstant *scevConst = cast<SCEVConstant>(scev);
+						distance = *(int *)(scevConst->getValue()->getValue()).getRawData();
+					}
+					else {
+						distance = 0;
+					}
 
-				//decide whether this dependency makes the loop not parallelizable
-				if (distance != 0) {
-					cerr << "dependency found between:\n";
-					i1->dump();
-					i2->dump();
-					cerr << "\n";
-					dependencies.push_back(d.release());
+					//decide whether this dependency makes the loop not parallelizable
+					if (distance != 0) {
+						cerr << "dependency found between:\n";
+						i1->dump();
+						i2->dump();
+						cerr << "\n";
+						dependencies.push_back(d.release());
+					}
 				}
+				si2++;
 			}
-			si2++;
 		}
+		return dependencies;
 	}
-	return dependencies;
 }
 
 
