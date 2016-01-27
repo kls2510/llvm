@@ -535,7 +535,7 @@ bool IsParallelizableLoopPass::isDependentOnInductionVariable(Instruction *ptr, 
 //there is write instruction not dependent on the induction variable (i.e. can't parallelize
 // for a write, in each index position of the corresponding GEP instruction, there must be at least one that depends on the outer loop induction phi node
 // (otherwise many threads could write to the same place at the same time - not parallelizable)
-bool IsParallelizableLoopPass::getDependencies(Loop *L, PHINode *phi, set<Instruction *> dependents) {
+bool IsParallelizableLoopPass::getDependencies(Loop *L, PHINode *phi, set<Instruction *> &dependents) {
 	bool parallelizable = true;
 	bool dependent;
 	for (auto &bb : L->getBlocks()) {
@@ -635,7 +635,7 @@ bool IsParallelizableLoopPass::checkPhiIsAccumulative(PHINode *inst, Loop *L, in
 	return false;
 }
 
-list<Dependence *> IsParallelizableLoopPass::findDistanceVectors(set<Instruction *> dependentInstructions, DependenceAnalysis *DA) {
+list<Dependence *> IsParallelizableLoopPass::findDistanceVectors(set<Instruction *> &dependentInstructions, DependenceAnalysis *DA) {
 	//find distance vectors for loop induction dependent read/write instructions
 	list<Dependence *> dependencies;
 	if (dependentInstructions.size() > 1) {
