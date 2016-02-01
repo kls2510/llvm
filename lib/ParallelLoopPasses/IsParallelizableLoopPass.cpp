@@ -229,15 +229,21 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 					cerr << "phi changes by a constant each outer loop iteration\n";
 					if (isa<SCEVAddRecExpr>(phiScev)) {
 						const SCEVAddRecExpr *phiScevExpr = cast<SCEVAddRecExpr>(phiScev);
-						const SCEV *startVal = phiScevExpr->evaluateAtIteration(SE.getConstant(Type::getInt64Ty(F.getContext()), 0), SE);
-						startVal->dump();
+						const SCEV *firstVal = phiScevExpr->getStart();
+						cerr << "first val:\n";
+						firstVal->dump();
 						cerr << "\n";
-						startVal = phiScevExpr->evaluateAtIteration(SE.getConstant(Type::getInt64Ty(F.getContext()), 1), SE);
-						startVal->dump();
+						const SCEV *stepSize = phiScevExpr->getStepRecurrence(SE);
+						cerr << "step size:\n";
+						stepSize->dump();
 						cerr << "\n";
-						startVal = phiScevExpr->evaluateAtIteration(SE.getConstant(Type::getInt64Ty(F.getContext()), 2), SE);
-						startVal->dump();
-						cerr << "\n";
+						/* if (isa<SCEVConstant>(firstVal) && isa<SCEVConstant>(secondVal)) {
+							const SCEVConstant *firstConst = cast<SCEVConstant>(firstVal);
+							const SCEVConstant *secondConst = cast<SCEVConstant>(secondVal);
+							Value *phiStart = firstConst->getValue();
+							Value *phiStepSize = 
+							distance = *(int *)(scevConst->getValue()->getValue()).getRawData();
+						} */
 					}
 				}
 				cerr << "\n";
