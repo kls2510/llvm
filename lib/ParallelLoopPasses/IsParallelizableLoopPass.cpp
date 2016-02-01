@@ -118,6 +118,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	list<Dependence *> dependencies;
 	multimap<Value *, Value *> returnValues;
 	map<PHINode *, unsigned int> accumulativePhiNodes;
+	map<PHINode *, pair<Value *, Value *>> otherPhiNodes;
 	set<PHINode *> foundPhiNodes;
 	int noOfInductionPhiNodes = 0;
 
@@ -219,6 +220,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 					if ((*((L->getSubLoops()).begin()))->contains(potentialAccumulator))
 						continue;
 				}
+				bool phiSatisfied = false;
 				//TODO: if scalar evolution knows the phi value changes by a particular value each iteration then we can pass in the required
 				//values to each thread
 				cerr << "non induction phi scev found:\n";
@@ -237,62 +239,63 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 						cerr << "step size:\n";
 						stepSize->dump();
 						cerr << "\n";
-						/* if (isa<SCEVConstant>(firstVal) && isa<SCEVConstant>(secondVal)) {
+						if (isa<SCEVConstant>(firstVal) && isa<SCEVConstant>(stepSize)) {
 							const SCEVConstant *firstConst = cast<SCEVConstant>(firstVal);
-							const SCEVConstant *secondConst = cast<SCEVConstant>(secondVal);
-							Value *phiStart = firstConst->getValue();
-							Value *phiStepSize = 
-							distance = *(int *)(scevConst->getValue()->getValue()).getRawData();
-						} */
-					}
-				}
-				cerr << "\n";
-
-
-				//else we'll assume it is a phi node used to accumulate some value
-				Value *nextValue = nullptr;
-				for (op = 0; op < 2; op++) {
-					if (potentialAccumulator->getIncomingBlock(op) == L->getLoopPredecessor()){
-						//initial entry edge, do nothing
-					}
-					else {
-						nextValue = potentialAccumulator->getIncomingValue(op);
-					}
-				}
-				//if the actual phi name is used in the loop for something other than accumualation->not parallelizable
-				//(i.e.x += x * y possible and this wouldn't be correct)
-				if (potentialAccumulator->getNumUses() > 1) {
-					cerr << "accumulative phi node has too many users: " << potentialAccumulator->getNumUses() << " - not parallelizable\n";
-					potentialAccumulator->dump();
-					for (auto u : potentialAccumulator->users()) {
-						u->dump();
-					}
-					return false;
-				}
-				//if the next value it's assigned is used elsewhere in the loop (except in an inner loop's phi node) 
-				//then not parallelizable (as we change this value between threads in transform)
-				for (auto u : nextValue->users()) {
-					if (isa<Instruction>(u)) {
-						if (L->contains(cast<Instruction>(u)) && !isa<PHINode>(u)) {
-							cerr << "accumulative value used in loop (and not in inner accumulative phi) - not parallelizable\n";
-							return false;
+							const SCEVConstant *stepConst = cast<SCEVConstant>(stepSize);
+							cerr << "phi node can be split up for iterations, adding to analysis\n";
+							otherPhiNodes.insert(make_pair(potentialAccumulator, make_pair(firstConst->getValue(), stepConst->getValue())));
+							phiSatisfied = true;
 						}
 					}
-					else {
-						//TEMPORARY
-						cerr << "found use not an instruction\n";
-						u->dump();
-						cerr << "\n";
+				}
+
+				if (!phiSatisfied) {
+					cerr << "phi node doesn't match pattern to be replaced by values in threads, checking to see whether it is accumulative\n";
+					//else we'll assume it is a phi node used to accumulate some value
+					Value *nextValue = nullptr;
+					for (op = 0; op < 2; op++) {
+						if (potentialAccumulator->getIncomingBlock(op) == L->getLoopPredecessor()){
+							//initial entry edge, do nothing
+						}
+						else {
+							nextValue = potentialAccumulator->getIncomingValue(op);
+						}
 					}
-				}
-				//Check it is valid i.e. if the one place the phi's non-initial operand value is used is for a commutable operation
-				int opcode;
-				bool isValid = checkPhiIsAccumulative(potentialAccumulator, L, opcode);
-				if (!isValid) {
-					return false;
-				}
-				else {
-					accumulativePhiNodes.insert(make_pair(potentialAccumulator, opcode));
+					//if the actual phi name is used in the loop for something other than accumualation->not parallelizable
+					//(i.e.x += x * y possible and this wouldn't be correct)
+					if (potentialAccumulator->getNumUses() > 1) {
+						cerr << "accumulative phi node has too many users: " << potentialAccumulator->getNumUses() << " - not parallelizable\n";
+						potentialAccumulator->dump();
+						for (auto u : potentialAccumulator->users()) {
+							u->dump();
+						}
+						return false;
+					}
+					//if the next value it's assigned is used elsewhere in the loop (except in an inner loop's phi node) 
+					//then not parallelizable (as we change this value between threads in transform)
+					for (auto u : nextValue->users()) {
+						if (isa<Instruction>(u)) {
+							if (L->contains(cast<Instruction>(u)) && !isa<PHINode>(u)) {
+								cerr << "accumulative value used in loop (and not in inner accumulative phi) - not parallelizable\n";
+								return false;
+							}
+						}
+						else {
+							//TEMPORARY
+							cerr << "found use not an instruction\n";
+							u->dump();
+							cerr << "\n";
+						}
+					}
+					//Check it is valid i.e. if the one place the phi's non-initial operand value is used is for a commutable operation
+					int opcode;
+					bool isValid = checkPhiIsAccumulative(potentialAccumulator, L, opcode);
+					if (!isValid) {
+						return false;
+					}
+					else {
+						accumulativePhiNodes.insert(make_pair(potentialAccumulator, opcode));
+					}
 				}
 			}
 		}
