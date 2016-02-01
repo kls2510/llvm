@@ -221,8 +221,13 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 				}
 				//TODO: if scalar evolution knows the phi value changes by a particular value each iteration then we can pass in the required
 				//values to each thread
+				cerr << "non induction phi scev found:\n";
 				const SCEV *phiScev = SE.getSCEVAtScope(potentialAccumulator, L);
 				phiScev->dump();
+				cerr << "\n";
+				SE.getUnsignedRange(phiScev).getLower().dump();
+				SE.getUnsignedRange(phiScev).getUpper().dump();
+
 
 				//else we'll assume it is a phi node used to accumulate some value
 				Value *nextValue = nullptr;
