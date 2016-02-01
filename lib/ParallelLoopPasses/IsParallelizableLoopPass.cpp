@@ -224,8 +224,18 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 				cerr << "non induction phi scev found:\n";
 				const SCEV *phiScev = SE.getSCEVAtScope(potentialAccumulator, L);
 				phiScev->dump();
+				phiScev->getType()->dump();
+				if (SE.getLoopDisposition(phiScev, L) == SE.LoopComputable) {
+					cerr << "phi changes by a constant each outer loop iteration\n";
+					SmallVector<const SCEV *, 10> stepArgs;
+					SE.collectParametricTerms(phiScev, stepArgs);
+					for (auto arg : stepArgs) {
+						arg->dump();
+					}
+				}
 				cerr << "\n";
-				SE.getSignedRange(phiScev).dump();
+				
+				cerr << "\n";
 				//cerr << "lower = " << SE.getSignedRange(phiScev). << "\n";
 				//cerr << "higher = " << SE.getUnsignedRange(phiScev).getUpper().getSExtValue() << "\n";
 
