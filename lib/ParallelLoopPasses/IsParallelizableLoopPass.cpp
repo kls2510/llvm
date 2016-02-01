@@ -214,6 +214,12 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 				PHINode *potentialAccumulator = cast<PHINode>(&i);
 				if (find(phiNodes.begin(), phiNodes.end(), potentialAccumulator) == phiNodes.end()) {
 					if (!(*((L->getSubLoops()).begin()))->contains(potentialAccumulator)) {
+						//TODO: if scalar evolution knows the phi value changes by a particular value each iteration then we can pass in the required
+						//values to each thread
+						const SCEV *phiScev = SE.getSCEVAtScope(potentialAccumulator, L);
+						phiScev->dump();
+
+						//else we'll assume it is a phi node used to accumulate some value
 						Value *nextValue = nullptr;
 						for (op = 0; op < 2; op++) {
 							if (potentialAccumulator->getIncomingBlock(op) == L->getLoopPredecessor()){
