@@ -225,8 +225,8 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 				const SCEV *phiScev = SE.getSCEVAtScope(potentialAccumulator, L);
 				phiScev->dump();
 				cerr << "\n";
-				SE.getUnsignedRange(phiScev).getLower().dump();
-				SE.getUnsignedRange(phiScev).getUpper().dump();
+				cerr << "lower = " << SE.getUnsignedRange(phiScev).getLower().getSExtValue() << "\n";
+				cerr << "higher = " << SE.getUnsignedRange(phiScev).getUpper().getSExtValue() << "\n";
 
 
 				//else we'll assume it is a phi node used to accumulate some value
