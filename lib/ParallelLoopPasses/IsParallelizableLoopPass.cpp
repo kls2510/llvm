@@ -212,7 +212,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 		for (auto &i : bb->getInstList()) {
 			if (isa<PHINode>(i)) {
 				PHINode *potentialAccumulator = cast<PHINode>(&i);
-				if (find(phiNodes.begin(), phiNodes.end(), potentialAccumulator) == phiNodes.end()) {
+				if (find(phiNodes.begin(), phiNodes.end(), potentialAccumulator) != phiNodes.end()) {
 					continue;
 				}
 				if (L->getSubLoops().size() > 0) {
