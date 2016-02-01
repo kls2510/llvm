@@ -213,10 +213,11 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 			if (isa<PHINode>(i)) {
 				PHINode *potentialAccumulator = cast<PHINode>(&i);
 				if (find(phiNodes.begin(), phiNodes.end(), potentialAccumulator) == phiNodes.end()) {
-					if (L->getSubLoops().size() > 0) {
-						if ((*((L->getSubLoops()).begin()))->contains(potentialAccumulator))
-							continue;
-					}
+					continue;
+				}
+				if (L->getSubLoops().size() > 0) {
+					if ((*((L->getSubLoops()).begin()))->contains(potentialAccumulator))
+						continue;
 				}
 				//TODO: if scalar evolution knows the phi value changes by a particular value each iteration then we can pass in the required
 				//values to each thread
