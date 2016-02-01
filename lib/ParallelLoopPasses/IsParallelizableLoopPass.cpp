@@ -227,17 +227,20 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 				phiScev->getType()->dump();
 				if (SE.getLoopDisposition(phiScev, L) == SE.LoopComputable) {
 					cerr << "phi changes by a constant each outer loop iteration\n";
-					SmallVector<const SCEV *, 10> stepArgs;
-					SE.collectParametricTerms(phiScev, stepArgs);
-					for (auto arg : stepArgs) {
-						arg->dump();
+					if (isa<SCEVAddRecExpr>(phiScev)) {
+						const SCEVAddRecExpr *phiScevExpr = cast<SCEVAddRecExpr>(phiScev);
+						const SCEV *startVal = phiScevExpr->evaluateAtIteration(SE.getConstant(Type::getInt64Ty(F.getContext()), 0), SE);
+						startVal->dump();
+						cerr << "\n";
+						startVal = phiScevExpr->evaluateAtIteration(SE.getConstant(Type::getInt64Ty(F.getContext()), 1), SE);
+						startVal->dump();
+						cerr << "\n";
+						startVal = phiScevExpr->evaluateAtIteration(SE.getConstant(Type::getInt64Ty(F.getContext()), 2), SE);
+						startVal->dump();
+						cerr << "\n";
 					}
 				}
 				cerr << "\n";
-				
-				cerr << "\n";
-				//cerr << "lower = " << SE.getSignedRange(phiScev). << "\n";
-				//cerr << "higher = " << SE.getUnsignedRange(phiScev).getUpper().getSExtValue() << "\n";
 
 
 				//else we'll assume it is a phi node used to accumulate some value
