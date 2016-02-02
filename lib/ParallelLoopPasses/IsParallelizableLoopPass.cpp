@@ -224,6 +224,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 				//TODO: if scalar evolution knows the phi value changes by a particular value each iteration then we can pass in the required
 				//values to each thread
 				cerr << "non induction phi scev found:\n";
+				potentialAccumulator->dump();
 				const SCEV *phiScev = SE.getSCEVAtScope(potentialAccumulator, L);
 				phiScev->dump();
 				phiScev->getType()->dump();
@@ -546,43 +547,24 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 					if (callee->onlyAccessesArgMemory()) {
 						cerr << "But only accesses arg values, args are:\n";
 						for (auto &arg : call->operands()) {
-							bool par = false;
+							bool par = true;
 							arg->dump();
 							if (isa<Instruction>(arg)) {
 								Instruction *a = cast<Instruction>(arg);
-								if (isDependentOnInductionVariable(a, outerPhi, false)) {
-									//it should be a different location each iteration
-									cerr << "This argument is dependent on the outer loop induction variable so could be parallelizable\n";
-									par = true;
-								}
-								else {
-									//else check if it is a unique argument to the threads
-									if (argValues.find(a) == argValues.end()) {
-										for (auto &insta : a->operands()) {
-											if (argValues.find(insta) == argValues.end()) {
-												//The value perhaps isn't unique to each thread so not parallelizable
-												cerr << "This argument is perhaps not unique to each thread\n";
-											}
-											else {
-												cerr << "argument's argument is passed in as argument to each thread so could be parallelized\n";
-												par = true;
-												break;
-											}
-										}
+								if (a->getType()->isPointerTy()) {
+									if (isDependentOnInductionVariable(a, outerPhi, false)) {
+										//it should be a different location each iteration
+										cerr << "This pointer argument is dependent on the outer loop induction variable so could be parallelizable\n";
 									}
 									else {
-										cerr << "argument is passed in as argument to each thread so could be parallelized\n";
-										par = true;
-										break;
+										cerr << "This pointer argument is perhaps not unique to each thread\n";
+										par = false;
 									}
 								}
 							}
 							else {
-								if (argValues.find(arg) == argValues.end()) {
-									//The value perhaps isn't unique to each thread so not parallelizable
-									cerr << "This argument is perhaps not unique to each thread - not parallelizable\n";
-									break;
-								}
+								cerr << "This argument is perhaps not unique to each thread\n";
+								par = false;
 							}
 							if (!par) {
 								cerr << "call to function that may write to same memory across iterations found - not parallelizable\n";
