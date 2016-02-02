@@ -475,9 +475,9 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	for (auto bb : L->getBlocks()) {
 		for (auto &i : bb->getInstList()) {
 			// find all operands used in every instruction in the loop
-			for (auto &op : i.operands()) {
-				if (isa<Value>(op)) {
-					if (!isa<FunctionType>(cast<Value>(op)->getType())) {
+			if (!isa<CallInst>(i)) {
+				for (auto &op : i.operands()) {
+					if (isa<Value>(op)) {
 						if (isa<Instruction>(op)) {
 							Instruction *inst = cast<Instruction>(&op);
 							//if the value is an instruction declared outside the loop
@@ -502,10 +502,10 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 							}
 						}
 					}
-				}
-				else {
-					cerr << "non-value required for argument - not parallelizable\n";
-					return false;
+					else {
+						cerr << "non-value required for argument - not parallelizable\n";
+						return false;
+					}
 				}
 			}
 		}
