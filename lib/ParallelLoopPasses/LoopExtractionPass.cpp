@@ -565,6 +565,7 @@ namespace {
 					}
 					if (!fromLoop) {
 						phi->setIncomingValue(op, loadInst);
+						phi->setIncomingBlock(op, loadBlock);
 						cerr << "reset a phi node start value:\n";
 						phi->dump();
 						loadInst->dump();
