@@ -476,30 +476,36 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 		for (auto &i : bb->getInstList()) {
 			// find all operands used in every instruction in the loop
 			for (auto &op : i.operands()) {
-				if (isa<Instruction>(op)) {
-					Instruction *inst = cast<Instruction>(&op);
-					//if the value is an instruction declared outside the loop
-					if (!(L->contains(inst))) {
-						//must pass in local value as arg so it is available
-						if (argValues.find(inst) == argValues.end()) {
-							argValues.insert(inst);
+				if (isa<Value>(op)) {
+					if (!isa<FunctionType>(cast<Value>(op))) {
+						if (isa<Instruction>(op)) {
+							Instruction *inst = cast<Instruction>(&op);
+							//if the value is an instruction declared outside the loop
+							if (!(L->contains(inst))) {
+								//must pass in local value as arg so it is available
+								if (argValues.find(inst) == argValues.end()) {
+									argValues.insert(inst);
+								}
+							}
+						}
+						else {
+							//if it is a Value declared as an argument or global variable
+							Value *val = cast<Value>(&op);
+							bool functionArg = false;
+							for (auto &arg : F.getArgumentList()) {
+								if (val == cast<Value>(&arg)) {
+									functionArg = true;
+								}
+							}
+							if (isa<GlobalValue>(op) || functionArg) {
+								argValues.insert(val);
+							}
 						}
 					}
 				}
 				else {
-					//if it is a Value declared as an argument or global variable
-					if (isa<Value>(op)) {
-						Value *val = cast<Value>(&op);
-						bool functionArg = false;
-						for (auto &arg : F.getArgumentList()) {
-							if (val == cast<Value>(&arg)) {
-								functionArg = true;
-							}
-						}
-						if ((isa<GlobalValue>(op) && !op->getType()->isFunctionTy()) || functionArg) {
-							argValues.insert(val);
-						}
-					}
+					cerr << "non-value required for argument - not parallelizable\n";
+					return false;
 				}
 			}
 		}
