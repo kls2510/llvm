@@ -301,34 +301,6 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 		}
 	}
 
-	// FUNCTION CALLS
-	// If there are any call instructions that may have side - effects -> not parallelizable
-	for (auto &bb : L->getBlocks()) {
-		for (auto &i : bb->getInstList()) {
-			if (isa<CallInst>(i)) {
-				CallInst *call = cast<CallInst>(&i);
-				Function *callee = call->getCalledFunction();
-				if (callee->onlyReadsMemory()) {
-					cerr << "call to function found but it doesn't write to memory\n";
-				}
-				else {
-					cerr << "call to function that may write to memory found\n";
-					//check if memory altered is only in arguments and it's different for each loop
-					if (callee->onlyAccessesArgMemory()) {
-						cerr << "args are:\n";
-						for (auto &arg : call->operands()) {
-							arg->dump();
-						}
-					}
-					cerr << "call to function that may write to memory found - not parallelizable\n";
-					callee->dump();
-					cerr << "\n";
-					return false;
-				}
-			}
-		}
-	}
-
 	// UNEXPECTED BRANCHING
 	// Check there aren't any unexpected branches out of the loop (can't parallelize those with returns / breaks in the middle of them)
 	vector<BasicBlock *> loopBBs = L->getBlocks();
@@ -551,6 +523,73 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 		argArgs.push_back(v);
 	}
 	cerr << "\n";
+
+	// FUNCTION CALLS
+	// If there are any call instructions that may have side - effects -> not parallelizable
+	for (auto &bb : L->getBlocks()) {
+		for (auto &i : bb->getInstList()) {
+			if (isa<CallInst>(i)) {
+				CallInst *call = cast<CallInst>(&i);
+				Function *callee = call->getCalledFunction();
+				if (callee->onlyReadsMemory()) {
+					cerr << "call to function found but it doesn't write to memory\n";
+				}
+				else {
+					cerr << "call to function that may write to memory found\n";
+					//check if memory altered is only in arguments and it's different for each loop
+					if (callee->onlyAccessesArgMemory()) {
+						cerr << "But only accesses arg values, args are:\n";
+						for (auto &arg : call->operands()) {
+							bool par = false;
+							arg->dump();
+							if (isa<Instruction>(arg)) {
+								Instruction *a = cast<Instruction>(arg);
+								if (isDependentOnInductionVariable(a, outerPhi, true)) {
+									//it should be a different location each iteration
+									cerr << "This argument is dependent on the outer loop induction variable so could be parallelizable\n";
+									par = true;
+								}
+								else {
+									//else check if it is a unique argument to the threads
+									if (argValues.find(a) == argValues.end()) {
+										for (auto &insta : a->operands()) {
+											if (argValues.find(insta) == argValues.end()) {
+												//The value perhaps isn't unique to each thread so not parallelizable
+												cerr << "This argument is perhaps not unique to each thread\n";
+											}
+											else {
+												cerr << "argument's argument is passed in as argument to each thread so could be parallelized\n";
+												par = true;
+												break;
+											}
+										}
+									}
+									else {
+										cerr << "argument is passed in as argument to each thread so could be parallelized\n";
+										par = true;
+										break;
+									}
+								}
+							}
+							else {
+								if (argValues.find(arg) == argValues.end()) {
+									//The value perhaps isn't unique to each thread so not parallelizable
+									cerr << "This argument is perhaps not unique to each thread - not parallelizable\n";
+									break;
+								}
+							}
+							if (!par) {
+								cerr << "call to function that may write to same memory across iterations found - not parallelizable\n";
+								callee->dump();
+								cerr << "\n";
+								return false;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 
 	//attempt to find trip count
 	unsigned int tripCount = SE.getSmallConstantTripCount(L);
