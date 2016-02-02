@@ -370,6 +370,67 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 
 	//TODO: Check for switch instructions?
 
+	//ARGUMENT VALUES
+	// Find all values that must be provided to each thread of the loop
+	set<Value *> argValues;
+	for (auto bb : L->getBlocks()) {
+		for (auto &i : bb->getInstList()) {
+			// find all operands used in every instruction in the loop
+			if (!isa<CallInst>(i)) {
+				for (auto &op : i.operands()) {
+					if (isa<Value>(op)) {
+						if (isa<Instruction>(op)) {
+							Instruction *inst = cast<Instruction>(&op);
+							//if the value is an instruction declared outside the loop
+							if (!(L->contains(inst))) {
+								//must pass in local value as arg so it is available
+								if (argValues.find(inst) == argValues.end()) {
+									argValues.insert(inst);
+								}
+							}
+						}
+						else {
+							//if it is a Value declared as an argument or global variable
+							Value *val = cast<Value>(&op);
+							bool functionArg = false;
+							for (auto &arg : F.getArgumentList()) {
+								if (val == cast<Value>(&arg)) {
+									functionArg = true;
+								}
+							}
+							if (isa<GlobalValue>(op) || functionArg) {
+								argValues.insert(val);
+							}
+						}
+					}
+					else {
+						cerr << "non-value required for argument - not parallelizable\n";
+						return false;
+					}
+				}
+			}
+		}
+	}
+
+	//store local args in list for extractor to use
+	//TEMPORARY: To avoid refactoring for now
+	set<Value *> localvalues;
+	list<Value *> localArgs;
+	for (auto v : localvalues) {
+		cerr << "value must be passed as an argument\n";
+		v->dump();
+		localArgs.push_back(v);
+	}
+
+	//store argument args in list for extractor to use
+	list<Value *> argArgs;
+	for (auto v : argValues) {
+		cerr << "value must be passed as an argument\n";
+		v->dump();
+		argArgs.push_back(v);
+	}
+	cerr << "\n";
+
 	// Find all values that will need to be returned by each thread
     // for each instruction in loop, test to see whether there are uses outside the loop
 	// add these to the return list along with instructions to replace it in
@@ -468,67 +529,6 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 			}
 		}
 	}
-
-	//ARGUMENT VALUES
-	// Find all values that must be provided to each thread of the loop
-	set<Value *> argValues;
-	for (auto bb : L->getBlocks()) {
-		for (auto &i : bb->getInstList()) {
-			// find all operands used in every instruction in the loop
-			if (!isa<CallInst>(i)) {
-				for (auto &op : i.operands()) {
-					if (isa<Value>(op)) {
-						if (isa<Instruction>(op)) {
-							Instruction *inst = cast<Instruction>(&op);
-							//if the value is an instruction declared outside the loop
-							if (!(L->contains(inst))) {
-								//must pass in local value as arg so it is available
-								if (argValues.find(inst) == argValues.end()) {
-									argValues.insert(inst);
-								}
-							}
-						}
-						else {
-							//if it is a Value declared as an argument or global variable
-							Value *val = cast<Value>(&op);
-							bool functionArg = false;
-							for (auto &arg : F.getArgumentList()) {
-								if (val == cast<Value>(&arg)) {
-									functionArg = true;
-								}
-							}
-							if (isa<GlobalValue>(op) || functionArg) {
-								argValues.insert(val);
-							}
-						}
-					}
-					else {
-						cerr << "non-value required for argument - not parallelizable\n";
-						return false;
-					}
-				}
-			}
-		}
-	}
-
-	//store local args in list for extractor to use
-	//TEMPORARY: To avoid refactoring for now
-	set<Value *> localvalues;
-	list<Value *> localArgs;
-	for (auto v : localvalues) {
-		cerr << "value must be passed as an argument\n";
-		v->dump();
-		localArgs.push_back(v);
-	}
-
-	//store argument args in list for extractor to use
-	list<Value *> argArgs;
-	for (auto v : argValues) {
-		cerr << "value must be passed as an argument\n";
-		v->dump();
-		argArgs.push_back(v);
-	}
-	cerr << "\n";
 
 	// FUNCTION CALLS
 	// If there are any call instructions that may have side - effects -> not parallelizable
