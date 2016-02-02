@@ -246,6 +246,8 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 							cerr << "phi node can be split up for iterations, adding to analysis\n";
 							otherPhiNodes.insert(make_pair(potentialAccumulator, make_pair(firstConst->getValue(), stepConst->getValue())));
 							phiSatisfied = true;
+							cerr << "for now not parallelizable\n";
+							return false;
 						}
 					}
 				}

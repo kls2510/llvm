@@ -114,9 +114,9 @@ namespace {
 				elts.push_back(a->getType());
 			}
 			//TODO: Calc start values for the other phi nodes and add to/from struct
-			for (auto a : otherPhiNodes) {
+			/*for (auto a : otherPhiNodes) {
 				elts.push_back(a.second.first->getType());
-			}
+			}*/
 
 			//create the struct we'll use to return local data variables from the threads (separate store needed for each thread)
 			returnStruct = StructType::create(context, "ThreadReturner");
@@ -202,7 +202,7 @@ namespace {
 					builder.CreateStore(op, getPTR);
 					k++;
 				}
-				for (auto p : otherPhiNodes) {
+				/* for (auto p : otherPhiNodes) {
 					Value *start = p.second.first;
 					Value *step = p.second.second;
 					Value *getPTR = builder.CreateStructGEP(threadStruct, allocateInst, k);
@@ -211,7 +211,7 @@ namespace {
 						//builder.CreateBinOp(Instruction::Mul, ConstantInt::get(Type::getInt64Ty(context), i), iterationsEach)));
 					builder.CreateStore(newStart, getPTR);
 					k++;
-				}
+				} */
 				//store startIt
 				Value *getPTR = builder.CreateStructGEP(threadStruct, allocateInst, k);
 				builder.CreateStore(threadStartIt, getPTR);
@@ -370,7 +370,7 @@ namespace {
 			list<Value *> returnStructs;
 
 			//load the return struct for each thread if we need to accumulate all values
-			int structIndex = argArguments.size() + localArguments.size() + otherPhiNodes.size() + 2;
+			int structIndex = argArguments.size() + localArguments.size() + /* otherPhiNodes.size() +*/ 2;
 			if (loopData->getOuterLoopNonInductionPHIs().size() > 0) {
 				for (auto s : threadStructs) {
 					Value *structx = s;
@@ -546,7 +546,7 @@ namespace {
 				sprintf(namePrefix, "loadVal_%d", loadedVal);
 				arrayAndLocalStructElements.push_back(loadInst);
 			}
-			map<PHINode *, pair<Value *, Value *>>::iterator phiIt = otherPhiNodes.begin();
+			/* map<PHINode *, pair<Value *, Value *>>::iterator phiIt = otherPhiNodes.begin();
 			for (p = argArguments.size() + localArguments.size(); p < argArguments.size() + localArguments.size() + otherPhiNodes.size(); p++) {
 				Value *arrayVal = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p, namePrefix);
 				loadedVal++;
@@ -575,7 +575,7 @@ namespace {
 					}
 				}
 				phiIt++;
-			}
+			} */
 
 			//create IR for obtaining pointers to where return values must be stored
 			Value *localReturns = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p + 2, namePrefix);
