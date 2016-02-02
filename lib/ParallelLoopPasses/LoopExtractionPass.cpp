@@ -363,17 +363,31 @@ namespace {
 			list<Value *> localArguments = loopData->getLocalArgValues();
 			list<Value *> argArguments = loopData->getArgumentArgValues();
 			list<Value *>  localArgumentsAndReturnVals = loopData->getReturnValues();
+			map<PHINode *, pair<Value *, Value *>> otherPhiNodes = loopData->getOtherPhiNodes();
 
 			list<Value *> returnStructs;
 
-			//load the return struct for each thread
-			int structIndex = argArguments.size() + localArguments.size() + 2;
-			for (auto s : threadStructs) {
-				Value *structx = s;
+			//load the return struct for each thread if we need to accumulate all values
+			int structIndex = argArguments.size() + localArguments.size() + otherPhiNodes.size() + 2;
+			if (loopData->getOuterLoopNonInductionPHIs().size() > 0) {
+				for (auto s : threadStructs) {
+					Value *structx = s;
+					structx = cleanup.CreateBitOrPointerCast(structx, threadStruct->getPointerTo());
+					Value *returnStructx = cleanup.CreateStructGEP(threadStruct, structx, structIndex);
+					returnStructx = cleanup.CreateLoad(returnStructx);
+					returnStructs.push_back(returnStructx);
+				}
+			}
+			//alternatively just the last struct if there are only singular return values
+			else if (localArgumentsAndReturnVals.size() > 0) {
+				Value *structx = threadStructs.back();
 				structx = cleanup.CreateBitOrPointerCast(structx, threadStruct->getPointerTo());
 				Value *returnStructx = cleanup.CreateStructGEP(threadStruct, structx, structIndex);
 				returnStructx = cleanup.CreateLoad(returnStructx);
 				returnStructs.push_back(returnStructx);
+			}
+			else {
+				//don't need to load anything back from the threads if no values are used later
 			}
 
 			//now load in our local variable values and update where they are used

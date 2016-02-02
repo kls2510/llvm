@@ -377,6 +377,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	for (auto bb : L->getBlocks()) {
 		for (auto &i : bb->getInstList()) {
 			// find all operands used in every instruction in the loop
+			//TODO: CHECK ARGS OF CALL INSTRUCTIONS IN LOOP
 			if (!isa<CallInst>(i)) {
 				for (auto &op : i.operands()) {
 					if (isa<Value>(op)) {
