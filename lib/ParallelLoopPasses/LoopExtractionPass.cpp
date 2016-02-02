@@ -206,7 +206,8 @@ namespace {
 					Value *start = p.second.first;
 					Value *step = p.second.second;
 					Value *getPTR = builder.CreateStructGEP(threadStruct, allocateInst, k);
-					Value *newStart = builder.CreateBinOp(Instruction::Add, start, builder.CreateBinOp(Instruction::Mul, step, threadStartIt));
+					Value *newStart = builder.CreateBinOp(Instruction::Add, start, builder.CreateBinOp(Instruction::Mul, step, 
+						builder.CreateBinOp(Instruction::Mul, ConstantInt::get(Type::getInt64Ty(context), i), iterationsEach)));
 					builder.CreateStore(newStart, getPTR);
 					k++;
 				}
