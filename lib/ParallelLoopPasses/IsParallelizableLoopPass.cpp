@@ -753,9 +753,12 @@ list<Dependence *> IsParallelizableLoopPass::findDistanceVectors(set<Instruction
 	//find distance vectors for loop induction dependent read/write instructions
 	list<Dependence *> dependencies;
 	if (dependentInstructions.size() > 1) {
-		for (set<Instruction *>::iterator si = dependentInstructions.begin(); si != dependentInstructions.end()--; si++) {
-			Instruction *i1 = (*si);
-			auto si2 = si++;
+		//(*(dependentInstructions.begin()))->dump();
+		//(*(dependentInstructions.end()--))->dump();
+		for (auto si : dependentInstructions) {
+			//set<Instruction *>::iterator si = dependentInstructions.begin(); si != dependentInstructions.end()--; si++) {
+			Instruction *i1 = si;
+			auto si2 = dependentInstructions.find(si)++;
 			while (si2 != dependentInstructions.end()) {
 				Instruction *i2 = (*si2);
 				unique_ptr<Dependence> d = DA->depends(i1, i2, true);
