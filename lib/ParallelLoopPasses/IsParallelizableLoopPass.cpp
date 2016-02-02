@@ -544,7 +544,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 							arg->dump();
 							if (isa<Instruction>(arg)) {
 								Instruction *a = cast<Instruction>(arg);
-								if (isDependentOnInductionVariable(a, outerPhi, true)) {
+								if (isDependentOnInductionVariable(a, outerPhi, false)) {
 									//it should be a different location each iteration
 									cerr << "This argument is dependent on the outer loop induction variable so could be parallelizable\n";
 									par = true;
@@ -747,7 +747,7 @@ list<Dependence *> IsParallelizableLoopPass::findDistanceVectors(set<Instruction
 	//find distance vectors for loop induction dependent read/write instructions
 	list<Dependence *> dependencies;
 	if (dependentInstructions.size() > 1) {
-		for (set<Instruction *>::iterator si = dependentInstructions.begin(); si != dependentInstructions.end(); ++si) {
+		for (set<Instruction *>::iterator si = dependentInstructions.begin(); si != dependentInstructions.end(); si++) {
 			Instruction *i1 = (*si);
 			auto si2 = si++;
 			while (si2 != dependentInstructions.end()) {
