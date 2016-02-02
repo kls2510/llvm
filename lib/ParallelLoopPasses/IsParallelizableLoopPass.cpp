@@ -477,7 +477,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 			// find all operands used in every instruction in the loop
 			for (auto &op : i.operands()) {
 				if (isa<Value>(op)) {
-					if (!isa<FunctionType>(cast<Value>(op))) {
+					if (!isa<FunctionType>(cast<Value>(op)->getType())) {
 						if (isa<Instruction>(op)) {
 							Instruction *inst = cast<Instruction>(&op);
 							//if the value is an instruction declared outside the loop
