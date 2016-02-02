@@ -552,7 +552,6 @@ namespace {
 				LoadInst *loadInst = loadBuilder.CreateLoad(arrayVal, namePrefix);
 				loadedVal++;
 				sprintf(namePrefix, "loadVal_%d", loadedVal);
-				arrayAndLocalStructElements.push_back(loadInst);
 				PHINode *phi = phiIt->first;
 				int op;
 				for (op = 0; op < 2; op++) {
@@ -631,6 +630,7 @@ namespace {
 
 		void replaceLoopValues(LoopDependencyData *loopData, LLVMContext &context, Function *loopFunction, list<Value *> loadedArrayAndLocalValues, Loop *loop, list<Value *> localValues, list<Value *> argValues, list<Value *> retValues) {
 			list<Value *>::iterator loadedVal = loadedArrayAndLocalValues.begin();
+			map<PHINode *, pair<Value *, Value *>> otherPhiNodes = loopData->getOtherPhiNodes();
 
 			//replace arg values
 			for (auto a : argValues) {
