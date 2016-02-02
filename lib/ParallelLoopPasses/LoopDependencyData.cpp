@@ -117,3 +117,7 @@ list<Value *> LoopDependencyData::getLocalArgValues() {
 list<Value *> LoopDependencyData::getArgumentArgValues() {
 	return this->argValues;
 }
+
+map<PHINode *, pair < Value *, Value * >> LoopDependencyData::getOtherPhiNodes() {
+	return this->otherPhiNodes;
+}

@@ -551,7 +551,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	//store results of analysis
 	bool parallelizable = true;
 	LoopDependencyData *data = new LoopDependencyData(outerPhi, localArgs, argArgs, cast<Instruction>(outerBranch->getOperand(0)), L, dependencies, noOfInductionPhiNodes, 
-														startIt, finalIt, tripCount, parallelizable, returnValues, accumulativePhiNodes);
+														startIt, finalIt, tripCount, parallelizable, returnValues, accumulativePhiNodes, otherPhiNodes);
 	results.push_back(data);
 	
 	return true;

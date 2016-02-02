@@ -29,13 +29,14 @@ private:
 	Instruction *end;
 	list<Value *> localValues;
 	list<Value *> argValues;
+	map<PHINode *, pair < Value *, Value * >> otherPhiNodes;
 
 public:
 	LoopDependencyData(Instruction *IndPhi, list<Value *> locvals, list<Value *> argValues, Instruction *end, Loop *L, list<Dependence *> d, int phi, Value *startIt, Value *finalIt, int tripCount,
-		bool parallelizable, multimap<Value *, Value *> returnValues, map<PHINode *, unsigned int> accumulativePhiNodes) {
+		bool parallelizable, multimap<Value *, Value *> returnValues, map<PHINode *, unsigned int> accumulativePhiNodes, map<PHINode *, pair<Value *, Value *>> otherPhiNodes) {
 		loop = L, dependencies = d, noOfPhiNodes = phi, this->parallelizable = parallelizable, this->startIt = startIt,
 			this->finalIt = finalIt, this->tripCount = tripCount, this->returnValues = returnValues, this->accumulativePhiNodes = accumulativePhiNodes,
-			this->phi = IndPhi, this->end = end, this->localValues = locvals, this->argValues = argValues;
+			this->phi = IndPhi, this->end = end, this->localValues = locvals, this->argValues = argValues, this->otherPhiNodes = otherPhiNodes;
 	}
 
 	Loop *getLoop();
@@ -71,6 +72,8 @@ public:
 	list<Value *> getLocalArgValues();
 
 	list<Value *> getArgumentArgValues();
+
+	map<PHINode *, pair < Value *, Value * >> getOtherPhiNodes();
 
 };
 

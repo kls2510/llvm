@@ -98,6 +98,7 @@ namespace {
 			list<Value *> localArguments = loopData->getLocalArgValues();
 			list<Value *> argArguments = loopData->getArgumentArgValues();
 			list<Value *>  localArgumentsAndReturnVals = loopData->getReturnValues();
+			map<PHINode *, pair<Value *, Value *>> otherPhiNodes = loopData->getOtherPhiNodes();
 
 			//create the struct we'll use to pass data to the threads
 			threadStruct = StructType::create(context, "ThreadPasser");
@@ -111,6 +112,10 @@ namespace {
 			}
 			for (auto a : localArguments) {
 				elts.push_back(a->getType());
+			}
+			//TODO: Calc start values for the other phi nodes and add to/from struct
+			for (auto a : otherPhiNodes) {
+				elts.push_back(a.second.first->getType());
 			}
 
 			//create the struct we'll use to return local data variables from the threads (separate store needed for each thread)
@@ -195,6 +200,14 @@ namespace {
 				for (auto op : localArguments) {
 					Value *getPTR = builder.CreateStructGEP(threadStruct, allocateInst, k);
 					builder.CreateStore(op, getPTR);
+					k++;
+				}
+				for (auto p : otherPhiNodes) {
+					Value *start = p.second.first;
+					Value *step = p.second.second;
+					Value *getPTR = builder.CreateStructGEP(threadStruct, allocateInst, k);
+					Value *newStart = builder.CreateBinOp(Instruction::Add, start, builder.CreateBinOp(Instruction::Mul, step, threadStartIt));
+					builder.CreateStore(newStart, getPTR);
 					k++;
 				}
 				//store startIt
@@ -481,6 +494,7 @@ namespace {
 			list<Value *> localArguments = loopData->getLocalArgValues();
 			list<Value *> argArguments = loopData->getArgumentArgValues();
 			list<Value *>  localArgumentsAndReturnVals = loopData->getReturnValues();
+			map<PHINode *, pair<Value *, Value *>> otherPhiNodes = loopData->getOtherPhiNodes();
 
 			//name all values so they don't conflict with value names in the loop later
 			int loadedVal = 0;
@@ -515,6 +529,35 @@ namespace {
 				loadedVal++;
 				sprintf(namePrefix, "loadVal_%d", loadedVal);
 				arrayAndLocalStructElements.push_back(loadInst);
+			}
+			map<PHINode *, pair<Value *, Value *>>::iterator phiIt = otherPhiNodes.begin();
+			for (p = argArguments.size() + localArguments.size(); p < argArguments.size() + localArguments.size() + otherPhiNodes.size(); p++) {
+				Value *arrayVal = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p, namePrefix);
+				loadedVal++;
+				sprintf(namePrefix, "loadVal_%d", loadedVal);
+				LoadInst *loadInst = loadBuilder.CreateLoad(arrayVal, namePrefix);
+				loadedVal++;
+				sprintf(namePrefix, "loadVal_%d", loadedVal);
+				arrayAndLocalStructElements.push_back(loadInst);
+				PHINode *phi = phiIt->first;
+				int op;
+				for (op = 0; op < 2; op++) {
+					//replace initial value
+					BasicBlock *entryBlock = phi->getIncomingBlock(op);
+					bool fromLoop = false;
+					for (auto &bb : loopData->getLoop()->getBlocks()) {
+						if (bb == entryBlock) {
+							fromLoop = true;
+						}
+					}
+					if (!fromLoop) {
+						phi->setIncomingValue(op, loadInst);
+						cerr << "reset a phi node start value:\n";
+						phi->dump();
+						loadInst->dump();
+						cerr << "\n";
+					}
+				}
 			}
 
 			//create IR for obtaining pointers to where return values must be stored
