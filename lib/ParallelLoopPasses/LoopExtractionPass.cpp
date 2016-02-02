@@ -558,6 +558,7 @@ namespace {
 						cerr << "\n";
 					}
 				}
+				phiIt++;
 			}
 
 			//create IR for obtaining pointers to where return values must be stored

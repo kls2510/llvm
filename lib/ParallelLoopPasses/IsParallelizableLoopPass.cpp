@@ -312,6 +312,14 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 					cerr << "call to function found but it doesn't write to memory\n";
 				}
 				else {
+					cerr << "call to function that may write to memory found\n";
+					//check if memory altered is only in arguments and it's different for each loop
+					if (callee->onlyAccessesArgMemory()) {
+						cerr << "args are:\n";
+						for (auto arg : call->operands()) {
+							arg->dump();
+						}
+					}
 					cerr << "call to function that may write to memory found - not parallelizable\n";
 					callee->dump();
 					cerr << "\n";
