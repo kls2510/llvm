@@ -586,6 +586,12 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 							}
 						}
 					}
+					else {
+						cerr << "call to function that may write to same memory across iterations found - not parallelizable\n";
+						callee->dump();
+						cerr << "\n";
+						return false;
+					}
 				}
 			}
 		}
@@ -747,7 +753,7 @@ list<Dependence *> IsParallelizableLoopPass::findDistanceVectors(set<Instruction
 	//find distance vectors for loop induction dependent read/write instructions
 	list<Dependence *> dependencies;
 	if (dependentInstructions.size() > 1) {
-		for (set<Instruction *>::iterator si = dependentInstructions.begin(); si != dependentInstructions.end(); si++) {
+		for (set<Instruction *>::iterator si = dependentInstructions.begin(); si != dependentInstructions.end()--; si++) {
 			Instruction *i1 = (*si);
 			auto si2 = si++;
 			while (si2 != dependentInstructions.end()) {
