@@ -316,7 +316,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 					//check if memory altered is only in arguments and it's different for each loop
 					if (callee->onlyAccessesArgMemory()) {
 						cerr << "args are:\n";
-						for (auto arg : call->operands()) {
+						for (auto &arg : call->operands()) {
 							arg->dump();
 						}
 					}
