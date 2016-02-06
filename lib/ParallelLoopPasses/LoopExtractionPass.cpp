@@ -116,7 +116,10 @@ namespace {
 			//fix new void cast instructions that never gets used but llvm complains
 			for (auto i : newInsts) {
 				Instruction *castinst = cast<Instruction>(i);
-				(*(castinst->op_begin())) = UndefValue::get(cast<Instruction>(castinst->op_begin())->getType());
+				Type *ptrType = cast<Instruction>(castinst->op_begin())->getType();
+				cerr << "removing bad references\n";
+				ptrType->dump();
+				(*(castinst->op_begin())) = UndefValue::get(ptrType);
 			}
 
 			//Mark the function to avoid infinite extraction
