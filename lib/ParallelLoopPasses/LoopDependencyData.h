@@ -10,6 +10,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include <list>
+#include <set>
 
 using namespace llvm;
 using namespace std;
