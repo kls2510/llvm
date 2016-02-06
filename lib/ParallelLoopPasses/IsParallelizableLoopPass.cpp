@@ -118,7 +118,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	list<Dependence *> dependencies;
 	multimap<Value *, Value *> returnValues;
 	map<PHINode *, unsigned int> accumulativePhiNodes;
-	map<PHINode *, pair<Value *, Value *>> otherPhiNodes;
+	map<PHINode *, pair<const Value *, Value *>> otherPhiNodes;
 	set<PHINode *> foundPhiNodes;
 	int noOfInductionPhiNodes = 0;
 
@@ -240,19 +240,21 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 						cerr << "step size:\n";
 						stepSize->dump();
 						cerr << "\n";
-						if (isa<SCEVConstant>(firstVal) && isa<SCEVConstant>(stepSize)) {
-							const SCEVConstant *firstConst = cast<SCEVConstant>(firstVal);
+						if (isa<SCEVConstant>(stepSize)) {
 							const SCEVConstant *stepConst = cast<SCEVConstant>(stepSize);
 							cerr << "phi node can be split up for iterations, adding to analysis\n";
-							otherPhiNodes.insert(make_pair(potentialAccumulator, make_pair(firstConst->getValue(), stepConst->getValue())));
+							if (isa<SCEVConstant>(firstVal)) {
+								otherPhiNodes.insert(make_pair(potentialAccumulator, make_pair(cast<SCEVConstant>(firstVal)->getValue(), stepConst->getValue())));
+							}
+							else {
+								otherPhiNodes.insert(make_pair(potentialAccumulator, make_pair(cast<Value>(firstVal), stepConst->getValue())));
+							}
 							phiSatisfied = true;
 							cerr << "for now not parallelizable\n";
 							return false;
 						}
 						//TODO: case: first or step value not constant but a value
-						cerr << LLVMTypeOf(LLVMValueRef(firstVal)) << "\n";
-						cerr << LLVMTypeOf(LLVMValueRef(stepSize)) << "\n";
-						cerr << "scev has non-constant value\n";
+						cerr << "scev has non-constant step value - not parallelizable\n";
 						return false;
 					}
 				}

@@ -98,7 +98,7 @@ namespace {
 			list<Value *> localArguments = loopData->getLocalArgValues();
 			list<Value *> argArguments = loopData->getArgumentArgValues();
 			list<Value *>  localArgumentsAndReturnVals = loopData->getReturnValues();
-			map<PHINode *, pair<Value *, Value *>> otherPhiNodes = loopData->getOtherPhiNodes();
+			map<PHINode *, pair<const Value *, Value *>> otherPhiNodes = loopData->getOtherPhiNodes();
 
 			//create the struct we'll use to pass data to the threads
 			threadStruct = StructType::create(context, "ThreadPasser");
@@ -364,7 +364,7 @@ namespace {
 			list<Value *> localArguments = loopData->getLocalArgValues();
 			list<Value *> argArguments = loopData->getArgumentArgValues();
 			list<Value *>  localArgumentsAndReturnVals = loopData->getReturnValues();
-			map<PHINode *, pair<Value *, Value *>> otherPhiNodes = loopData->getOtherPhiNodes();
+			map<PHINode *, pair<const Value *, Value *>> otherPhiNodes = loopData->getOtherPhiNodes();
 
 			list<Value *> returnStructs;
 
@@ -509,7 +509,7 @@ namespace {
 			list<Value *> localArguments = loopData->getLocalArgValues();
 			list<Value *> argArguments = loopData->getArgumentArgValues();
 			list<Value *>  localArgumentsAndReturnVals = loopData->getReturnValues();
-			map<PHINode *, pair<Value *, Value *>> otherPhiNodes = loopData->getOtherPhiNodes();
+			map<PHINode *, pair<const Value *, Value *>> otherPhiNodes = loopData->getOtherPhiNodes();
 
 			//name all values so they don't conflict with value names in the loop later
 			int loadedVal = 0;
@@ -632,7 +632,7 @@ namespace {
 
 		void replaceLoopValues(LoopDependencyData *loopData, LLVMContext &context, Function *loopFunction, list<Value *> loadedArrayAndLocalValues, Loop *loop, list<Value *> localValues, list<Value *> argValues, list<Value *> retValues) {
 			list<Value *>::iterator loadedVal = loadedArrayAndLocalValues.begin();
-			map<PHINode *, pair<Value *, Value *>> otherPhiNodes = loopData->getOtherPhiNodes();
+			map<PHINode *, pair<const Value *, Value *>> otherPhiNodes = loopData->getOtherPhiNodes();
 
 			//replace arg values
 			for (auto a : argValues) {
