@@ -1,6 +1,5 @@
 #include "LoopDependencyData.h"
 #include <iostream>
-#include <set>
 
 using namespace llvm;
 using namespace std;
