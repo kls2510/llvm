@@ -70,11 +70,13 @@ namespace {
 			for (int c = 0; c < loopData->getOtherPhiNodes().size() + loopData->getOuterLoopNonInductionPHIs().size() + 1; c++) {
 				insertPoint = insertPoint->getNextNode();
 			}
+			set<Value *> newInsts;
 			IRBuilder<> moveBuilder(insertPoint);
 			set<Value *> toMove = loopData->getVoidCastsForLoop();
 			for (auto v : toMove) {
 				Instruction *toCopy = cast<Instruction>(v);
 				Value *newInst = moveBuilder.CreateBitOrPointerCast(toCopy->getOperand(0), Type::getInt8PtrTy(context), "voidCast");
+				newInsts.insert(newInst);
 				for (auto bb : loopData->getLoop()->getBlocks()) {
 					for (auto &i : bb->getInstList()) {
 						auto oppointer = i.op_begin();
@@ -110,6 +112,11 @@ namespace {
 
 			//copy loop blocks into the function and delete them from the caller
 			extractTheLoop(loopData->getLoop(), threadFunction, &F, context);
+
+			//fix new void cast instructions that never gets used but llvm complains
+			for (auto i : newInsts) {
+				cast<Instruction>(i)->eraseFromParent();
+			}
 
 			//Mark the function to avoid infinite extraction
 			threadFunction->addFnAttr("Extracted", "true");
@@ -815,7 +822,7 @@ namespace {
 				}
 			}
 			for (auto &bb : loop->getBlocks()) {
-				bb->eraseFromParent();
+				bb->removeFromParent();
 			}
 		}
 
