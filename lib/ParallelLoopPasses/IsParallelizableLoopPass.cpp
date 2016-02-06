@@ -248,6 +248,9 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 							}
 							else {
 								const SCEVUnknown *scev = cast<SCEVUnknown>(firstVal);
+								cerr << "start val non-const but is value:\n";
+								scev->getValue()->dump();
+								cerr << "\n";
 								otherPhiNodes.insert(make_pair(potentialAccumulator, make_pair(scev->getValue(), stepConst->getValue())));
 							}
 							phiSatisfied = true;
