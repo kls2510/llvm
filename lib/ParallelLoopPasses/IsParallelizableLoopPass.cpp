@@ -412,6 +412,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 						Value *actualLifetimeVal = lifetimeCastVal->stripPointerCasts();
 						actualLifetimeVal->dump();
 						cerr << "\n";
+						Instruction *endCall = nullptr;
 						bool end = false;
 						for (auto bb : L->getBlocks()) {
 							for (auto &i : bb->getInstList()) {
@@ -420,6 +421,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 									if (call->getCalledFunction() == lifetimeEnd) {
 										if (call->getArgOperand(1) == lifetimeCastVal) {
 											end = true;
+											endCall = call;
 											break;
 										}
 									}
@@ -435,7 +437,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 							if (!L->contains(cast<Instruction>(lifetimeCastVal))) {
 								bool uniqueToLifetime = true;
 								for (auto u : lifetimeCastVal->users()) {
-									if (u != call && u != &i) {
+									if (u != call && u != endCall) {
 										cerr << "void cast is outside loop and used elsewhere other than for lifetime calls - not parallelizable\n";
 										u->dump();
 										uniqueToLifetime = false;
