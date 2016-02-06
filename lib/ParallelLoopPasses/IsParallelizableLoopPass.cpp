@@ -550,7 +550,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	//DEPENDENCY ANALYSIS
 	set<Instruction *> dependentInstructions;
     // get all read / write instructions in the loop and check that all write indexes depend on the outer phi value
-	bool allWriteDependentOnPhi = getDependencies(L, outerPhi, dependentInstructions);
+	bool allWriteDependentOnPhi = getDependencies(L, outerPhi, dependentInstructions, lifetimeValues);
 	if (!allWriteDependentOnPhi) {
 		//writes to the same location across threads will cause error
 		cerr << "not parallelizable as write to array found not dependent on i\n";
@@ -721,19 +721,27 @@ bool IsParallelizableLoopPass::isDependentOnInductionVariable(Instruction *ptr, 
 
 //function puts all instructions whose memory access depends on the induction variable in the set. And returns false if
 //there is write instruction not dependent on the induction variable (i.e. can't parallelize
-// for a write, in each index position of the corresponding GEP instruction, there must be at least one that depends on the outer loop induction phi node
+// for a write, in each index position of the corresponding GEP instruction, there must be at least one that depends on the outer loop induction phi node,
+// or the memory must be unique for each thread (i.e. be in lifetime values)
 // (otherwise many threads could write to the same place at the same time - not parallelizable)
-bool IsParallelizableLoopPass::getDependencies(Loop *L, PHINode *phi, set<Instruction *> &dependents) {
+bool IsParallelizableLoopPass::getDependencies(Loop *L, PHINode *phi, set<Instruction *> &dependents, set<Value *> lifetimeValues) {
 	bool parallelizable = true;
-	bool dependent;
+	bool dependent, lifetimeVal;
 	for (auto &bb : L->getBlocks()) {
 		for (auto &i : bb->getInstList()) {
 			dependent = false;
+			lifetimeVal = false;
 			if (isa<LoadInst>(&i)) {
 				//case : load
 				//get the memory location pointer
 				Instruction *ptr = cast<Instruction>(i.getOperand(0));
-				dependent = isDependentOnInductionVariable(ptr, phi, true);
+				if (lifetimeValues.find(ptr->getOperand(0)) == lifetimeValues.end()) {
+					dependent = isDependentOnInductionVariable(ptr, phi, true);
+				}
+				else {
+					lifetimeVal = true;
+					dependent = true;
+				}
 				if (dependent) {
 					i.dump();
 					cerr << "\n";
@@ -742,7 +750,13 @@ bool IsParallelizableLoopPass::getDependencies(Loop *L, PHINode *phi, set<Instru
 			else if (isa<StoreInst>(&i)) {
 				//case : write
 				Instruction *ptr = cast<Instruction>(i.getOperand(1));
-				dependent = isDependentOnInductionVariable(ptr, phi, false);
+				if (lifetimeValues.find(ptr->getOperand(0)) == lifetimeValues.end()) {
+					dependent = isDependentOnInductionVariable(ptr, phi, false);
+				}
+				else {
+					lifetimeVal = true;
+					dependent = true;
+				}
 				if (dependent) {
 					i.dump();
 					cerr << "\n";
@@ -753,7 +767,7 @@ bool IsParallelizableLoopPass::getDependencies(Loop *L, PHINode *phi, set<Instru
 					parallelizable = false;
 				}
 			}
-			if (dependent) {
+			if (dependent && !lifetimeVal) {
 				dependents.insert(&i);
 			}
 		}
