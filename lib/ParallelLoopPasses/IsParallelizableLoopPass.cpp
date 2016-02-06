@@ -247,7 +247,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 								otherPhiNodes.insert(make_pair(potentialAccumulator, make_pair(cast<SCEVConstant>(firstVal)->getValue(), stepConst->getValue())));
 							}
 							else {
-								otherPhiNodes.insert(make_pair(potentialAccumulator, make_pair(cast<Value>(firstVal), stepConst->getValue())));
+								otherPhiNodes.insert(make_pair(potentialAccumulator, make_pair(cast<SCEVConstant>(firstVal)->getValue(), stepConst->getValue())));
 							}
 							phiSatisfied = true;
 							cerr << "for now not parallelizable\n";
