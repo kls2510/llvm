@@ -66,7 +66,7 @@ namespace {
 			//TODO: Calculate overhead/iteration work heuristic and decide whether parallelization is worthwhile
 
 			//move lifetime void casts that are outside loop into loop
-			IRBuilder<> moveBuilder(loopData->getInductionPhi());
+			IRBuilder<> moveBuilder(loopData->getInductionPhi()->getNextNode());
 			set<Value *> toMove = loopData->getVoidCastsForLoop();
 			for (auto v : toMove) {
 				Instruction *toCopy = cast<Instruction>(v);
