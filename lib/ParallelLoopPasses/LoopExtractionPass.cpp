@@ -199,9 +199,15 @@ namespace {
 					cerr << "trying to make start value non-const:";
 					start->dump();
 					Value *step = p.second.second;
+					//TODO: Improve and make correct (as with indvars boundaries)
 					Value *getPTR = builder.CreateStructGEP(threadStruct, allocateInst, k);
+					Value *incrementer = builder.CreateURem(builder.CreateTrunc(iterationsEach, Type::getInt32Ty(context)), ConstantInt::get(Type::getInt32Ty(context), 1));
+					cerr << "incrementer = \n";
+					incrementer->dump();
 					Value *newStart = builder.CreateBinOp(Instruction::Add, start, builder.CreateBinOp(Instruction::Mul, step, 
-						builder.CreateBinOp(Instruction::Mul, ConstantInt::get(Type::getInt32Ty(context), i), builder.CreateTrunc(iterationsEach, Type::getInt32Ty(context)))));
+						builder.CreateBinOp(Instruction::Mul, ConstantInt::get(Type::getInt32Ty(context), i), incrementer)));
+					cerr << "thread " << i << " start val = \n";
+					newStart->dump();
 					builder.CreateStore(newStart, getPTR);
 					k++;
 				}
