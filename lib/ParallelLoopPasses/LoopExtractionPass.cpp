@@ -167,7 +167,7 @@ namespace {
 				Value *threadStartIt;
 				Value *endIt;
 				Value *startItMult = builder.CreateBinOp(Instruction::Mul, iterationsEach, ConstantInt::get(Type::getInt64Ty(context), i));
-				//TODO: fix ranges
+				//TODO: MAKE BOUNDARIES CORRECT
 				threadStartIt = builder.CreateBinOp(Instruction::Add, loadedStartIt, startItMult);
 				if (i == (noThreads - 1)) {
 					endIt = loadedEndIt;
@@ -199,9 +199,10 @@ namespace {
 					cerr << "trying to make start value non-const:";
 					start->dump();
 					Value *step = p.second.second;
-					//TODO: Improve and make correct (as with indvars boundaries)
+					//TODO: MAKE BOUNDARIES CORRECT 
 					Value *getPTR = builder.CreateStructGEP(threadStruct, allocateInst, k);
-					Value *incrementer = builder.CreateURem(builder.CreateTrunc(iterationsEach, Type::getInt32Ty(context)), ConstantInt::get(Type::getInt32Ty(context), 1));
+					//THIS VALUE IS WRONG
+					Value *incrementer = builder.CreateBinOp(Instruction::UDiv, builder.CreateTrunc(iterationsEach, Type::getInt32Ty(context)), ConstantInt::get(Type::getInt32Ty(context), 1));
 					cerr << "incrementer = \n";
 					incrementer->dump();
 					Value *newStart = builder.CreateBinOp(Instruction::Add, start, builder.CreateBinOp(Instruction::Mul, step, 
