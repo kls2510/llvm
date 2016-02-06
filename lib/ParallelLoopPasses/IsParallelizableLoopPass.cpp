@@ -256,7 +256,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 							}
 							phiSatisfied = true;
 							cerr << "for now not parallelizable\n";
-							return false;
+							//return false;
 						}
 						//TODO: case: first or step value not constant but a value
 						cerr << "scev has non-constant step value - not parallelizable\n";
