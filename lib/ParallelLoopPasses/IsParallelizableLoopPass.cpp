@@ -406,15 +406,39 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 				if (isa<CallInst>(i)) {
 					CallInst *call = cast<CallInst>(&i);
 					if (call->getCalledFunction() == lifetimeStart) {
+						//need to check lifetime end is within loop too
 						cerr << "analysing a lifetime in loop\n";
 						Value *lifetimeCastVal = call->getArgOperand(1);
 						lifetimeCastVal->dump();
 						Value *actualLifetimeVal = lifetimeCastVal->stripPointerCasts();
 						actualLifetimeVal->dump();
 						cerr << "\n";
-						argValues.insert(actualLifetimeVal);
-						lifetimeValues.insert(actualLifetimeVal);
-						cerr << "pass in latter as argument\n";
+						bool end = false;
+						for (auto bb : L->getBlocks()) {
+							for (auto &i : bb->getInstList()) {
+								if (isa<CallInst>(i)) {
+									CallInst *call = cast<CallInst>(&i);
+									if (call->getCalledFunction() == lifetimeEnd) {
+										if (call->getArgOperand(1) == lifetimeCastVal) {
+											end = true;
+											break;
+										}
+									}
+								}
+							}
+							if (end) {
+								break;
+							}
+						}
+						if (end)   {
+							argValues.insert(actualLifetimeVal);
+							lifetimeValues.insert(actualLifetimeVal);
+							cerr << "pass in latter as argument\n";
+						}
+						else {
+							cerr << "lifetime start in loop doesn't end until outside the loop - not parallelizable\n";
+							return false;
+						}
 					}
 				}
 			}
