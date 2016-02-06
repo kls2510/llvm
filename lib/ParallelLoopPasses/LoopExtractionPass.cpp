@@ -198,7 +198,7 @@ namespace {
 						cerr << "creating memory for data live only in loop\n";
 						op->dump();
 						op->getType()->dump();
-						Value *myAlloca = builder.CreateAlloca(op->getType());
+						Value *myAlloca = builder.CreateAlloca(op->getType()->getArrayElementType());
 						builder.CreateStore(myAlloca, getPTR);
 					}
 					else {
