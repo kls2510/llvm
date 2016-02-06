@@ -815,7 +815,7 @@ namespace {
 				}
 			}
 			for (auto &bb : loop->getBlocks()) {
-				bb->removeFromParent();
+				bb->eraseFromParent();
 			}
 		}
 
