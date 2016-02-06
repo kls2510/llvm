@@ -93,6 +93,7 @@ namespace {
 
 		list<Value *> setupStructs(Function *callingFunction, LLVMContext &context, LoopDependencyData *loopData, Value *startIt, Value *finalIt, ValueSymbolTable &symTab) {
 			Function *integerDiv = cast<Function>(symTab.lookup(StringRef("integerDivide")));
+			Function *modulo = cast<Function>(symTab.lookup(StringRef("modulo")));
 
 			//Obtain the argument values required for passing to/from the function
 			list<Value *> argArguments = loopData->getArgumentArgValues();
@@ -199,10 +200,9 @@ namespace {
 					cerr << "trying to make start value non-const:";
 					start->dump();
 					Value *step = p.second.second;
-					//TODO: MAKE BOUNDARIES CORRECT 
 					Value *getPTR = builder.CreateStructGEP(threadStruct, allocateInst, k);
 					//THIS VALUE IS WRONG
-					Value *incrementer = builder.CreateBinOp(Instruction::UDiv, builder.CreateTrunc(iterationsEach, Type::getInt32Ty(context)), ConstantInt::get(Type::getInt32Ty(context), 1));
+					Value *incrementer = builder.CreateCall(modulo, builder.CreateTrunc(iterationsEach, Type::getInt32Ty(context)));
 					cerr << "incrementer = \n";
 					incrementer->dump();
 					Value *newStart = builder.CreateBinOp(Instruction::Add, start, builder.CreateBinOp(Instruction::Mul, step, 
