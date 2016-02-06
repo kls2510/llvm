@@ -624,7 +624,11 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 			if (isa<CallInst>(i)) {
 				CallInst *call = cast<CallInst>(&i);
 				Function *callee = call->getCalledFunction();
-				if (callee->onlyReadsMemory()) {
+				if (callee == lifetimeStart || callee == lifetimeEnd) {
+					call->dump();
+					cerr << "lifetime start and end are safe functions\n";
+				}
+				else if (callee->onlyReadsMemory()) {
 					cerr << "call to function found but it doesn't write to memory\n";
 				}
 				else {
