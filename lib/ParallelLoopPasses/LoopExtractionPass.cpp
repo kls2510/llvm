@@ -115,7 +115,8 @@ namespace {
 
 			//fix new void cast instructions that never gets used but llvm complains
 			for (auto i : newInsts) {
-				cast<Instruction>(i)->eraseFromParent();
+				Instruction *castinst = cast<Instruction>(i);
+				(*(castinst->op_begin())) = UndefValue::get(cast<Instruction>(castinst->op_begin())->getType());
 			}
 
 			//Mark the function to avoid infinite extraction
