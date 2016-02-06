@@ -110,14 +110,14 @@ Instruction *LoopDependencyData::getExitCondNode() {
 	return end;
 }
 
-list<Value *> LoopDependencyData::getLocalArgValues() {
-	return this->localValues;
-}
-
 list<Value *> LoopDependencyData::getArgumentArgValues() {
 	return this->argValues;
 }
 
 map<PHINode *, pair <const Value *, Value * >> LoopDependencyData::getOtherPhiNodes() {
 	return this->otherPhiNodes;
+}
+
+set<Value *> LoopDependencyData::getLifetimeValues() {
+	return this->lifetimeValues;
 }

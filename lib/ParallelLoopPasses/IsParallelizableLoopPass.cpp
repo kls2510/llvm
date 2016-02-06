@@ -499,17 +499,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 		}
 	}
 
-	//store local args in list for extractor to use
-	//TEMPORARY: To avoid refactoring for now
-	set<Value *> localvalues;
-	list<Value *> localArgs;
-	for (auto v : localvalues) {
-		cerr << "value must be passed as an argument\n";
-		v->dump();
-		localArgs.push_back(v);
-	}
-
-	//store argument args in list for extractor to use
+	//store arguments in list for extractor to use
 	list<Value *> argArgs;
 	for (auto v : argValues) {
 		cerr << "value must be passed as an argument\n";
@@ -645,7 +635,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 							if (isa<Instruction>(arg)) {
 								Instruction *a = cast<Instruction>(arg);
 								if (a->getType()->isPointerTy()) {
-									if (isDependentOnInductionVariable(a, outerPhi, false)) {
+									if (isDependentOnInductionVariable(a, outerPhi, false) || lifetimeValues.find(a) != lifetimeValues.end()) {
 										//it should be a different location each iteration
 										cerr << "This pointer argument is dependent on the outer loop induction variable so could be parallelizable\n";
 									}
@@ -684,8 +674,8 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 
 	//store results of analysis
 	bool parallelizable = true;
-	LoopDependencyData *data = new LoopDependencyData(outerPhi, localArgs, argArgs, cast<Instruction>(outerBranch->getOperand(0)), L, dependencies, noOfInductionPhiNodes, 
-														startIt, finalIt, tripCount, parallelizable, returnValues, accumulativePhiNodes, otherPhiNodes);
+	LoopDependencyData *data = new LoopDependencyData(outerPhi, argArgs, cast<Instruction>(outerBranch->getOperand(0)), L, dependencies, noOfInductionPhiNodes, 
+														startIt, finalIt, tripCount, parallelizable, returnValues, accumulativePhiNodes, otherPhiNodes, lifetimeValues);
 	results.push_back(data);
 	
 	return true;

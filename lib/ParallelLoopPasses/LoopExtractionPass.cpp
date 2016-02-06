@@ -79,7 +79,7 @@ namespace {
 			list<Value *> loadedArrayAndLocalValues = loadStructValuesInFunctionForLoop(threadFunction, context, loopData);
 
 			//replace the array and local value Values in the loop with the ones loaded from the struct
-			replaceLoopValues(loopData, context, threadFunction, loadedArrayAndLocalValues, loopData->getLoop(), loopData->getLocalArgValues(), loopData->getArgumentArgValues(), loopData->getReturnValues());
+			replaceLoopValues(loopData, context, threadFunction, loadedArrayAndLocalValues, loopData->getLoop(), loopData->getArgumentArgValues(), loopData->getReturnValues());
 
 			//copy loop blocks into the function and delete them from the caller
 			extractTheLoop(loopData->getLoop(), threadFunction, &F, context);
@@ -94,8 +94,7 @@ namespace {
 		list<Value *> setupStructs(Function *callingFunction, LLVMContext &context, LoopDependencyData *loopData, Value *startIt, Value *finalIt, ValueSymbolTable &symTab) {
 			Function *integerDiv = cast<Function>(symTab.lookup(StringRef("integerDivide")));
 
-			//Obtain the array and local argument values required for passing to/from the function
-			list<Value *> localArguments = loopData->getLocalArgValues();
+			//Obtain the argument values required for passing to/from the function
 			list<Value *> argArguments = loopData->getArgumentArgValues();
 			list<Value *>  localArgumentsAndReturnVals = loopData->getReturnValues();
 			map<PHINode *, pair<const Value *, Value *>> otherPhiNodes = loopData->getOtherPhiNodes();
@@ -110,13 +109,10 @@ namespace {
 			for (auto a : argArguments) {
 				elts.push_back(a->getType());
 			}
-			for (auto a : localArguments) {
-				elts.push_back(a->getType());
-			}
 			//TODO: Calc start values for the other phi nodes and add to/from struct
-			/* for (auto a : otherPhiNodes) {
+			for (auto a : otherPhiNodes) {
 				elts.push_back(a.second.first->getType());
-			} */
+			}
 
 			//create the struct we'll use to return local data variables from the threads (separate store needed for each thread)
 			returnStruct = StructType::create(context, "ThreadReturner");
@@ -124,9 +120,6 @@ namespace {
 
 			//setup return struct type with all values discovered by the analysis pass
 			for (auto i : localArgumentsAndReturnVals) {
-				//cerr << "adding local return value to return struct with type:\n";
-				//i->getType()->dump();
-				//cerr << "\n";
 				retElts.push_back(i->getType());
 			}
 			returnStruct->setBody(retElts);
@@ -156,6 +149,9 @@ namespace {
 			list<Value *> threadStructs;
 
 			//setup the threads in IR
+			Type *branchConditionType = loopData->getExitCondNode()->getOperand(0)->getType();
+			cerr << "loop branch Condition type:\n";
+			branchConditionType->dump();
 			Value *start = builder.CreateAlloca(startIt->getType());
 			Value *end = builder.CreateAlloca(finalIt->getType());
 			builder.CreateStore(startIt, start);
@@ -171,7 +167,7 @@ namespace {
 				Value *threadStartIt;
 				Value *endIt;
 				Value *startItMult = builder.CreateBinOp(Instruction::Mul, iterationsEach, ConstantInt::get(Type::getInt64Ty(context), i));
-				//TODO: +1 to start it if loop condition is <= or -1 if condition it >= : avoid overlapping
+				//TODO: fix ranges
 				threadStartIt = builder.CreateBinOp(Instruction::Add, loadedStartIt, startItMult);
 				if (i == (noThreads - 1)) {
 					endIt = loadedEndIt;
@@ -198,20 +194,17 @@ namespace {
 					builder.CreateStore(op, getPTR);
 					k++;
 				}
-				for (auto op : localArguments) {
-					Value *getPTR = builder.CreateStructGEP(threadStruct, allocateInst, k);
-					builder.CreateStore(op, getPTR);
-					k++;
-				}
-				/* for (auto p : otherPhiNodes) {
-					Value *start = p.second.first;
+				for (auto p : otherPhiNodes) {
+					Value *start = *(p.second.first->use_begin());
+					cerr << "trying to make start value non-const:";
+					start->dump();
 					Value *step = p.second.second;
 					Value *getPTR = builder.CreateStructGEP(threadStruct, allocateInst, k);
 					Value *newStart = builder.CreateBinOp(Instruction::Add, start, builder.CreateBinOp(Instruction::Mul, step, 
 						               builder.CreateBinOp(Instruction::Mul, ConstantInt::get(Type::getInt64Ty(context), i), iterationsEach)));
 					builder.CreateStore(newStart, getPTR);
 					k++;
-				} */
+				}
 				//store startIt
 				Value *getPTR = builder.CreateStructGEP(threadStruct, allocateInst, k);
 				builder.CreateStore(threadStartIt, getPTR);
@@ -362,7 +355,6 @@ namespace {
 
 		void loadAndReplaceLocals(IRBuilder<> cleanup, LoopDependencyData *loopData, list<Value *> threadStructs, LLVMContext &context) {
 			//Obtain the array and local argument values required for passing to/from the function
-			list<Value *> localArguments = loopData->getLocalArgValues();
 			list<Value *> argArguments = loopData->getArgumentArgValues();
 			list<Value *>  localArgumentsAndReturnVals = loopData->getReturnValues();
 			map<PHINode *, pair<const Value *, Value *>> otherPhiNodes = loopData->getOtherPhiNodes();
@@ -370,7 +362,7 @@ namespace {
 			list<Value *> returnStructs;
 
 			//load the return struct for each thread if we need to accumulate all values
-			int structIndex = argArguments.size() + localArguments.size() + /* otherPhiNodes.size() + */ 2;
+			int structIndex = argArguments.size() + otherPhiNodes.size() + 2;
 			if (loopData->getOuterLoopNonInductionPHIs().size() > 0) {
 				for (auto s : threadStructs) {
 					Value *structx = s;
@@ -507,7 +499,6 @@ namespace {
 
 		list<Value *> loadStructValuesInFunctionForLoop(Function *loopFunction, LLVMContext &context, LoopDependencyData *loopData) {
 			//Obtain the array and local argument values required for passing to/from the function
-			list<Value *> localArguments = loopData->getLocalArgValues();
 			list<Value *> argArguments = loopData->getArgumentArgValues();
 			list<Value *>  localArgumentsAndReturnVals = loopData->getReturnValues();
 			map<PHINode *, pair<const Value *, Value *>> otherPhiNodes = loopData->getOtherPhiNodes();
@@ -537,17 +528,8 @@ namespace {
 				sprintf(namePrefix, "loadVal_%d", loadedVal);
 				arrayAndLocalStructElements.push_back(loadInst);
 			}
-			for (p = argArguments.size(); p < argArguments.size() + localArguments.size(); p++) {
-				Value *arrayVal = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p, namePrefix);
-				loadedVal++;
-				sprintf(namePrefix, "loadVal_%d", loadedVal);
-				LoadInst *loadInst = loadBuilder.CreateLoad(arrayVal, namePrefix);
-				loadedVal++;
-				sprintf(namePrefix, "loadVal_%d", loadedVal);
-				arrayAndLocalStructElements.push_back(loadInst);
-			}
-			/* map<PHINode *, pair<Value *, Value *>>::iterator phiIt = otherPhiNodes.begin();
-			for (p = argArguments.size() + localArguments.size(); p < argArguments.size() + localArguments.size() + otherPhiNodes.size(); p++) {
+			map<PHINode *, pair<const Value *, Value *>>::iterator phiIt = otherPhiNodes.begin();
+			for (p = argArguments.size(); p < argArguments.size() + otherPhiNodes.size(); p++) {
 				Value *arrayVal = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p, namePrefix);
 				loadedVal++;
 				sprintf(namePrefix, "loadVal_%d", loadedVal);
@@ -575,7 +557,7 @@ namespace {
 					}
 				}
 				phiIt++;
-			} */
+			}
 
 			//create IR for obtaining pointers to where return values must be stored
 			Value *localReturns = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p + 2, namePrefix);
@@ -592,7 +574,7 @@ namespace {
 			}
 
 			//load the start and end iteration values
-			p = argArguments.size() + localArguments.size();
+			p = argArguments.size() + otherPhiNodes.size();
 			Value *val = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p, namePrefix);
 			loadedVal++;
 			sprintf(namePrefix, "loadVal_%d", loadedVal);
@@ -631,27 +613,12 @@ namespace {
 			return arrayAndLocalStructElements;
 		}
 
-		void replaceLoopValues(LoopDependencyData *loopData, LLVMContext &context, Function *loopFunction, list<Value *> loadedArrayAndLocalValues, Loop *loop, list<Value *> localValues, list<Value *> argValues, list<Value *> retValues) {
+		void replaceLoopValues(LoopDependencyData *loopData, LLVMContext &context, Function *loopFunction, list<Value *> loadedArrayAndLocalValues, Loop *loop, list<Value *> argValues, list<Value *> retValues) {
 			list<Value *>::iterator loadedVal = loadedArrayAndLocalValues.begin();
 			map<PHINode *, pair<const Value *, Value *>> otherPhiNodes = loopData->getOtherPhiNodes();
 
 			//replace arg values
 			for (auto a : argValues) {
-				for (auto &bb : loop->getBlocks()) {
-					for (auto &inst : bb->getInstList()) {
-						User::op_iterator operand = inst.op_begin();
-						while (operand != inst.op_end()) {
-							if (*operand == a) {
-								*operand = *loadedVal;
-							}
-							operand++;
-						}
-					}
-				}
-				loadedVal++;
-			}
-			//replace local values
-			for (auto a : localValues) {
 				for (auto &bb : loop->getBlocks()) {
 					for (auto &inst : bb->getInstList()) {
 						User::op_iterator operand = inst.op_begin();

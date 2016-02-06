@@ -27,16 +27,16 @@ private:
 	map<PHINode *, unsigned int> accumulativePhiNodes;
 	Instruction *phi;
 	Instruction *end;
-	list<Value *> localValues;
 	list<Value *> argValues;
 	map<PHINode *, pair < const Value *, Value * >> otherPhiNodes;
+	set<Value *> lifetimeValues;
 
 public:
-	LoopDependencyData(Instruction *IndPhi, list<Value *> locvals, list<Value *> argValues, Instruction *end, Loop *L, list<Dependence *> d, int phi, Value *startIt, Value *finalIt, int tripCount,
-		bool parallelizable, multimap<Value *, Value *> returnValues, map<PHINode *, unsigned int> accumulativePhiNodes, map<PHINode *, pair<const Value *, Value *>> otherPhiNodes) {
+	LoopDependencyData(Instruction *IndPhi, list<Value *> argValues, Instruction *end, Loop *L, list<Dependence *> d, int phi, Value *startIt, Value *finalIt, int tripCount,
+		bool parallelizable, multimap<Value *, Value *> returnValues, map<PHINode *, unsigned int> accumulativePhiNodes, map<PHINode *, pair<const Value *, Value *>> otherPhiNodes, set<Value *> lifetimeValues) {
 		loop = L, dependencies = d, noOfPhiNodes = phi, this->parallelizable = parallelizable, this->startIt = startIt,
 			this->finalIt = finalIt, this->tripCount = tripCount, this->returnValues = returnValues, this->accumulativePhiNodes = accumulativePhiNodes,
-			this->phi = IndPhi, this->end = end, this->localValues = locvals, this->argValues = argValues, this->otherPhiNodes = otherPhiNodes;
+			this->phi = IndPhi, this->end = end, this->argValues = argValues, this->otherPhiNodes = otherPhiNodes, this->lifetimeValues = lifetimeValues;
 	}
 
 	Loop *getLoop();
@@ -69,12 +69,11 @@ public:
 
 	Instruction *getExitCondNode();
 
-	list<Value *> getLocalArgValues();
-
 	list<Value *> getArgumentArgValues();
 
 	map<PHINode *, pair <const Value *, Value * >> getOtherPhiNodes();
 
+	set<Value *> getLifetimeValues();
 };
 
 #endif
