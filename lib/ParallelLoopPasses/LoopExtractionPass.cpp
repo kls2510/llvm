@@ -824,6 +824,12 @@ namespace {
 			SmallVector<Type *, 0> abortParamTypes;
 			FunctionType *abortFunctionType = FunctionType::get(Type::getVoidTy(context), abortParamTypes, false);
 			mod->getOrInsertFunction("abort", abortFunctionType);
+
+			//create modulo
+			SmallVector<Type *, 1> modParamTypes;
+			modParamTypes.push_back(Type::getInt32Ty(context));
+			FunctionType *modFunctionType = FunctionType::get(Type::getInt32Ty(context), modParamTypes, false);
+			mod->getOrInsertFunction("modulo", modFunctionType);
 		}
 
 		virtual bool runOnFunction(Function &F) {
