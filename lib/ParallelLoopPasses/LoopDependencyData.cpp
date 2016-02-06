@@ -120,3 +120,7 @@ map<PHINode *, pair <const Value *, Value * >> LoopDependencyData::getOtherPhiNo
 set<Value *> LoopDependencyData::getLifetimeValues() {
 	return this->lifetimeValues;
 }
+
+set<Value *> LoopDependencyData::getVoidCastsForLoop() {
+	return this->voidCastsForLoop;
+}

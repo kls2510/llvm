@@ -31,13 +31,16 @@ private:
 	list<Value *> argValues;
 	map<PHINode *, pair < const Value *, Value * >> otherPhiNodes;
 	set<Value *> lifetimeValues;
+	set<Value *> voidCastsForLoop;
 
 public:
 	LoopDependencyData(Instruction *IndPhi, list<Value *> argValues, Instruction *end, Loop *L, list<Dependence *> d, int phi, Value *startIt, Value *finalIt, int tripCount,
-		bool parallelizable, multimap<Value *, Value *> returnValues, map<PHINode *, unsigned int> accumulativePhiNodes, map<PHINode *, pair<const Value *, Value *>> otherPhiNodes, set<Value *> lifetimeValues) {
+		bool parallelizable, multimap<Value *, Value *> returnValues, map<PHINode *, unsigned int> accumulativePhiNodes, map<PHINode *, pair<const Value *, Value *>> otherPhiNodes,
+		set<Value *> lifetimeValues, set<Value *> voidCastsForLoop) {
 		loop = L, dependencies = d, noOfPhiNodes = phi, this->parallelizable = parallelizable, this->startIt = startIt,
 			this->finalIt = finalIt, this->tripCount = tripCount, this->returnValues = returnValues, this->accumulativePhiNodes = accumulativePhiNodes,
-			this->phi = IndPhi, this->end = end, this->argValues = argValues, this->otherPhiNodes = otherPhiNodes, this->lifetimeValues = lifetimeValues;
+			this->phi = IndPhi, this->end = end, this->argValues = argValues, this->otherPhiNodes = otherPhiNodes, this->lifetimeValues = lifetimeValues,
+			this->voidCastsForLoop = voidCastsForLoop;
 	}
 
 	Loop *getLoop();
@@ -75,6 +78,8 @@ public:
 	map<PHINode *, pair <const Value *, Value * >> getOtherPhiNodes();
 
 	set<Value *> getLifetimeValues();
+
+	set<Value *> getVoidCastsForLoop();
 };
 
 #endif

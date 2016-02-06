@@ -65,6 +65,27 @@ namespace {
 
 			//TODO: Calculate overhead/iteration work heuristic and decide whether parallelization is worthwhile
 
+			//move lifetime void casts that are outside loop into loop
+			IRBuilder<> moveBuilder(loopData->getInductionPhi());
+			set<Value *> toMove = loopData->getVoidCastsForLoop();
+			for (auto v : toMove) {
+				Instruction *toCopy = cast<Instruction>(v);
+				Value *newInst = moveBuilder.CreateBitOrPointerCast(toCopy->getOperand(0), Type::getInt8PtrTy(context));
+				for (auto u : v->users()) {
+					cerr << "replacing void cast in instruction:\n";
+					u->dump();
+					auto oppointer = u->op_begin();
+					for (auto &op : u->operands()) {
+						if (op == v) {
+							//replace value
+							*oppointer = newInst;
+						}
+						oppointer++;
+					}
+				}
+				toCopy->removeFromParent();
+			}
+
 			//setup helper functions so declararations are there to be linked later
 			Module * mod = (F.getParent());
 			ValueSymbolTable &symTab = mod->getValueSymbolTable();

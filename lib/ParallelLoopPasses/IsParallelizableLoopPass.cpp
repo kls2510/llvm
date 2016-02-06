@@ -390,6 +390,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	// Find all values that must be provided to each thread of the loop
 	set<Value *> argValues;
 	set<Value *> lifetimeValues;
+	set<Value *> voidCastsForLoop;
 	//case: use of lifetime start/end in the IR - separate memory must be passed to each thread for this
 	Function *lifetimeStart = nullptr;
 	Function *lifetimeEnd = nullptr;
@@ -431,6 +432,23 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 							}
 						}
 						if (end)   {
+							//check that the null pointer cast is inside the loop before the call to lifetime begin - otherwise we'll need to move
+							//it into the loop
+							if (!L->contains(lifetimeCastVal)) {
+								bool uniqueToLifetime = true;
+								for (auto u : lifetimeCastVal->users()) {
+									if (u != call && u != &i) {
+										cerr << "void cast is outside loop and used elsewhere other than for lifetime calls - not parallelizable\n";
+										uniqueToLifetime = false;
+									}
+								}
+								if (uniqueToLifetime) {
+									voidCastsForLoop.insert(lifetimeCastVal);
+								}
+								else {
+									return false;
+								}
+							}
 							argValues.insert(actualLifetimeVal);
 							lifetimeValues.insert(actualLifetimeVal);
 							cerr << "pass in latter as argument\n";
@@ -675,7 +693,8 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	//store results of analysis
 	bool parallelizable = true;
 	LoopDependencyData *data = new LoopDependencyData(outerPhi, argArgs, cast<Instruction>(outerBranch->getOperand(0)), L, dependencies, noOfInductionPhiNodes, 
-														startIt, finalIt, tripCount, parallelizable, returnValues, accumulativePhiNodes, otherPhiNodes, lifetimeValues);
+														startIt, finalIt, tripCount, parallelizable, returnValues, accumulativePhiNodes, otherPhiNodes, lifetimeValues,
+														voidCastsForLoop);
 	results.push_back(data);
 	
 	return true;
