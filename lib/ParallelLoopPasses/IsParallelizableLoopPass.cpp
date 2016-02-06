@@ -389,6 +389,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	//ARGUMENT VALUES
 	// Find all values that must be provided to each thread of the loop
 	set<Value *> argValues;
+	set<Value *> lifetimeValues;
 	//case: use of lifetime start/end in the IR - separate memory must be passed to each thread for this
 	Function *lifetimeStart = nullptr;
 	Function *lifetimeEnd = nullptr;
@@ -411,6 +412,9 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 						Value *actualLifetimeVal = lifetimeCastVal->stripPointerCasts();
 						actualLifetimeVal->dump();
 						cerr << "\n";
+						argValues.insert(actualLifetimeVal);
+						lifetimeValues.insert(actualLifetimeVal);
+						cerr << "pass in latter as argument\n";
 					}
 				}
 			}
@@ -426,8 +430,18 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 					if (isa<Value>(op)) {
 						if (isa<Instruction>(op)) {
 							Instruction *inst = cast<Instruction>(&op);
-							//if the value is an instruction declared outside the loop
-							if (!(L->contains(inst))) {
+							//if the instruction is a GEP and the memory it's accessing will definitely be local
+							//i.e. is within a lifetime start/end, then we don't need to pass it in as an arg
+							if (isa<GetElementPtrInst>(inst)) {
+								if (lifetimeValues.find(inst->getOperand(0)) != lifetimeValues.end()) {
+									cerr << "already added lifetime value, so not adding to args:\n";
+									inst->dump();
+									cerr << "\n";
+									continue;
+								}
+							}
+							//else if the value is an instruction declared outside the loop
+							else if (!(L->contains(inst))) {
 								//must pass in local value as arg so it is available
 								if (argValues.find(inst) == argValues.end()) {
 									argValues.insert(inst);
