@@ -75,7 +75,7 @@ namespace {
 			for (auto v : toMove) {
 				Instruction *toCopy = cast<Instruction>(v);
 				Value *newInst = moveBuilder.CreateBitOrPointerCast(toCopy->getOperand(0), Type::getInt8PtrTy(context), "voidCast");
-				for (auto u : v->users()) {
+				for (auto u : toCopy->users()) {
 					cerr << "replacing void cast in instruction:\n";
 					u->dump();
 					auto oppointer = u->op_begin();
@@ -136,7 +136,7 @@ namespace {
 			for (auto a : argArguments) {
 				elts.push_back(a->getType());
 			}
-			//TODO: Calc start values for the other phi nodes and add to/from struct
+			//Calc start values for the other phi nodes and add to/from struct
 			for (auto a : otherPhiNodes) {
 				elts.push_back(a.second.first->getType());
 			}
@@ -238,6 +238,7 @@ namespace {
 					start->dump();
 					Value *step = p.second.second;
 					Value *getPTR = builder.CreateStructGEP(threadStruct, allocateInst, k);
+					//TODO: divide by step constant of phi node - otherwise incorrect
 					Value *incrementer = builder.CreateCall(modulo, builder.CreateTrunc(iterationsEach, Type::getInt32Ty(context)));
 					cerr << "incrementer = \n";
 					incrementer->dump();
