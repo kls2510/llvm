@@ -249,6 +249,11 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 							cerr << "for now not parallelizable\n";
 							return false;
 						}
+						//TODO: case: first or step value not constant but a value
+						cerr << LLVMTypeOf(LLVMValueRef(firstVal)) << "\n";
+						cerr << LLVMTypeOf(LLVMValueRef(stepSize)) << "\n";
+						cerr << "scev has non-constant value\n";
+						return false;
 					}
 				}
 

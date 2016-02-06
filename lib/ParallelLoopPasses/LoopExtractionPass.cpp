@@ -114,9 +114,9 @@ namespace {
 				elts.push_back(a->getType());
 			}
 			//TODO: Calc start values for the other phi nodes and add to/from struct
-			/*for (auto a : otherPhiNodes) {
+			/* for (auto a : otherPhiNodes) {
 				elts.push_back(a.second.first->getType());
-			}*/
+			} */
 
 			//create the struct we'll use to return local data variables from the threads (separate store needed for each thread)
 			returnStruct = StructType::create(context, "ThreadReturner");
@@ -206,9 +206,8 @@ namespace {
 					Value *start = p.second.first;
 					Value *step = p.second.second;
 					Value *getPTR = builder.CreateStructGEP(threadStruct, allocateInst, k);
-					Value *newStart = ConstantInt::get(Type::getInt64Ty(context), 1);
-						//builder.CreateBinOp(Instruction::Add, start, builder.CreateBinOp(Instruction::Mul, step, 
-						//builder.CreateBinOp(Instruction::Mul, ConstantInt::get(Type::getInt64Ty(context), i), iterationsEach)));
+					Value *newStart = builder.CreateBinOp(Instruction::Add, start, builder.CreateBinOp(Instruction::Mul, step, 
+						               builder.CreateBinOp(Instruction::Mul, ConstantInt::get(Type::getInt64Ty(context), i), iterationsEach)));
 					builder.CreateStore(newStart, getPTR);
 					k++;
 				} */
@@ -370,7 +369,7 @@ namespace {
 			list<Value *> returnStructs;
 
 			//load the return struct for each thread if we need to accumulate all values
-			int structIndex = argArguments.size() + localArguments.size() + /* otherPhiNodes.size() +*/ 2;
+			int structIndex = argArguments.size() + localArguments.size() + /* otherPhiNodes.size() + */ 2;
 			if (loopData->getOuterLoopNonInductionPHIs().size() > 0) {
 				for (auto s : threadStructs) {
 					Value *structx = s;
