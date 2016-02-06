@@ -75,16 +75,18 @@ namespace {
 			for (auto v : toMove) {
 				Instruction *toCopy = cast<Instruction>(v);
 				Value *newInst = moveBuilder.CreateBitOrPointerCast(toCopy->getOperand(0), Type::getInt8PtrTy(context), "voidCast");
-				for (auto u : toCopy->users()) {
-					cerr << "replacing void cast in instruction:\n";
-					u->dump();
-					auto oppointer = u->op_begin();
-					for (auto &op : u->operands()) {
-						if (op == v) {
-							//replace value
-							*oppointer = newInst;
+				for (auto bb : loopData->getLoop()->getBlocks()) {
+					for (auto &i : bb->getInstList()) {
+						auto oppointer = i.op_begin();
+						for (auto &op : i.operands()) {
+							if (op == toCopy) {
+								//replace value
+								cerr << "replacing void cast in instruction:\n";
+								i.dump();
+								*oppointer = newInst;
+							}
+							oppointer++;
 						}
-						oppointer++;
 					}
 				}
 				toCopy->removeFromParent();
