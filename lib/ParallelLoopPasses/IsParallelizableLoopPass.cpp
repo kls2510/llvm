@@ -255,8 +255,6 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 								otherPhiNodes.insert(make_pair(potentialAccumulator, make_pair(scev->getValue(), stepConst->getValue())));
 							}
 							phiSatisfied = true;
-							cerr << "for now not parallelizable\n";
-							//return false;
 						}
 						else {
 							cerr << "scev has non-constant step value - not parallelizable\n";
@@ -439,6 +437,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 								for (auto u : lifetimeCastVal->users()) {
 									if (u != call && u != &i) {
 										cerr << "void cast is outside loop and used elsewhere other than for lifetime calls - not parallelizable\n";
+										u->dump();
 										uniqueToLifetime = false;
 									}
 								}
