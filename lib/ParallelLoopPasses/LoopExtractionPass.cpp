@@ -66,11 +66,15 @@ namespace {
 			//TODO: Calculate overhead/iteration work heuristic and decide whether parallelization is worthwhile
 
 			//move lifetime void casts that are outside loop into loop
-			IRBuilder<> moveBuilder(loopData->getInductionPhi()->getNextNode());
+			Instruction *insertPoint = loopData->getInductionPhi();
+			for (int c = 0; c < loopData->getOtherPhiNodes() + loopData->getOuterLoopNonInductionPHIs + 1; c++) {
+				insertPoint = insertPoint->getNextNode();
+			}
+			IRBuilder<> moveBuilder(insertPoint);
 			set<Value *> toMove = loopData->getVoidCastsForLoop();
 			for (auto v : toMove) {
 				Instruction *toCopy = cast<Instruction>(v);
-				Value *newInst = moveBuilder.CreateBitOrPointerCast(toCopy->getOperand(0), Type::getInt8PtrTy(context));
+				Value *newInst = moveBuilder.CreateBitOrPointerCast(toCopy->getOperand(0), Type::getInt8PtrTy(context), "voidCast");
 				for (auto u : v->users()) {
 					cerr << "replacing void cast in instruction:\n";
 					u->dump();
