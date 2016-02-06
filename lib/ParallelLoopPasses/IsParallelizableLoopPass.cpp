@@ -436,6 +436,8 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 							//it into the loop
 							if (!L->contains(cast<Instruction>(lifetimeCastVal))) {
 								bool uniqueToLifetime = true;
+								call->dump();
+								endCall->dump();
 								for (auto u : lifetimeCastVal->users()) {
 									if (u != call && u != endCall) {
 										cerr << "void cast is outside loop and used elsewhere other than for lifetime calls - not parallelizable\n";
