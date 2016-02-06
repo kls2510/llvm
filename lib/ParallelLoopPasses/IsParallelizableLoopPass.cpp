@@ -434,7 +434,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 						if (end)   {
 							//check that the null pointer cast is inside the loop before the call to lifetime begin - otherwise we'll need to move
 							//it into the loop
-							if (!L->contains(lifetimeCastVal)) {
+							if (!L->contains(cast<Instruction>(lifetimeCastVal))) {
 								bool uniqueToLifetime = true;
 								for (auto u : lifetimeCastVal->users()) {
 									if (u != call && u != &i) {
