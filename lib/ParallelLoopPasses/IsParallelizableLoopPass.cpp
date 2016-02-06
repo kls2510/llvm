@@ -628,6 +628,9 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 					call->dump();
 					cerr << "lifetime start and end are safe functions\n";
 				}
+				else if (callee == symTab.lookup(StringRef("erand48"))) {
+					cerr << "assume erand is OK for now\n";
+				}
 				else if (callee->onlyReadsMemory()) {
 					cerr << "call to function found but it doesn't write to memory\n";
 				}
