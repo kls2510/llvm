@@ -99,6 +99,7 @@ namespace {
 			list<Value *> argArguments = loopData->getArgumentArgValues();
 			list<Value *>  localArgumentsAndReturnVals = loopData->getReturnValues();
 			map<PHINode *, pair<const Value *, Value *>> otherPhiNodes = loopData->getOtherPhiNodes();
+			set<Value *> lifetimeValues = loopData->getLifetimeValues();
 
 			//create the struct we'll use to pass data to the threads
 			threadStruct = StructType::create(context, "ThreadPasser");
@@ -188,11 +189,22 @@ namespace {
 
 				AllocaInst *allocateInst = builder.CreateAlloca(threadStruct);
 				AllocaInst *allocateReturns = builder.CreateAlloca(returnStruct);
-				//store original array arguments in struct
+				//store arguments in struct
 				int k = 0;
 				for (auto op : argArguments) {
 					Value *getPTR = builder.CreateStructGEP(threadStruct, allocateInst, k);
-					builder.CreateStore(op, getPTR);
+					if (lifetimeValues.find(op) != lifetimeValues.end()) {
+						//these need array memory allocated per thread
+						cerr << "creating memory for data live only in loop\n";
+						op->dump();
+						op->getType()->dump();
+						Value *myAlloca = builder.CreateAlloca(op->getType());
+						builder.CreateStore(myAlloca, getPTR);
+					}
+					else {
+						//the same value can be shared across all threads
+						builder.CreateStore(op, getPTR);
+					}
 					k++;
 				}
 				for (auto p : otherPhiNodes) {
@@ -201,7 +213,6 @@ namespace {
 					start->dump();
 					Value *step = p.second.second;
 					Value *getPTR = builder.CreateStructGEP(threadStruct, allocateInst, k);
-					//THIS VALUE IS WRONG
 					Value *incrementer = builder.CreateCall(modulo, builder.CreateTrunc(iterationsEach, Type::getInt32Ty(context)));
 					cerr << "incrementer = \n";
 					incrementer->dump();
