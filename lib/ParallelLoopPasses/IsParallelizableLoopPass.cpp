@@ -7,6 +7,7 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/ParallelLoopPasses/LoopDependencyData.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/IR/ValueSymbolTable.h"
 #include <iostream>
 #include "llvm/ParallelLoopPasses/IsParallelizableLoopPass.h"
 #include <string>
@@ -221,7 +222,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 						continue;
 				}
 				bool phiSatisfied = false;
-				//TODO: if scalar evolution knows the phi value changes by a particular value each iteration then we can pass in the required
+				//if scalar evolution knows the phi value changes by a particular value each iteration then we can pass in the required
 				//values to each thread
 				cerr << "non induction phi scev found:\n";
 				potentialAccumulator->dump();
@@ -387,10 +388,38 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	//ARGUMENT VALUES
 	// Find all values that must be provided to each thread of the loop
 	set<Value *> argValues;
+	//case: use of lifetime start/end in the IR - separate memory must be passed to each thread for this
+	Function *lifetimeStart = nullptr;
+	Function *lifetimeEnd = nullptr;
+	ValueSymbolTable &symTab = F.getParent()->getValueSymbolTable();
+	if (symTab.lookup(StringRef("llvm.lifetime.start"))) {
+		lifetimeStart = cast<Function>(symTab.lookup(StringRef("llvm.lifetime.start")));
+	}
+	if (symTab.lookup(StringRef("llvm.lifetime.end"))) {
+		lifetimeEnd = cast<Function>(symTab.lookup(StringRef("llvm.lifetime.end")));
+	}
+	if (lifetimeStart != nullptr) {
+		for (auto bb : L->getBlocks()) {
+			for (auto &i : bb->getInstList()) {
+				if (isa<CallInst>(i)) {
+					CallInst *call = cast<CallInst>(&i);
+					if (call->getCalledFunction() == lifetimeStart) {
+						cerr << "analysing a lifetime in loop\n";
+						Value *lifetimeCastVal = call->getArgOperand(1);
+						lifetimeCastVal->dump();
+						Value *actualLifetimeVal = lifetimeCastVal->stripPointerCasts();
+						actualLifetimeVal->dump();
+						cerr << "\n";
+					}
+				}
+			}
+		}
+	}
+	
+	//case: find the rest - all values used in loop not defined inside it
 	for (auto bb : L->getBlocks()) {
 		for (auto &i : bb->getInstList()) {
 			// find all operands used in every instruction in the loop
-			//TODO: CHECK ARGS OF CALL INSTRUCTIONS IN LOOP
 			if (!isa<CallInst>(i)) {
 				for (auto &op : i.operands()) {
 					if (isa<Value>(op)) {
@@ -423,6 +452,10 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 						return false;
 					}
 				}
+			}
+			else {
+				//TODO: check the callInst's operands
+
 			}
 		}
 	}

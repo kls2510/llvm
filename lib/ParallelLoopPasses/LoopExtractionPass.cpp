@@ -171,6 +171,7 @@ namespace {
 				Value *threadStartIt;
 				Value *endIt;
 				Value *startItMult = builder.CreateBinOp(Instruction::Mul, iterationsEach, ConstantInt::get(Type::getInt64Ty(context), i));
+				//TODO: +1 to start it if loop condition is <= or -1 if condition it >= : avoid overlapping
 				threadStartIt = builder.CreateBinOp(Instruction::Add, loadedStartIt, startItMult);
 				if (i == (noThreads - 1)) {
 					endIt = loadedEndIt;
