@@ -67,7 +67,7 @@ namespace {
 
 			//move lifetime void casts that are outside loop into loop
 			Instruction *insertPoint = loopData->getInductionPhi();
-			for (int c = 0; c < loopData->getOtherPhiNodes() + loopData->getOuterLoopNonInductionPHIs + 1; c++) {
+			for (int c = 0; c < loopData->getOtherPhiNodes().size() + loopData->getOuterLoopNonInductionPHIs().size() + 1; c++) {
 				insertPoint = insertPoint->getNextNode();
 			}
 			IRBuilder<> moveBuilder(insertPoint);
