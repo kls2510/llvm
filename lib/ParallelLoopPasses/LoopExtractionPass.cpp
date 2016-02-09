@@ -233,7 +233,6 @@ namespace {
 					Value *getPTR = builder.CreateStructGEP(threadStruct, allocateInst, k);
 					if (lifetimeValues.find(op) != lifetimeValues.end()) {
 						//these need array memory allocated per thread
-						//TODO: use a loop like this to find values that need to be replaced in the function as they are values loaded from this op
 						cerr << "creating memory for data live only in loop\n";
 						op->dump();
 						op->getType()->dump();
@@ -612,13 +611,15 @@ namespace {
 						}
 						loadBuilder.Insert(newInst);
 						//replace uses of old instruction with this one
-						for (auto olduser : toMove->users()) {
-							auto toreplace = olduser->op_begin();
-							for (auto &op : olduser->operands()) {
-								if (op == toMove) {
-									*toreplace = newInst;
+						for (auto &bb : loopData->getLoop()->getBlocks()) {
+							for (auto &inst : bb->getInstList()) {
+								auto toreplace = inst.op_begin();
+								for (auto &op : inst.operands()) {
+									if (op == toMove) {
+										*toreplace = newInst;
+									}
+									toreplace++;
 								}
-								toreplace++;
 							}
 						}
 					}
