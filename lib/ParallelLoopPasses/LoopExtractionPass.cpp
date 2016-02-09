@@ -65,8 +65,8 @@ namespace {
 
 			//TODO: Calculate overhead/iteration work heuristic and decide whether parallelization is worthwhile
 
-			//move lifetime void casts that are outside loop into loop
-			Instruction *insertPoint = loopData->getInductionPhi();
+			//move lifetime void casts that are outside loop into loop - don't need this anymore due to other values also being moved
+			/*Instruction *insertPoint = loopData->getInductionPhi();
 			for (int c = 0; c < loopData->getOtherPhiNodes().size() + loopData->getOuterLoopNonInductionPHIs().size() + 1; c++) {
 				insertPoint = insertPoint->getNextNode();
 			}
@@ -92,7 +92,7 @@ namespace {
 					}
 				}
 				toCopy->removeFromParent();
-			}
+			} */
 
 			//setup helper functions so declararations are there to be linked later
 			Module * mod = (F.getParent());
