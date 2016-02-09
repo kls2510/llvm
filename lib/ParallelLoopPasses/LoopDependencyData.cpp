@@ -124,3 +124,7 @@ set<Value *> LoopDependencyData::getLifetimeValues() {
 set<Value *> LoopDependencyData::getVoidCastsForLoop() {
 	return this->voidCastsForLoop;
 }
+
+set<Value *> LoopDependencyData::getPrivateLoopVarUses() {
+	return this->privateLoopVarUses;
+}

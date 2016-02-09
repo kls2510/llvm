@@ -560,6 +560,7 @@ namespace {
 			list<Value *> argArguments = loopData->getArgumentArgValues();
 			list<Value *>  localArgumentsAndReturnVals = loopData->getReturnValues();
 			map<PHINode *, pair<const Value *, Value *>> otherPhiNodes = loopData->getOtherPhiNodes();
+			set<Value *> externalLoads = loopData->getPrivateLoopVarUses();
 
 			//name all values so they don't conflict with value names in the loop later
 			int loadedVal = 0;
@@ -577,6 +578,7 @@ namespace {
 			sprintf(namePrefix, "loadVal_%d", loadedVal);
 
 			//load argument and local instructions
+			auto originalArg = argArguments.begin();
 			for (p = 0; p < argArguments.size(); p++) {
 				Value *arrayVal = loadBuilder.CreateStructGEP(threadStruct, castArgVal, p, namePrefix);
 				loadedVal++;
@@ -584,7 +586,45 @@ namespace {
 				LoadInst *loadInst = loadBuilder.CreateLoad(arrayVal, namePrefix);
 				loadedVal++;
 				sprintf(namePrefix, "loadVal_%d", loadedVal);
+				//if argument had any loads outside the loop, they need to happen here instead so the loop has access inside the function:
+				for (auto u : (*originalArg)->users()) {
+					list<Value *> operands;
+					Instruction *toMove = nullptr;
+					if ((externalLoads.find(u)) != externalLoads.end()) {
+						toMove = cast<Instruction>(u);
+						for (auto op : toMove->operand_values()) {
+							if (op == *originalArg) {
+								//replace value
+								operands.push_back(loadInst);
+							}
+							else {
+								operands.push_back(op);
+							}
+						}
+					}
+					if (toMove != nullptr) {
+						//insert new instruction
+						Instruction *newInst = toMove->clone();
+						int i = 0;
+						for (auto op : operands) {
+							newInst->setOperand(i, op);
+							i++;
+						}
+						loadBuilder.Insert(newInst);
+						//replace uses of old instruction with this one
+						for (auto olduser : toMove->users()) {
+							auto toreplace = olduser->op_begin();
+							for (auto &op : olduser->operands()) {
+								if (op == toMove) {
+									*toreplace = newInst;
+								}
+								toreplace++;
+							}
+						}
+					}
+				}
 				arrayAndLocalStructElements.push_back(loadInst);
+				originalArg++;
 			}
 			map<PHINode *, pair<const Value *, Value *>>::iterator phiIt = otherPhiNodes.begin();
 			for (p = argArguments.size(); p < argArguments.size() + otherPhiNodes.size(); p++) {

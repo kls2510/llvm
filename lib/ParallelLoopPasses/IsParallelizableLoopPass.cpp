@@ -387,6 +387,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	//ARGUMENT VALUES
 	// Find all values that must be provided to each thread of the loop
 	set<Value *> argValues;
+	set<Value *> privateLoopVarUses;
 	set<Value *> lifetimeValues;
 	set<Value *> voidCastsForLoop;
 	//case: use of lifetime start/end in the IR - separate memory must be passed to each thread for this
@@ -457,15 +458,27 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 								Instruction *lifetimeUser = cast<Instruction>(u);
 								if (!L->contains(lifetimeUser)) {
 									bool uniqueToLoop = true;
-									for (auto u : lifetimeCastVal->users()) {
-										if (u != call && u != endCall) {
+									for (auto mu : lifetimeUser->users()) {
+										Instruction *instructionToMoveUse = cast<Instruction>(mu);
+										if (!L->contains(instructionToMoveUse)) {
 											cerr << "Use of loaded lifetime val is used outside loop - not parallelizable\n";
 											u->dump();
 											uniqueToLoop = false;
 										}
 									}
+									//check operands are either constant or the lifetime value
+									for (auto &op : lifetimeUser->operands()) {
+										if (isa<Constant>(op) || cast<Value>(&op) == actualLifetimeVal) {
+											//this is OK
+										}
+										else {
+											cerr << "Argument to instruction that needs to be moved belongs outside loop - not parallelizable\n";
+											u->dump();
+											return false;
+										}
+									}
 									if (uniqueToLoop) {
-										voidCastsForLoop.insert(u);
+										privateLoopVarUses.insert(u);
 									}
 									else {
 										return false;
@@ -717,7 +730,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	bool parallelizable = true;
 	LoopDependencyData *data = new LoopDependencyData(outerPhi, argArgs, cast<Instruction>(outerBranch->getOperand(0)), L, dependencies, noOfInductionPhiNodes, 
 														startIt, finalIt, tripCount, parallelizable, returnValues, accumulativePhiNodes, otherPhiNodes, lifetimeValues,
-														voidCastsForLoop);
+														voidCastsForLoop, privateLoopVarUses);
 	results.push_back(data);
 	
 	return true;
