@@ -114,11 +114,13 @@ namespace {
 			extractTheLoop(loopData->getLoop(), threadFunction, &F, context);
 
 			//fix new void cast instructions that never gets used but llvm complains
-			for (auto i : newInsts) {
+			/* for (auto i : newInsts) {
 				Instruction *castinst = cast<Instruction>(i);
 				cerr << "removing bad reference\n";
 				(*(castinst->op_begin())) = UndefValue::get(Type::getInt32PtrTy(context));
-			}
+			}*/ 
+
+			//F.begin()->begin()->users().begin()->dump();
 
 			//Mark the function to avoid infinite extraction
 			threadFunction->addFnAttr("Extracted", "true");
@@ -231,6 +233,7 @@ namespace {
 					Value *getPTR = builder.CreateStructGEP(threadStruct, allocateInst, k);
 					if (lifetimeValues.find(op) != lifetimeValues.end()) {
 						//these need array memory allocated per thread
+						//TODO: use a loop like this to find values that need to be replaced in the function as they are values loaded from this op
 						cerr << "creating memory for data live only in loop\n";
 						op->dump();
 						op->getType()->dump();
