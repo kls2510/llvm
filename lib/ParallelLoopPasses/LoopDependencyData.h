@@ -33,15 +33,16 @@ private:
 	set<Value *> lifetimeValues;
 	set<Value *> voidCastsForLoop;
 	set<Value *> privateLoopVarUses;
+	Value *outerPhiStep;
 
 public:
 	LoopDependencyData(Instruction *IndPhi, list<Value *> argValues, Instruction *end, Loop *L, list<Dependence *> d, int phi, Value *startIt, Value *finalIt, int tripCount,
 		bool parallelizable, multimap<Value *, Value *> returnValues, map<PHINode *, unsigned int> accumulativePhiNodes, map<PHINode *, pair<const Value *, Value *>> otherPhiNodes,
-		set<Value *> lifetimeValues, set<Value *> voidCastsForLoop, set<Value *> privateLoopVarUses) {
+		set<Value *> lifetimeValues, set<Value *> voidCastsForLoop, set<Value *> privateLoopVarUses, Value *outerPhiStep) {
 		loop = L, dependencies = d, noOfPhiNodes = phi, this->parallelizable = parallelizable, this->startIt = startIt,
 			this->finalIt = finalIt, this->tripCount = tripCount, this->returnValues = returnValues, this->accumulativePhiNodes = accumulativePhiNodes,
 			this->phi = IndPhi, this->end = end, this->argValues = argValues, this->otherPhiNodes = otherPhiNodes, this->lifetimeValues = lifetimeValues,
-			this->voidCastsForLoop = voidCastsForLoop, this->privateLoopVarUses = privateLoopVarUses;
+			this->voidCastsForLoop = voidCastsForLoop, this->privateLoopVarUses = privateLoopVarUses, this->outerPhiStep = outerPhiStep;
 	}
 
 	Loop *getLoop();
@@ -83,6 +84,8 @@ public:
 	set<Value *> getVoidCastsForLoop();
 
 	set<Value *> getPrivateLoopVarUses();
+
+	Value *getOuterPhiStep();
 };
 
 #endif

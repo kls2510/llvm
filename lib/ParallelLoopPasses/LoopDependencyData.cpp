@@ -128,3 +128,7 @@ set<Value *> LoopDependencyData::getVoidCastsForLoop() {
 set<Value *> LoopDependencyData::getPrivateLoopVarUses() {
 	return this->privateLoopVarUses;
 }
+
+Value *LoopDependencyData::getOuterPhiStep() {
+	return outerPhiStep;
+}

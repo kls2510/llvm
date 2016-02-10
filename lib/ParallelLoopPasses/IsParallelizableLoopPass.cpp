@@ -184,6 +184,37 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 		return false;
 	}
 
+	Value *outerPhiStep = nullptr;
+	// check the outer phi node step is constant and available using scalar evolution
+	const SCEV *outerPhiScev = SE.getSCEVAtScope(outerPhi, L);
+	if (SE.getLoopDisposition(outerPhiScev, L) == SE.LoopComputable) {
+		cerr << "outer phi changes by a constant each loop iteration\n";
+		if (isa<SCEVAddRecExpr>(outerPhiScev)) {
+			const SCEVAddRecExpr *outerPhiScevExpr = cast<SCEVAddRecExpr>(outerPhiScev);
+			const SCEV *stepSize = outerPhiScevExpr->getStepRecurrence(SE);
+			cerr << "step size:\n";
+			stepSize->dump();
+			cerr << "\n";
+			if (isa<SCEVConstant>(stepSize)) {
+				const SCEVConstant *stepConst = cast<SCEVConstant>(stepSize);
+				cerr << "outer phi has found constant step size, continuing...\n";
+				outerPhiStep = stepConst->getValue();
+			}
+			else {
+				cerr << "scev has non-constant step value - not parallelizable\n";
+				return false;
+			}
+		}
+		else {
+			cerr << "outer phi node step not part of an AddRecExpr - not parallelizable";
+			return false;
+		}
+	}
+	else {
+		cerr << "outer phi node step not loop computable - not parallelizable";
+		return false;
+	}
+
 	cerr << "set outer loop induction variable to\n";
 	outerPhi->dump();
 	cerr << "\n";
@@ -498,7 +529,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 			}
 		}
 	}
-	
+
 	//case: find the rest - all values used in loop not defined inside it
 	for (auto bb : L->getBlocks()) {
 		for (auto &i : bb->getInstList()) {
@@ -730,7 +761,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	bool parallelizable = true;
 	LoopDependencyData *data = new LoopDependencyData(outerPhi, argArgs, cast<Instruction>(outerBranch->getOperand(0)), L, dependencies, noOfInductionPhiNodes, 
 														startIt, finalIt, tripCount, parallelizable, returnValues, accumulativePhiNodes, otherPhiNodes, lifetimeValues,
-														voidCastsForLoop, privateLoopVarUses);
+														voidCastsForLoop, privateLoopVarUses, outerPhiStep);
 	results.push_back(data);
 	
 	return true;

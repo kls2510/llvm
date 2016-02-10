@@ -188,8 +188,19 @@ namespace {
 			//store all struct values created in IR
 			list<Value *> threadStructs;
 
+			//function to call to get bounds for loops
+			Function *getBounds = cast<Function>(symTab.lookup(StringRef("calcBounds")));
+			Function *getPhiStartVal = cast<Function>(symTab.lookup(StringRef("calcStartValue")));
+
+			//add start/end/return struct to struct
+			elts.push_back(loopData->getInductionPhi()->getType());
+			elts.push_back(loopData->getInductionPhi()->getType());
+			//memory on original stack to store return values
+			elts.push_back(returnStruct->getPointerTo());
+			threadStruct->setBody(elts);
+
 			//setup the threads in IR
-			Type *branchConditionType = loopData->getExitCondNode()->getOperand(0)->getType();
+			/*Type *branchConditionType = loopData->getExitCondNode()->getOperand(0)->getType();
 			cerr << "loop branch Condition type:\n";
 			branchConditionType->dump();
 			Value *start = builder.CreateAlloca(startIt->getType());
@@ -202,11 +213,9 @@ namespace {
 			SmallVector<Value *, 2> divArgs;
 			divArgs.push_back(noIterations);
 			divArgs.push_back(ConstantInt::get(Type::getInt64Ty(context), noThreads));
-			Value *iterationsEach = builder.CreateCall(integerDiv, divArgs);
+			Value *iterationsEach = builder.CreateCall(integerDiv, divArgs); */
 			for (int i = 0; i < noThreads; i++) {
-				Value *threadStartIt;
-				Value *endIt;
-				Value *startItMult = builder.CreateBinOp(Instruction::Mul, iterationsEach, ConstantInt::get(Type::getInt64Ty(context), i));
+				/* Value *startItMult = builder.CreateBinOp(Instruction::Mul, iterationsEach, ConstantInt::get(Type::getInt64Ty(context), i));
 				//TODO: MAKE BOUNDARIES CORRECT
 				threadStartIt = builder.CreateBinOp(Instruction::Add, loadedStartIt, startItMult);
 				if (i == (noThreads - 1)) {
@@ -214,16 +223,16 @@ namespace {
 				}
 				else {
 					endIt = builder.CreateBinOp(Instruction::Add, threadStartIt, iterationsEach);
-				}
+				} */
 
 				//add final types to thread passer struct
-				if (i == 0) {
+				/* if (i == 0) {
 					elts.push_back(threadStartIt->getType());
 					elts.push_back(endIt->getType());
 					//memory on original stack to store return values
 					elts.push_back(returnStruct->getPointerTo());
 					threadStruct->setBody(elts);
-				}
+				} */
 
 				AllocaInst *allocateInst = builder.CreateAlloca(threadStruct);
 				AllocaInst *allocateReturns = builder.CreateAlloca(returnStruct);
@@ -246,32 +255,95 @@ namespace {
 					k++;
 				}
 				for (auto p : otherPhiNodes) {
+					//TODO: check why use begin used here
 					Value *start = *(p.second.first->use_begin());
-					cerr << "trying to make start value non-const:";
-					start->dump();
 					Value *step = p.second.second;
+					//place to store start val
 					Value *getPTR = builder.CreateStructGEP(threadStruct, allocateInst, k);
-					//TODO: divide by step constant of phi node - otherwise incorrect
+					SmallVector<Value *, 10> args;
+					args.push_back(ConstantInt::get(Type::getInt32Ty(context), i));
+					args.push_back(ConstantInt::get(Type::getInt32Ty(context), noThreads));
+					CmpInst *inductionBranch = cast<CmpInst>(loopData->getExitCondNode()->getOperand(0));
+					//see about eq and neq too
+					if (inductionBranch->getPredicate() == CmpInst::ICMP_SGE || inductionBranch->getPredicate() == CmpInst::ICMP_UGE) {
+						args.push_back(ConstantInt::get(Type::getInt32Ty(context), 1));
+						args.push_back(ConstantInt::get(Type::getInt32Ty(context), 0));
+					}
+					else if (inductionBranch->getPredicate() == CmpInst::ICMP_SGT || inductionBranch->getPredicate() == CmpInst::ICMP_UGT) {
+						args.push_back(ConstantInt::get(Type::getInt32Ty(context), 0));
+						args.push_back(ConstantInt::get(Type::getInt32Ty(context), 0));
+					}
+					else if (inductionBranch->getPredicate() == CmpInst::ICMP_SLE || inductionBranch->getPredicate() == CmpInst::ICMP_ULE) {
+						args.push_back(ConstantInt::get(Type::getInt32Ty(context), 1));
+						args.push_back(ConstantInt::get(Type::getInt32Ty(context), 1));
+					}
+					else if (inductionBranch->getPredicate() == CmpInst::ICMP_SLT || inductionBranch->getPredicate() == CmpInst::ICMP_ULT) {
+						args.push_back(ConstantInt::get(Type::getInt32Ty(context), 0));
+						args.push_back(ConstantInt::get(Type::getInt32Ty(context), 1));
+					}
+					else {
+						//TODO
+					}
+					args.push_back(startIt);
+					args.push_back(finalIt);
+					args.push_back(loopData->getOuterPhiStep());
+					args.push_back(start);
+					args.push_back(step);
+					args.push_back(getPTR);
+					builder.CreateCall(getPhiStartVal, args);
+					/*Value *iterationRange = builder.CreateBinOp(Instruction::Sub, builder.CreateLoad(getPTREnd), builder.CreateLoad(getPTRStart));
+					Value *iterationsEach = builder.CreateBinOp(Instruction::SDiv, iterationRange, step);
 					Value *incrementer = builder.CreateCall(modulo, builder.CreateTrunc(iterationsEach, Type::getInt32Ty(context)));
-					cerr << "incrementer = \n";
-					incrementer->dump();
-					Value *newStart = builder.CreateBinOp(Instruction::Add, start, builder.CreateBinOp(Instruction::Mul, step, 
-						builder.CreateBinOp(Instruction::Mul, ConstantInt::get(Type::getInt32Ty(context), i), incrementer)));
-					cerr << "thread " << i << " start val = \n";
-					newStart->dump();
-					builder.CreateStore(newStart, getPTR);
+					Value *newStart = builder.CreateBinOp(Instruction::Add, start, builder.CreateBinOp(Instruction::Mul, step,
+					builder.CreateBinOp(Instruction::Mul, ConstantInt::get(Type::getInt32Ty(context), i), incrementer)));
+					builder.CreateStore(newStart, getPTR); */
 					k++;
 				}
 				//store startIt
-				Value *getPTR = builder.CreateStructGEP(threadStruct, allocateInst, k);
-				builder.CreateStore(threadStartIt, getPTR);
+				Value *getPTRStart = builder.CreateStructGEP(threadStruct, allocateInst, k);
+				//builder.CreateStore(threadStartIt, getPTR);
 				//store endIt
-				getPTR = builder.CreateStructGEP(threadStruct, allocateInst, k + 1);
-				builder.CreateStore(endIt, getPTR);
+				Value *getPTREnd = builder.CreateStructGEP(threadStruct, allocateInst, k + 1);
+				/* builder.CreateStore(endIt, getPTR);
+				Value *start = builder.CreateAlloca(startIt->getType());
+				Value *end = builder.CreateAlloca(finalIt->getType()); */
+				SmallVector<Value *, 9> args;
+				args.push_back(ConstantInt::get(Type::getInt32Ty(context), i));
+				args.push_back(ConstantInt::get(Type::getInt32Ty(context), noThreads));
+				CmpInst *inductionBranch = cast<CmpInst>(loopData->getExitCondNode()->getOperand(0));
+				//see about eq and neq too
+				if (inductionBranch->getPredicate() == CmpInst::ICMP_SGE || inductionBranch->getPredicate() == CmpInst::ICMP_UGE) {
+					args.push_back(ConstantInt::get(Type::getInt32Ty(context), 1));
+					args.push_back(ConstantInt::get(Type::getInt32Ty(context), 0));
+				}
+				else if (inductionBranch->getPredicate() == CmpInst::ICMP_SGT || inductionBranch->getPredicate() == CmpInst::ICMP_UGT) {
+					args.push_back(ConstantInt::get(Type::getInt32Ty(context), 0));
+					args.push_back(ConstantInt::get(Type::getInt32Ty(context), 0));
+				}
+				else if (inductionBranch->getPredicate() == CmpInst::ICMP_SLE || inductionBranch->getPredicate() == CmpInst::ICMP_ULE) {
+					args.push_back(ConstantInt::get(Type::getInt32Ty(context), 1));
+					args.push_back(ConstantInt::get(Type::getInt32Ty(context), 1));
+				}
+				else if (inductionBranch->getPredicate() == CmpInst::ICMP_SLT || inductionBranch->getPredicate() == CmpInst::ICMP_ULT) {
+					args.push_back(ConstantInt::get(Type::getInt32Ty(context), 0));
+					args.push_back(ConstantInt::get(Type::getInt32Ty(context), 1));
+				}
+				else {
+					//TODO
+				}
+				args.push_back(startIt);
+				args.push_back(finalIt);
+				args.push_back(loopData->getOuterPhiStep());
+				args.push_back(getPTRStart);
+				args.push_back(getPTREnd);
+				builder.CreateCall(getBounds, args);
+				//Value *threadStartIt;
+				//Value *endIt;
 				//store local variables in return struct at the end
 				//return struct therefore at index noCallOperands + 2
-				getPTR = builder.CreateStructGEP(threadStruct, allocateInst, k + 2);
+				Value *getPTR = builder.CreateStructGEP(threadStruct, allocateInst, k + 2);
 				builder.CreateStore(allocateReturns, getPTR);
+				
 				//store the struct pointer for passing into the function - as type void *
 				Value *structInst = builder.CreateCast(Instruction::CastOps::BitCast, allocateInst, Type::getInt8PtrTy(context));
 				threadStructs.push_back(structInst);
@@ -922,6 +994,35 @@ namespace {
 			modParamTypes.push_back(Type::getInt32Ty(context));
 			FunctionType *modFunctionType = FunctionType::get(Type::getInt32Ty(context), modParamTypes, false);
 			mod->getOrInsertFunction("modulo", modFunctionType);
+
+			//create loop bounds
+			SmallVector<Type *, 9> loopParamTypes;
+			loopParamTypes.push_back(Type::getInt32Ty(context));
+			loopParamTypes.push_back(Type::getInt32Ty(context));
+			loopParamTypes.push_back(Type::getInt32Ty(context));
+			loopParamTypes.push_back(Type::getInt32Ty(context));
+			loopParamTypes.push_back(Type::getInt32Ty(context));
+			loopParamTypes.push_back(Type::getInt32Ty(context));
+			loopParamTypes.push_back(Type::getInt32Ty(context));
+			loopParamTypes.push_back(Type::getInt32PtrTy(context));
+			loopParamTypes.push_back(Type::getInt32PtrTy(context));
+			FunctionType *loopFunctionType = FunctionType::get(Type::getVoidTy(context), loopParamTypes, false);
+			mod->getOrInsertFunction("calcBounds", loopFunctionType);
+
+			//create find start value
+			SmallVector<Type *, 10> startParamTypes;
+			startParamTypes.push_back(Type::getInt32Ty(context));
+			startParamTypes.push_back(Type::getInt32Ty(context));
+			startParamTypes.push_back(Type::getInt32Ty(context));
+			startParamTypes.push_back(Type::getInt32Ty(context));
+			startParamTypes.push_back(Type::getInt32Ty(context));
+			startParamTypes.push_back(Type::getInt32Ty(context));
+			startParamTypes.push_back(Type::getInt32Ty(context));
+			startParamTypes.push_back(Type::getInt32Ty(context));
+			startParamTypes.push_back(Type::getInt32Ty(context));
+			startParamTypes.push_back(Type::getInt32PtrTy(context));
+			FunctionType *startFunctionType = FunctionType::get(Type::getVoidTy(context), startParamTypes, false);
+			mod->getOrInsertFunction("calcStartValue", startFunctionType);
 		}
 
 		virtual bool runOnFunction(Function &F) {
