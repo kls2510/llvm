@@ -311,7 +311,7 @@ namespace {
 				SmallVector<Value *, 9> args;
 				args.push_back(ConstantInt::get(Type::getInt32Ty(context), i));
 				args.push_back(ConstantInt::get(Type::getInt32Ty(context), noThreads));
-				CmpInst *inductionBranch = cast<CmpInst>(loopData->getExitCondNode()->getOperand(0));
+				CmpInst *inductionBranch = cast<CmpInst>(loopData->getExitCondNode());
 				//see about eq and neq too
 				if (inductionBranch->getPredicate() == CmpInst::ICMP_SGE || inductionBranch->getPredicate() == CmpInst::ICMP_UGE) {
 					args.push_back(ConstantInt::get(Type::getInt32Ty(context), 1));
