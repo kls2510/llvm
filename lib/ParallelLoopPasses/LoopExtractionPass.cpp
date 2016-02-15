@@ -1018,7 +1018,7 @@ namespace {
 			startParamTypes.push_back(Type::getInt32Ty(context));
 			startParamTypes.push_back(Type::getInt64Ty(context));
 			startParamTypes.push_back(Type::getInt64Ty(context));
-			startParamTypes.push_back(Type::getInt32Ty(context));
+			startParamTypes.push_back(Type::getInt64Ty(context));
 			startParamTypes.push_back(Type::getInt32Ty(context));
 			startParamTypes.push_back(Type::getInt32Ty(context));
 			startParamTypes.push_back(Type::getInt32PtrTy(context));
