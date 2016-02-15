@@ -313,7 +313,7 @@ namespace {
 				args.push_back(ConstantInt::get(Type::getInt32Ty(context), noThreads));
 				CmpInst *inductionBranch = cast<CmpInst>(loopData->getExitCondNode());
 				//see about eq and neq too
-				if (inductionBranch->getPredicate() == CmpInst::ICMP_SGE || inductionBranch->getPredicate() == CmpInst::ICMP_UGE) {
+				if (inductionBranch->getPredicate() == CmpInst::ICMP_SGE || inductionBranch->getPredicate() == CmpInst::ICMP_UGE || (inductionBranch->getPredicate() == CmpInst::ICMP_EQ && loopData->getOuterPhiStep() < 0)) {
 					args.push_back(ConstantInt::get(Type::getInt32Ty(context), 1));
 					args.push_back(ConstantInt::get(Type::getInt32Ty(context), 0));
 				}
@@ -321,7 +321,7 @@ namespace {
 					args.push_back(ConstantInt::get(Type::getInt32Ty(context), 0));
 					args.push_back(ConstantInt::get(Type::getInt32Ty(context), 0));
 				}
-				else if (inductionBranch->getPredicate() == CmpInst::ICMP_SLE || inductionBranch->getPredicate() == CmpInst::ICMP_ULE) {
+				else if (inductionBranch->getPredicate() == CmpInst::ICMP_SLE || inductionBranch->getPredicate() == CmpInst::ICMP_ULE || (inductionBranch->getPredicate() == CmpInst::ICMP_EQ && loopData->getOuterPhiStep() > 0)) {
 					args.push_back(ConstantInt::get(Type::getInt32Ty(context), 1));
 					args.push_back(ConstantInt::get(Type::getInt32Ty(context), 1));
 				}
