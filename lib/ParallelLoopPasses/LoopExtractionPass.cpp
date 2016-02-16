@@ -395,13 +395,19 @@ namespace {
 				argsForDispatch.push_back(groupCall);
 				argsForDispatch.push_back(*it);
 				argsForDispatch.push_back(newLoopFunc);
-				builder.CreateCall(asyncDispatch, argsForDispatch);
+				//builder.CreateCall(asyncDispatch, argsForDispatch);
+				//TODO: change back - temporary for debugging
+				SmallVector<Value *, 3> args;
+				args.push_back(*it);
+				builder.CreateCall(newLoopFunc, args);
 			}
 			//Wait for threads to finish
-			SmallVector<Value *, 2> waitArgTypes;
-			waitArgTypes.push_back(groupCall);
-			waitArgTypes.push_back(ConstantInt::get(Type::getInt64Ty(context), 1000000000));
-			Value *complete = builder.CreateCall(wait, waitArgTypes);
+			//SmallVector<Value *, 2> waitArgTypes;
+			//waitArgTypes.push_back(groupCall);
+			//waitArgTypes.push_back(ConstantInt::get(Type::getInt64Ty(context), 1000000000));
+			//Value *complete = builder.CreateCall(wait, waitArgTypes);
+			//TODO: change back - temporary for debugging
+			Value *complete = builder.Insert(ConstantInt::get(Type::getInt64Ty(context), 0));
 
 			//condition on thread complete; if 0 OK, if non zero than force stop
 			Value *completeCond = builder.CreateICmpEQ(complete, ConstantInt::get(Type::getInt64Ty(context), 0));
