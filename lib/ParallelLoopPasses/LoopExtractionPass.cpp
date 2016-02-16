@@ -407,7 +407,7 @@ namespace {
 			//waitArgTypes.push_back(ConstantInt::get(Type::getInt64Ty(context), 1000000000));
 			//Value *complete = builder.CreateCall(wait, waitArgTypes);
 			//TODO: change back - temporary for debugging
-			Value *complete = builder.Insert(ConstantInt::get(Type::getInt64Ty(context), 0));
+			Value *complete = ConstantInt::get(Type::getInt64Ty(context), 0);
 
 			//condition on thread complete; if 0 OK, if non zero than force stop
 			Value *completeCond = builder.CreateICmpEQ(complete, ConstantInt::get(Type::getInt64Ty(context), 0));
