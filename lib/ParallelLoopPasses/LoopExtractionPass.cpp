@@ -315,23 +315,47 @@ namespace {
 				//see about eq and neq too
 				if (inductionBranch->getPredicate() == CmpInst::ICMP_SGE || inductionBranch->getPredicate() == CmpInst::ICMP_UGE || (inductionBranch->getPredicate() == CmpInst::ICMP_EQ && loopData->getOuterPhiStep() < 0)) {
 					args.push_back(ConstantInt::get(Type::getInt32Ty(context), 1));
-					args.push_back(ConstantInt::get(Type::getInt32Ty(context), 0));
+					//args.push_back(ConstantInt::get(Type::getInt32Ty(context), 0));
 				}
 				else if (inductionBranch->getPredicate() == CmpInst::ICMP_SGT || inductionBranch->getPredicate() == CmpInst::ICMP_UGT) {
 					args.push_back(ConstantInt::get(Type::getInt32Ty(context), 0));
-					args.push_back(ConstantInt::get(Type::getInt32Ty(context), 0));
+					//args.push_back(ConstantInt::get(Type::getInt32Ty(context), 0));
 				}
 				else if (inductionBranch->getPredicate() == CmpInst::ICMP_SLE || inductionBranch->getPredicate() == CmpInst::ICMP_ULE || (inductionBranch->getPredicate() == CmpInst::ICMP_EQ && loopData->getOuterPhiStep() > 0)) {
 					args.push_back(ConstantInt::get(Type::getInt32Ty(context), 1));
-					args.push_back(ConstantInt::get(Type::getInt32Ty(context), 1));
+					//args.push_back(ConstantInt::get(Type::getInt32Ty(context), 1));
 				}
 				else if (inductionBranch->getPredicate() == CmpInst::ICMP_SLT || inductionBranch->getPredicate() == CmpInst::ICMP_ULT) {
 					args.push_back(ConstantInt::get(Type::getInt32Ty(context), 0));
-					args.push_back(ConstantInt::get(Type::getInt32Ty(context), 1));
+					//args.push_back(ConstantInt::get(Type::getInt32Ty(context), 1));
 				}
 				else {
 					//TODO
 				}
+				BranchInst *branch = cast<BranchInst>(*(inductionBranch->user_begin()));
+				BasicBlock *brIfTrue = cast<BasicBlock>(branch->getOperand(1));
+				int leaveIfCndTrue = 1;
+				for (auto bb : loopData->getLoop()->getBlocks()) {
+					if (bb == brIfTrue) {
+						leaveIfCndTrue = 0;
+						break;
+					}
+				}
+				args.push_back(ConstantInt::get(Type::getInt32Ty(context), leaveIfCndTrue));
+				int phiInCnd = 0;
+				for (auto &op : inductionBranch->operands()) {
+					if (cast<Value>(&op) == loopData->getInductionPhi()) {
+						phiInCnd = 1;
+						break;
+					}
+				}
+				args.push_back(ConstantInt::get(Type::getInt32Ty(context), phiInCnd));
+				int cmpBefore = 1;
+				BasicBlock *last = loopData->getLoop()->getBlocks().back();
+				if (inductionBranch->getParent() == last) {
+					cmpBefore = 0;
+				}
+				args.push_back(ConstantInt::get(Type::getInt32Ty(context), cmpBefore));
 				args.push_back(startIt);
 				args.push_back(finalIt);
 				args.push_back(loopData->getOuterPhiStep());
@@ -1004,6 +1028,8 @@ namespace {
 
 			//create loop bounds
 			SmallVector<Type *, 9> loopParamTypes;
+			loopParamTypes.push_back(Type::getInt32Ty(context));
+			loopParamTypes.push_back(Type::getInt32Ty(context));
 			loopParamTypes.push_back(Type::getInt32Ty(context));
 			loopParamTypes.push_back(Type::getInt32Ty(context));
 			loopParamTypes.push_back(Type::getInt32Ty(context));
