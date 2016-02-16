@@ -357,7 +357,7 @@ namespace {
 					//TODO
 				}
 				BranchInst *branch = cast<BranchInst>(*(inductionBranch->user_begin()));
-				BasicBlock *brIfTrue = cast<BasicBlock>(branch->getOperand(1));
+				BasicBlock *brIfTrue = cast<BasicBlock>(branch->getOperand(0));
 				int leaveIfCndTrue = 1;
 				for (auto bb : loopData->getLoop()->getBlocks()) {
 					if (bb == brIfTrue) {
