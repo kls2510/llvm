@@ -285,6 +285,30 @@ namespace {
 					else {
 						//TODO
 					}
+					BranchInst *branch = cast<BranchInst>(*(inductionBranch->user_begin()));
+					BasicBlock *brIfTrue = cast<BasicBlock>(branch->getOperand(1));
+					int leaveIfCndTrue = 1;
+					for (auto bb : loopData->getLoop()->getBlocks()) {
+						if (bb == brIfTrue) {
+							leaveIfCndTrue = 0;
+							break;
+						}
+					}
+					args.push_back(ConstantInt::get(Type::getInt32Ty(context), leaveIfCndTrue));
+					int phiInCnd = 0;
+					for (auto &op : inductionBranch->operands()) {
+						if (cast<Value>(&op) == loopData->getInductionPhi()) {
+							phiInCnd = 1;
+							break;
+						}
+					}
+					args.push_back(ConstantInt::get(Type::getInt32Ty(context), phiInCnd));
+					int cmpBefore = 1;
+					BasicBlock *last = loopData->getLoop()->getBlocks().back();
+					if (inductionBranch->getParent() == last) {
+						cmpBefore = 0;
+					}
+					args.push_back(ConstantInt::get(Type::getInt32Ty(context), cmpBefore));
 					args.push_back(startIt);
 					args.push_back(finalIt);
 					args.push_back(loopData->getOuterPhiStep());
@@ -1027,7 +1051,7 @@ namespace {
 			mod->getOrInsertFunction("modulo", modFunctionType);
 
 			//create loop bounds
-			SmallVector<Type *, 9> loopParamTypes;
+			SmallVector<Type *, 11> loopParamTypes;
 			loopParamTypes.push_back(Type::getInt32Ty(context));
 			loopParamTypes.push_back(Type::getInt32Ty(context));
 			loopParamTypes.push_back(Type::getInt32Ty(context));
@@ -1043,7 +1067,10 @@ namespace {
 			mod->getOrInsertFunction("calcBounds", loopFunctionType);
 
 			//create find start value
-			SmallVector<Type *, 10> startParamTypes;
+			SmallVector<Type *, 13> startParamTypes;
+			startParamTypes.push_back(Type::getInt32Ty(context));
+			startParamTypes.push_back(Type::getInt32Ty(context));
+			startParamTypes.push_back(Type::getInt32Ty(context));
 			startParamTypes.push_back(Type::getInt32Ty(context));
 			startParamTypes.push_back(Type::getInt32Ty(context));
 			startParamTypes.push_back(Type::getInt32Ty(context));
