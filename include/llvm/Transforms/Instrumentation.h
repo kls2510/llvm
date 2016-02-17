@@ -104,9 +104,6 @@ FunctionPass *createMemorySanitizerPass(int TrackOrigins = 0);
 // Insert ThreadSanitizer (race detection) instrumentation
 FunctionPass *createThreadSanitizerPass();
 
-// Insert loop paralleization instrumentation
-FunctionPass *createParallelizationPass();
-
 // Insert DataFlowSanitizer (dynamic data flow analysis) instrumentation
 ModulePass *createDataFlowSanitizerPass(
     const std::vector<std::string> &ABIListFiles = std::vector<std::string>(),

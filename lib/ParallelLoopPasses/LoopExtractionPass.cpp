@@ -1,4 +1,3 @@
-#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Dominators.h"
@@ -1121,6 +1120,6 @@ namespace {
 char LoopExtractionPass::ID = 1;
 static RegisterPass<LoopExtractionPass> reg2("LoopExtractionPass",
 	"Extracts loops into functions that can be called in separate threads for parallelization");
-FunctionPass *llvm::createParallelizationPass() {
+FunctionPass *parallelize::createParallelizationPass() {
 	return new LoopExtractionPass();
 }
