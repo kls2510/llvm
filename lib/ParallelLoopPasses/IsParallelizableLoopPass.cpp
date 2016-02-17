@@ -968,3 +968,6 @@ char IsParallelizableLoopPass::ID = 0;
 list<LoopDependencyData *> IsParallelizableLoopPass::results;
 static RegisterPass<IsParallelizableLoopPass> reg("IsParallelizableLoopPass",
 	"Categorizes loops into 2 categories per function; is parallelizable and is not parallelizable");
+FunctionPass *parallelize::createAnalysisParallelizationPass() {
+	return new IsParallelizableLoopPass();
+}

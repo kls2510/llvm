@@ -20,6 +20,7 @@ using namespace std;
 namespace parallelize {
 	//to use to integrate with clang
 	FunctionPass *createParallelizationPass();
+	FunctionPass *createAnalysisParallelizationPass();
 
 	/*
 	IsParallelizablePass detects loops in a function's IR and determines whether
