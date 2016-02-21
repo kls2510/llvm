@@ -19,6 +19,17 @@ using namespace std;
 using namespace parallelize;
 
 
+INITIALIZE_PASS_BEGIN(IsParallelizableLoopPass, "parallelizable-loop-analysis",
+                "Determine if a loop can be parallelized", false, true)
+INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DependenceAnalysis)
+INITIALIZE_PASS_DEPENDENCY(DependenceAnalysis)
+INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
+INITIALIZE_PASS_END(IsParallelizableLoopPass, "parallelizable-loop-analysis",
+                "Determine if a loop can be parallelized", false, true)
+
+
 //Set LoopInfo pass to run before this one so we can access its results
 void IsParallelizableLoopPass::getAnalysisUsage(AnalysisUsage &AU) const {
 	AU.addRequired<LoopInfoWrapperPass>();
@@ -966,8 +977,10 @@ list<Dependence *> IsParallelizableLoopPass::findDistanceVectors(set<Instruction
 
 char IsParallelizableLoopPass::ID = 0;
 list<LoopDependencyData *> IsParallelizableLoopPass::results;
+#if 0
 static RegisterPass<IsParallelizableLoopPass> reg("IsParallelizableLoopPass",
 	"Categorizes loops into 2 categories per function; is parallelizable and is not parallelizable");
+#endif
 FunctionPass *parallelize::createAnalysisParallelizationPass() {
 	return new IsParallelizableLoopPass();
 }

@@ -27,7 +27,7 @@ using namespace std;
 using namespace parallelize;
 
 namespace {
-	static const int DEFAULT_THREAD_COUNT = 1;
+	static const int DEFAULT_THREAD_COUNT = 2;
 	static const int DEFAULT_MIN_LOOP_COUNT = 100;
 
 	static cl::opt<unsigned> ThreadLimit(
@@ -49,6 +49,10 @@ namespace {
 
 		//Constructor
 		LoopExtractionPass() : FunctionPass(ID) {}
+
+		const char *getPassName() const override {
+			return "Loop extraction pass";
+		}
 
 		//Set LoopInfo pass to run before this one so we can access its results
 		void getAnalysisUsage(AnalysisUsage &AU) const {
@@ -1118,8 +1122,15 @@ namespace {
 }
 
 char LoopExtractionPass::ID = 1;
+INITIALIZE_PASS_BEGIN(LoopExtractionPass, "parallelizable-loops",
+                "Parallelize loops", false, false)
+INITIALIZE_PASS_DEPENDENCY(IsParallelizableLoopPass)
+INITIALIZE_PASS_END(LoopExtractionPass, "parallelizable-loops",
+                "Parallelize loops", false, false)
+/*
 static RegisterPass<LoopExtractionPass> reg2("LoopExtractionPass",
 	"Extracts loops into functions that can be called in separate threads for parallelization");
+*/
 FunctionPass *parallelize::createParallelizationPass() {
 	return new LoopExtractionPass();
 }

@@ -52,6 +52,9 @@ namespace parallelize {
 		static list<LoopDependencyData *> getResultsForFunction(Function &F);
 
 	private:
+		const char *getPassName() override {
+			return "Is parallelizable loop pass";
+		}
 		//runs the actual analysis
 		bool isParallelizable(Loop *L, Function &F, ScalarEvolution &SE);
 
