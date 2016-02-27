@@ -32,7 +32,7 @@ namespace {
 
 	static cl::opt<unsigned> ThreadLimit(
 		"thread-limit", cl::init(DEFAULT_THREAD_COUNT), cl::value_desc("threadNo"),
-		cl::desc("The number of threads to use for parallelization (default 1)"));
+		cl::desc("The number of threads to use for parallelization (default 2)"));
 
 	/*
 
@@ -60,43 +60,9 @@ namespace {
 		}
 
 		bool extract(Function &F, LoopDependencyData *loopData, LLVMContext &context) {
-			//extract the loop
-			//cerr << "This loop has no dependencies so can be extracted\n";
-
 			//get start and end of loop
 			Value *startIt = loopData->getStartIt();
 			Value *finalIt = loopData->getFinalIt();
-
-			//TODO: Calculate overhead/iteration work heuristic and decide whether parallelization is worthwhile
-
-			//move lifetime void casts that are outside loop into loop - don't need this anymore due to other values also being moved
-			/*Instruction *insertPoint = loopData->getInductionPhi();
-			for (int c = 0; c < loopData->getOtherPhiNodes().size() + loopData->getOuterLoopNonInductionPHIs().size() + 1; c++) {
-				insertPoint = insertPoint->getNextNode();
-			}
-			set<Value *> newInsts;
-			IRBuilder<> moveBuilder(insertPoint);
-			set<Value *> toMove = loopData->getVoidCastsForLoop();
-			for (auto v : toMove) {
-				Instruction *toCopy = cast<Instruction>(v);
-				Value *newInst = moveBuilder.CreateBitOrPointerCast(toCopy->getOperand(0), Type::getInt8PtrTy(context), "voidCast");
-				newInsts.insert(newInst);
-				for (auto bb : loopData->getLoop()->getBlocks()) {
-					for (auto &i : bb->getInstList()) {
-						auto oppointer = i.op_begin();
-						for (auto &op : i.operands()) {
-							if (op == toCopy) {
-								//replace value
-								cerr << "replacing void cast in instruction:\n";
-								i.dump();
-								*oppointer = newInst;
-							}
-							oppointer++;
-						}
-					}
-				}
-				toCopy->removeFromParent();
-			} */
 
 			//setup helper functions so declararations are there to be linked later
 			Module * mod = (F.getParent());
@@ -116,15 +82,6 @@ namespace {
 
 			//copy loop blocks into the function and delete them from the caller
 			extractTheLoop(loopData->getLoop(), threadFunction, &F, context);
-
-			//fix new void cast instructions that never gets used but llvm complains
-			/* for (auto i : newInsts) {
-				Instruction *castinst = cast<Instruction>(i);
-				cerr << "removing bad reference\n";
-				(*(castinst->op_begin())) = UndefValue::get(Type::getInt32PtrTy(context));
-			}*/ 
-
-			//F.begin()->begin()->users().begin()->dump();
 
 			//Mark the function to avoid infinite extraction
 			threadFunction->addFnAttr("Extracted", "true");
@@ -204,40 +161,7 @@ namespace {
 			threadStruct->setBody(elts);
 
 			//setup the threads in IR
-			/*Type *branchConditionType = loopData->getExitCondNode()->getOperand(0)->getType();
-			cerr << "loop branch Condition type:\n";
-			branchConditionType->dump();
-			Value *start = builder.CreateAlloca(startIt->getType());
-			Value *end = builder.CreateAlloca(finalIt->getType());
-			builder.CreateStore(startIt, start);
-			builder.CreateStore(finalIt, end);
-			Value *loadedStartIt = builder.CreateLoad(start);
-			Value *loadedEndIt = builder.CreateLoad(end);
-			Value *noIterations = builder.CreateBinOp(Instruction::Sub, loadedEndIt, loadedStartIt);
-			SmallVector<Value *, 2> divArgs;
-			divArgs.push_back(noIterations);
-			divArgs.push_back(ConstantInt::get(Type::getInt64Ty(context), noThreads));
-			Value *iterationsEach = builder.CreateCall(integerDiv, divArgs); */
 			for (int i = 0; i < noThreads; i++) {
-				/* Value *startItMult = builder.CreateBinOp(Instruction::Mul, iterationsEach, ConstantInt::get(Type::getInt64Ty(context), i));
-				//TODO: MAKE BOUNDARIES CORRECT
-				threadStartIt = builder.CreateBinOp(Instruction::Add, loadedStartIt, startItMult);
-				if (i == (noThreads - 1)) {
-					endIt = loadedEndIt;
-				}
-				else {
-					endIt = builder.CreateBinOp(Instruction::Add, threadStartIt, iterationsEach);
-				} */
-
-				//add final types to thread passer struct
-				/* if (i == 0) {
-					elts.push_back(threadStartIt->getType());
-					elts.push_back(endIt->getType());
-					//memory on original stack to store return values
-					elts.push_back(returnStruct->getPointerTo());
-					threadStruct->setBody(elts);
-				} */
-
 				AllocaInst *allocateInst = builder.CreateAlloca(threadStruct);
 				AllocaInst *allocateReturns = builder.CreateAlloca(returnStruct);
 				//store arguments in struct
@@ -260,7 +184,6 @@ namespace {
 				}
 
 				for (auto p : otherPhiNodes) {
-					//TODO: check why use begin used here
 					Value *start = *(p.second.first->use_begin());
 					Value *step = p.second.second;
 					//place to store start val
@@ -285,9 +208,6 @@ namespace {
 					else if (inductionBranch->getPredicate() == CmpInst::ICMP_SLT || inductionBranch->getPredicate() == CmpInst::ICMP_ULT) {
 						args.push_back(ConstantInt::get(Type::getInt32Ty(context), 0));
 						args.push_back(ConstantInt::get(Type::getInt32Ty(context), 1));
-					}
-					else {
-						//TODO
 					}
 					BranchInst *branch = cast<BranchInst>(*(inductionBranch->user_begin()));
 					BasicBlock *brIfTrue = cast<BasicBlock>(branch->getOperand(1));
@@ -320,22 +240,13 @@ namespace {
 					args.push_back(step);
 					args.push_back(getPTR);
 					builder.CreateCall(getPhiStartVal, args);
-					/*Value *iterationRange = builder.CreateBinOp(Instruction::Sub, builder.CreateLoad(getPTREnd), builder.CreateLoad(getPTRStart));
-					Value *iterationsEach = builder.CreateBinOp(Instruction::SDiv, iterationRange, step);
-					Value *incrementer = builder.CreateCall(modulo, builder.CreateTrunc(iterationsEach, Type::getInt32Ty(context)));
-					Value *newStart = builder.CreateBinOp(Instruction::Add, start, builder.CreateBinOp(Instruction::Mul, step,
-					builder.CreateBinOp(Instruction::Mul, ConstantInt::get(Type::getInt32Ty(context), i), incrementer)));
-					builder.CreateStore(newStart, getPTR); */
 					k++;
 				}
 				//store startIt
 				Value *getPTRStart = builder.CreateStructGEP(threadStruct, allocateInst, k);
-				//builder.CreateStore(threadStartIt, getPTR);
 				//store endIt
 				Value *getPTREnd = builder.CreateStructGEP(threadStruct, allocateInst, k + 1);
-				/* builder.CreateStore(endIt, getPTR);
-				Value *start = builder.CreateAlloca(startIt->getType());
-				Value *end = builder.CreateAlloca(finalIt->getType()); */
+			
 				SmallVector<Value *, 9> args;
 				args.push_back(ConstantInt::get(Type::getInt32Ty(context), i));
 				args.push_back(ConstantInt::get(Type::getInt32Ty(context), noThreads));
@@ -343,22 +254,15 @@ namespace {
 				//see about eq and neq too
 				if (inductionBranch->getPredicate() == CmpInst::ICMP_SGE || inductionBranch->getPredicate() == CmpInst::ICMP_UGE || (inductionBranch->getPredicate() == CmpInst::ICMP_EQ && loopData->getOuterPhiStep() < 0)) {
 					args.push_back(ConstantInt::get(Type::getInt32Ty(context), 1));
-					//args.push_back(ConstantInt::get(Type::getInt32Ty(context), 0));
 				}
 				else if (inductionBranch->getPredicate() == CmpInst::ICMP_SGT || inductionBranch->getPredicate() == CmpInst::ICMP_UGT) {
 					args.push_back(ConstantInt::get(Type::getInt32Ty(context), 0));
-					//args.push_back(ConstantInt::get(Type::getInt32Ty(context), 0));
 				}
 				else if (inductionBranch->getPredicate() == CmpInst::ICMP_SLE || inductionBranch->getPredicate() == CmpInst::ICMP_ULE || (inductionBranch->getPredicate() == CmpInst::ICMP_EQ && loopData->getOuterPhiStep() > 0)) {
 					args.push_back(ConstantInt::get(Type::getInt32Ty(context), 1));
-					//args.push_back(ConstantInt::get(Type::getInt32Ty(context), 1));
 				}
 				else if (inductionBranch->getPredicate() == CmpInst::ICMP_SLT || inductionBranch->getPredicate() == CmpInst::ICMP_ULT) {
 					args.push_back(ConstantInt::get(Type::getInt32Ty(context), 0));
-					//args.push_back(ConstantInt::get(Type::getInt32Ty(context), 1));
-				}
-				else {
-					//TODO
 				}
 				BranchInst *branch = cast<BranchInst>(*(inductionBranch->user_begin()));
 				BasicBlock *brIfTrue = cast<BasicBlock>(branch->getOperand(2));
@@ -390,9 +294,7 @@ namespace {
 				args.push_back(getPTRStart);
 				args.push_back(getPTREnd);
 				builder.CreateCall(getBounds, args);
-				//Value *threadStartIt;
-				//Value *endIt;
-				//store local variables in return struct at the end
+				
 				//return struct therefore at index noCallOperands + 2
 				Value *getPTR = builder.CreateStructGEP(threadStruct, allocateInst, k + 2);
 				builder.CreateStore(allocateReturns, getPTR);
@@ -454,9 +356,8 @@ namespace {
 				//builder.CreateCall(newLoopFunc, args);
 			}
 			//Wait for threads to finish
-			SmallVector<Value *, 2> waitArgTypes;
+			SmallVector<Value *, 1> waitArgTypes;
 			waitArgTypes.push_back(groupCall);
-			waitArgTypes.push_back(ConstantInt::get(Type::getInt64Ty(context), 1000000000));
 			Value *complete = builder.CreateCall(wait, waitArgTypes);
 			//TODO: delete - temporary for debugging
 			//Value *complete = ConstantInt::get(Type::getInt64Ty(context), 0);
@@ -1033,7 +934,6 @@ namespace {
 			//Create wait
 			SmallVector<Type *, 2> waitParamTypes;
 			waitParamTypes.push_back(groupStruct->getPointerTo());
-			waitParamTypes.push_back(Type::getInt64Ty(context));
 			FunctionType *waitFunctionType = FunctionType::get(Type::getInt64Ty(context), waitParamTypes, false);
 			mod->getOrInsertFunction("wait", waitFunctionType);
 

@@ -79,16 +79,22 @@ list<LoopDependencyData *> IsParallelizableLoopPass::getResultsForFunction(Funct
 	return results;
 }
 
+/* list<LoopDependencyData *> IsParallelizableLoopPass::getResultsForFunction(Function &F) {
+	return results.find(F);
+} */
+
 Instruction *IsParallelizableLoopPass::findCorrespondingBranch(Value *potentialPhi, BasicBlock *backedgeBlock) {
 	for (auto inst : potentialPhi->users()) {
 		if (isa<CmpInst>(inst)) {
 			for (auto u : inst->users()) {
 				if (isa<BranchInst>(u)) {
 					BranchInst *br = cast<BranchInst>(u);
-					Value *bb = br->getOperand(1);
-					Value *bb2 = br->getOperand(2);
-					if (bb == backedgeBlock || bb2 == backedgeBlock) {
-						return cast<Instruction>(u);
+					if (br->isConditional()) {
+						Value *bb = br->getOperand(1);
+						Value *bb2 = br->getOperand(2);
+						if (bb == backedgeBlock || bb2 == backedgeBlock) {
+							return cast<Instruction>(u);
+						}
 					}
 				}
 			}
@@ -189,7 +195,6 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	}
 
 	//check outer phi can only be integer-based - for now
-	//TODO: add support for floating point - will need to update extraction too
 	if (!outerPhi->getType()->isIntegerTy()) {
 		cerr << "outer phi node not integer value - not parallelizable\n";
 		return false;
@@ -223,6 +228,25 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	}
 	else {
 		cerr << "outer phi node step not loop computable - not parallelizable";
+		return false;
+	}
+
+	//check outer phi branch condition is within a set of allowed predicates
+	CmpInst *outercnd = cast<CmpInst>(outerBranch->getOperand(0));
+	if (outercnd->getPredicate() == CmpInst::ICMP_SGE || outercnd->getPredicate() == CmpInst::ICMP_UGE || (outercnd->getPredicate() == CmpInst::ICMP_EQ && outerPhiStep < 0)) {
+		//allowed
+	}
+	else if (outercnd->getPredicate() == CmpInst::ICMP_SGT || outercnd->getPredicate() == CmpInst::ICMP_UGT) {
+		//allowed
+	}
+	else if (outercnd->getPredicate() == CmpInst::ICMP_SLE || outercnd->getPredicate() == CmpInst::ICMP_ULE || (outercnd->getPredicate() == CmpInst::ICMP_EQ && outerPhiStep > 0)) {
+		//allowed
+	}
+	else if (outercnd->getPredicate() == CmpInst::ICMP_SLT || outercnd->getPredicate() == CmpInst::ICMP_ULT) {
+		//allowed
+	}
+	else {
+		cerr << "outer phi conditional branch predicate not allowed - not parallelizable\n";
 		return false;
 	}
 
@@ -424,8 +448,6 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 		}
 	}
 
-	//TODO: Check for switch instructions?
-
 	//ARGUMENT VALUES
 	// Find all values that must be provided to each thread of the loop
 	set<Value *> argValues;
@@ -569,7 +591,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 							}
 						}
 						else {
-							//if it is a Value declared as an argument or global variable
+							//if it is a Value declared as an argument
 							Value *val = cast<Value>(&op);
 							bool functionArg = false;
 							for (auto &arg : F.getArgumentList()) {
@@ -577,8 +599,10 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 									functionArg = true;
 								}
 							}
-							if (isa<GlobalValue>(op) || functionArg) {
-								argValues.insert(val);
+							if (functionArg) {
+								if (argValues.find(val) == argValues.end()) {
+									argValues.insert(val);
+								}
 							}
 						}
 					}
@@ -589,8 +613,47 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 				}
 			}
 			else {
-				//TODO: check the callInst's operands
-
+				CallInst *call = cast<CallInst>(&i);
+				int numArgs = call->getNumArgOperands();
+				int i;
+				for (i = 0; i < numArgs; i++) {
+					Value *arg = call->getArgOperand(i);
+					if (isa<Instruction>(arg)) {
+						Instruction *inst = cast<Instruction>(arg);
+						//if the instruction is a GEP and the memory it's accessing will definitely be local
+						//i.e. is within a lifetime start/end, then we don't need to pass it in as an arg
+						if (isa<GetElementPtrInst>(inst)) {
+							if (lifetimeValues.find(inst->getOperand(0)) != lifetimeValues.end()) {
+								cerr << "already added lifetime value, so not adding to args:\n";
+								inst->dump();
+								cerr << "\n";
+								continue;
+							}
+						}
+						//else if the value is an instruction declared outside the loop
+						else if (!(L->contains(inst))) {
+							//must pass in local value as arg so it is available
+							if (argValues.find(inst) == argValues.end()) {
+								argValues.insert(inst);
+							}
+						}
+					}
+					else {
+						//if it is a Value declared as an argument
+						Value *val = arg;
+						bool functionArg = false;
+						for (auto &farg : F.getArgumentList()) {
+							if (val == cast<Value>(&farg)) {
+								functionArg = true;
+							}
+						}
+						if (functionArg) {
+							if (argValues.find(val) == argValues.end()) {
+								argValues.insert(val);
+							}
+						}
+					}
+				}
 			}
 		}
 	}
@@ -767,6 +830,16 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	//attempt to find trip count
 	unsigned int tripCount = SE.getSmallConstantTripCount(L);
 	cerr << "trip count is: " << tripCount << "\n";
+
+	//final checks for expected loop form
+	if (L->getExitingBlock() == nullptr) {
+		cerr << "loop has no exiting block - not parallelizable";
+		return false;
+	}
+	if (L->getExitBlock() == nullptr) {
+		cerr << "loop has no exit block - not parallelizable";
+		return false;
+	}
 
 	//store results of analysis
 	bool parallelizable = true;
