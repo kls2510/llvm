@@ -340,13 +340,21 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 							nextValue = potentialAccumulator->getIncomingValue(op);
 						}
 					}
-					//if the actual phi name is used in the loop for something other than accumualation->not parallelizable
+					//if the actual phi name is used in the loop for operations other than accumualation->not parallelizable
 					//(i.e.x += x * y possible and this wouldn't be correct)
-					if (potentialAccumulator->getNumUses() > 1) {
-						cerr << "accumulative phi node has too many users: " << potentialAccumulator->getNumUses() << " - not parallelizable\n";
+					int numPhiNodeUsesInInnerPhis = 0;
+					for (auto u : potentialAccumulator->users()) {
+						if (isa<PHINode>(u)) {
+							numPhiNodeUsesInInnerPhis++;
+						}
+					}
+					if (potentialAccumulator->getNumUses() - numPhiNodeUsesInInnerPhis > 1) {
+						cerr << "accumulative phi node has too many users: " << potentialAccumulator->getNumUses() - numPhiNodeUsesInInnerPhis << " - not parallelizable\n";
 						potentialAccumulator->dump();
 						for (auto u : potentialAccumulator->users()) {
-							u->dump();
+							if (!isa<PHINode>(u)) {
+								u->dump();
+							}
 						}
 						return false;
 					}
