@@ -24,7 +24,7 @@ INITIALIZE_PASS_BEGIN(IsParallelizableLoopPass, "parallelizable-loop-analysis",
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DependenceAnalysis)
-INITIALIZE_PASS_DEPENDENCY(DependenceAnalysis)
+INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
 INITIALIZE_PASS_END(IsParallelizableLoopPass, "parallelizable-loop-analysis",
                 "Determine if a loop can be parallelized", false, true)

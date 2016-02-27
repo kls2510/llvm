@@ -990,7 +990,7 @@ namespace {
 		virtual bool runOnModule(Module &M) override {
 
 			for (Function &F : M.functions()) {
-				if (!F.hasFnAttribute("Extracted") && noThreads >= DEFAULT_THREAD_COUNT) {
+				if (!F.isDeclaration() && !F.hasFnAttribute("Extracted") && noThreads >= DEFAULT_THREAD_COUNT) {
 					//get data from the IsParallelizableLoopPass analysis
 					IsParallelizableLoopPass &IP = getAnalysis<IsParallelizableLoopPass>(F);
 					list<LoopDependencyData *> loopData = IP.getResultsForFunction(F);
