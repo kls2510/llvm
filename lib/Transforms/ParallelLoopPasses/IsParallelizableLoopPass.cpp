@@ -275,9 +275,10 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 
 	//ACCUMULATOR/NON-INDUCTION PHI NODES
 	//If there are any other phi nodes in the outer loop that aren't induction phis
+	set<PHINode *> helperAccPhis;
 	for (auto &bb : L->getBlocks()) {
 		for (auto &i : bb->getInstList()) {
-			if (isa<PHINode>(i)) {
+			if (isa<PHINode>(i) && helperAccPhis.find(cast<PHINode>(&i)) == helperAccPhis.end()) {
 				PHINode *potentialAccumulator = cast<PHINode>(&i);
 				if (find(phiNodes.begin(), phiNodes.end(), potentialAccumulator) != phiNodes.end()) {
 					continue;
@@ -346,6 +347,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 					for (auto u : potentialAccumulator->users()) {
 						if (isa<PHINode>(u)) {
 							numPhiNodeUsesInInnerPhis++;
+							helperAccPhis.insert(cast<PHINode>(u));
 						}
 					}
 					if (potentialAccumulator->getNumUses() - numPhiNodeUsesInInnerPhis > 1) {
