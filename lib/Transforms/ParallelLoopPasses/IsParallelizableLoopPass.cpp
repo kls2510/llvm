@@ -983,13 +983,39 @@ bool IsParallelizableLoopPass::checkPhiIsAccumulative(PHINode *inst, Loop *L, in
 	int op;
 	BasicBlock *initialEntry = L->getLoopPredecessor();
 
-	for (op = 0; op < 2; op++) {
+	Value *incomingNewValue = phi->user_back();
+	cerr << "incoming accumulative phi value:\n";
+	incomingNewValue->dump();
+	if (isa<Instruction>(incomingNewValue)) {
+		Instruction *incomingInstruction = cast<Instruction>(incomingNewValue);
+		cerr << "found instruction to accumulate\n";
+		incomingInstruction->dump();
+		cerr << "\n";
+		opcode = incomingInstruction->getOpcode();
+		if (Instruction::isCommutative(opcode)) {
+			return true;
+		}
+		else {
+			cerr << "phi variable op not commutative so can't be parallelized\n";
+			return false;
+		}
+	}
+	else {
+		//TEMPORARY
+		cerr << "next phi node value that's not an instruction found\n";
+		incomingNewValue->dump();
+		cerr << "\n";
+		return false;
+	}
+	/*for (op = 0; op < 2; op++) {
 		if (phi->getIncomingBlock(op) == initialEntry){
 			//initial entry edge, do nothing
 		}
 		else {
 			//find where incoming value is defined - this op will be what needs to be used to accumulate
 			Value *incomingNewValue = phi->getIncomingValue(op);
+			cerr << "incoming accumulative phi value:\n";
+			incomingNewValue->dump();
 			if (isa<Instruction>(incomingNewValue)) {
 				Instruction *incomingInstruction = cast<Instruction>(incomingNewValue);
 				cerr << "found instruction to accumulate\n";
@@ -1012,7 +1038,7 @@ bool IsParallelizableLoopPass::checkPhiIsAccumulative(PHINode *inst, Loop *L, in
 				return false;
 			}
 		}
-	}
+	} */
 	return false;
 }
 
