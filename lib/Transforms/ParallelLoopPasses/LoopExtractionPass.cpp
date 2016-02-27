@@ -463,7 +463,22 @@ namespace {
 				int pos;
 				bool accumulativeValue = false;
 				for (auto &p : accumulativePhiNodes) {
-					pos = 0;
+					for (auto u : p->users()) {
+						if (!isa<PHINode>(u)) {
+							if (u == retVal) {
+								cerr << "found phi node for return value:\n";
+								p->dump();
+								retVal->dump();
+								accumulativeValue = true;
+								accumulativePhi = p;
+								break;
+							}
+						}
+					}
+					if (accumulativeValue) {
+						break;
+					}
+					/* pos = 0;
 					for (auto &op : p->operands()) {
 						if (op == retVal) {
 							accumulativeValue = true;
@@ -474,7 +489,7 @@ namespace {
 					}
 					if (accumulativeValue) {
 						break;
-					}
+					} */
 				}
 				if (!accumulativeValue) {
 					//replace uses of value with the value loaded from the last return struct if there isn't an associated phi node

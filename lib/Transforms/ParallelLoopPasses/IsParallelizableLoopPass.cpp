@@ -983,31 +983,33 @@ bool IsParallelizableLoopPass::checkPhiIsAccumulative(PHINode *inst, Loop *L, in
 	int op;
 	BasicBlock *initialEntry = L->getLoopPredecessor();
 
-	Value *incomingNewValue = phi->user_back();
-	cerr << "incoming accumulative phi value:\n";
-	incomingNewValue->dump();
-	if (isa<Instruction>(incomingNewValue)) {
-		Instruction *incomingInstruction = cast<Instruction>(incomingNewValue);
-		cerr << "found instruction to accumulate\n";
-		incomingInstruction->dump();
-		cerr << "\n";
-		opcode = incomingInstruction->getOpcode();
-		if (Instruction::isCommutative(opcode)) {
-			return true;
-		}
-		else {
-			cerr << "phi variable op not commutative so can't be parallelized\n";
-			return false;
+	for (auto u : inst->users()) {
+		if (!isa<PHINode>(u)) {
+			cerr << "new accumulative phi value:\n";
+			u->dump();
+
+			if (isa<Instruction>(u)) {
+				Instruction *incomingInstruction = cast<Instruction>(u);
+				opcode = incomingInstruction->getOpcode();
+				if (Instruction::isCommutative(opcode)) {
+					return true;
+				}
+				else {
+					cerr << "phi variable op not commutative so can't be parallelized\n";
+					return false;
+				}
+			}
+			else {
+				//TEMPORARY
+				cerr << "next phi node value that's not an instruction found\n";
+				u->dump();
+				cerr << "\n";
+				return false;
+			}
+			break;
 		}
 	}
-	else {
-		//TEMPORARY
-		cerr << "next phi node value that's not an instruction found\n";
-		incomingNewValue->dump();
-		cerr << "\n";
-		return false;
-	}
-	/*for (op = 0; op < 2; op++) {
+	/* for (op = 0; op < 2; op++) {
 		if (phi->getIncomingBlock(op) == initialEntry){
 			//initial entry edge, do nothing
 		}
@@ -1016,6 +1018,7 @@ bool IsParallelizableLoopPass::checkPhiIsAccumulative(PHINode *inst, Loop *L, in
 			Value *incomingNewValue = phi->getIncomingValue(op);
 			cerr << "incoming accumulative phi value:\n";
 			incomingNewValue->dump();
+			
 			if (isa<Instruction>(incomingNewValue)) {
 				Instruction *incomingInstruction = cast<Instruction>(incomingNewValue);
 				cerr << "found instruction to accumulate\n";
@@ -1037,7 +1040,7 @@ bool IsParallelizableLoopPass::checkPhiIsAccumulative(PHINode *inst, Loop *L, in
 				cerr << "\n";
 				return false;
 			}
-		}
+		} 
 	} */
 	return false;
 }
