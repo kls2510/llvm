@@ -987,11 +987,11 @@ namespace {
 		}
 
 		virtual bool runOnModule(Module &M) override {
-			//get data from the IsParallelizableLoopPass analysis
-			IsParallelizableLoopPass &IP = getAnalysis<IsParallelizableLoopPass>();
 
 			for (Function &F : M.functions()) {
 				if (!F.hasFnAttribute("Extracted") && noThreads > DEFAULT_THREAD_COUNT) {
+					//get data from the IsParallelizableLoopPass analysis
+					IsParallelizableLoopPass &IP = getAnalysis<IsParallelizableLoopPass>(F);
 					list<LoopDependencyData *> loopData = IP.getResultsForFunction(F);
 					cerr << "Extraction in function " << (F.getName()).data() << "\n";
 					Module *mod = (F.getParent());

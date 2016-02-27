@@ -48,7 +48,7 @@ bool IsParallelizableLoopPass::runOnFunction(Function &F) {
 	DA = &getAnalysis<DependenceAnalysis>();
 	AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 	//list<LoopDependencyData *> l;
-	results.clear();
+	//results.clear();
 	//results.insert(std::pair<Function&, list<LoopDependencyData *>>(F, l));
 	//cout << "Results size = " << results.size() << "\n";
 	
@@ -587,7 +587,8 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 							}
 						}
 						else {
-							//if it is a Value declared as an argument
+							//if it is a Value declared as an argument or a global array
+							//(dependency/alias analysis will catch writes and reads to global state later)
 							Value *val = cast<Value>(&op);
 							bool functionArg = false;
 							for (auto &arg : F.getArgumentList()) {
@@ -595,7 +596,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 									functionArg = true;
 								}
 							}
-							if (functionArg) {
+							if (functionArg || isa<GlobalValue>(val)) {
 								if (argValues.find(val) == argValues.end()) {
 									argValues.insert(val);
 								}
@@ -647,6 +648,11 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 							if (argValues.find(val) == argValues.end()) {
 								argValues.insert(val);
 							}
+						}
+						//don't allow calls to functions passing global arrays/state
+						if (isa<GlobalValue>(val)) {
+							cerr << "function called with global state - not parallelizable\n";
+							return false;
 						}
 					}
 				}
