@@ -460,7 +460,6 @@ namespace {
 			list<PHINode *> accumulativePhiNodes = loopData->getOuterLoopNonInductionPHIs();
 			for (auto retVal : localArgumentsAndReturnVals) {
 				PHINode *accumulativePhi;
-				int pos;
 				bool accumulativeValue = false;
 				for (auto &p : accumulativePhiNodes) {
 					for (auto u : p->users()) {
