@@ -19,7 +19,7 @@ using namespace std;
 
 namespace parallelize {
 	//to use to integrate with clang
-	FunctionPass *createParallelizationPass();
+	ModulePass *createParallelizationPass();
 	FunctionPass *createAnalysisParallelizationPass();
 
 	/*
@@ -38,8 +38,7 @@ namespace parallelize {
 		AliasAnalysis *AA;
 
 		//Map containing all loops and dependencies associated with each function
-		//static map<Function&, list<LoopDependencyData *>> results;
-		static list<LoopDependencyData *> results;
+		static map<Function *, list<LoopDependencyData *>> results;
 
 		//Constructor
 		IsParallelizableLoopPass() : FunctionPass(ID) {	}

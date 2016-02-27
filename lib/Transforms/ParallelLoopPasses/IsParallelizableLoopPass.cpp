@@ -76,12 +76,8 @@ bool IsParallelizableLoopPass::runOnFunction(Function &F) {
 }
 
 list<LoopDependencyData *> IsParallelizableLoopPass::getResultsForFunction(Function &F) {
-	return results;
+	return results.find(&F)->second;
 }
-
-/* list<LoopDependencyData *> IsParallelizableLoopPass::getResultsForFunction(Function &F) {
-	return results.find(F);
-} */
 
 Instruction *IsParallelizableLoopPass::findCorrespondingBranch(Value *potentialPhi, BasicBlock *backedgeBlock) {
 	for (auto inst : potentialPhi->users()) {
@@ -846,7 +842,11 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	LoopDependencyData *data = new LoopDependencyData(outerPhi, argArgs, cast<Instruction>(outerBranch->getOperand(0)), L, dependencies, noOfInductionPhiNodes, 
 														startIt, finalIt, tripCount, parallelizable, returnValues, accumulativePhiNodes, otherPhiNodes, lifetimeValues,
 														voidCastsForLoop, privateLoopVarUses, outerPhiStep);
-	results.push_back(data);
+	
+	if (results.find(&F) == results.end()) {
+		results.insert(make_pair(&F, list<LoopDependencyData *>()));
+	}
+	results.find(&F)->second.push_back(data);
 	
 	return true;
 }
@@ -1021,7 +1021,6 @@ list<Dependence *> IsParallelizableLoopPass::findDistanceVectors(set<Instruction
 				if (d != nullptr) {
 					// direction: NONE = 0, LT = 1, EQ = 2, LE = 3, GT = 4, NE = 5, GE = 6, ALL = 7
 					const SCEV *scev = (d->getDistance(1));
-					int direction = d->getDirection(1);
 					int distance;
 					if (scev != nullptr && isa<SCEVConstant>(scev)) {
 						const SCEVConstant *scevConst = cast<SCEVConstant>(scev);
@@ -1049,7 +1048,7 @@ list<Dependence *> IsParallelizableLoopPass::findDistanceVectors(set<Instruction
 
 
 char IsParallelizableLoopPass::ID = 0;
-list<LoopDependencyData *> IsParallelizableLoopPass::results;
+map<Function *, list<LoopDependencyData *>> IsParallelizableLoopPass::results;
 #if 0
 static RegisterPass<IsParallelizableLoopPass> reg("IsParallelizableLoopPass",
 	"Categorizes loops into 2 categories per function; is parallelizable and is not parallelizable");

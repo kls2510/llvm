@@ -28,7 +28,6 @@ using namespace parallelize;
 
 namespace {
 	static const int DEFAULT_THREAD_COUNT = 2;
-	static const int DEFAULT_MIN_LOOP_COUNT = 100;
 
 	static cl::opt<unsigned> ThreadLimit(
 		"thread-limit", cl::init(DEFAULT_THREAD_COUNT), cl::value_desc("threadNo"),
@@ -37,7 +36,7 @@ namespace {
 	/*
 
 	*/
-	struct LoopExtractionPass : public FunctionPass {
+	struct LoopExtractionPass : public ModulePass {
 		int noThreads = ThreadLimit.getValue();
 		StructType *threadStruct;
 		StructType *returnStruct;
@@ -48,14 +47,14 @@ namespace {
 		static char ID;
 
 		//Constructor
-		LoopExtractionPass() : FunctionPass(ID) {}
+		LoopExtractionPass() : ModulePass(ID) {}
 
 		const char *getPassName() const override {
 			return "Loop extraction pass";
 		}
 
 		//Set LoopInfo pass to run before this one so we can access its results
-		void getAnalysisUsage(AnalysisUsage &AU) const {
+		void getAnalysisUsage(AnalysisUsage &AU) const override {
 			AU.addRequired<IsParallelizableLoopPass>();
 		}
 
@@ -91,9 +90,7 @@ namespace {
 		}
 
 		list<Value *> setupStructs(Function *callingFunction, LLVMContext &context, LoopDependencyData *loopData, Value *startIt, Value *finalIt, ValueSymbolTable &symTab) {
-			Function *integerDiv = cast<Function>(symTab.lookup(StringRef("integerDivide")));
-			Function *modulo = cast<Function>(symTab.lookup(StringRef("modulo")));
-
+			
 			//Obtain the argument values required for passing to/from the function
 			list<Value *> argArguments = loopData->getArgumentArgValues();
 			list<Value *>  localArgumentsAndReturnVals = loopData->getReturnValues();
@@ -325,7 +322,7 @@ namespace {
 			loadBlock = BasicBlock::Create(context, "load", newLoopFunc);
 
 			//add dummy calls to try and prevent its deletion
-			BasicBlock *dummyBlock = BasicBlock::Create(context, "dummy", callingFunction);
+			/* BasicBlock *dummyBlock = BasicBlock::Create(context, "dummy", callingFunction);
 			IRBuilder<> builderdummy(dummyBlock);
 			SmallVector<Value *, 1> dummyarg;
 			Value *ptr = builderdummy.CreateAlloca(Type::getInt8Ty(context));
@@ -339,7 +336,7 @@ namespace {
 			}
 			else {
 				retdum = builderdummy.CreateRetVoid();
-			}
+			} */
 
 			//add calls to it, one per thread
 			IRBuilder<> builder(setupBlock);
@@ -989,33 +986,30 @@ namespace {
 			mod->getOrInsertFunction("calcStartValue", startFunctionType);
 		}
 
-		virtual bool runOnFunction(Function &F) {
+		virtual bool runOnModule(Module &M) override {
 			//get data from the IsParallelizableLoopPass analysis
 			IsParallelizableLoopPass &IP = getAnalysis<IsParallelizableLoopPass>();
 
-			if (!F.hasFnAttribute("Extracted") && noThreads > DEFAULT_THREAD_COUNT) {
-				list<LoopDependencyData *> loopData = IP.getResultsForFunction(F);
-				//cerr << "In function " << (F.getName()).data() << "\n";
-				Module * mod = (F.getParent());
-				LLVMContext &context = mod->getContext();
-				addHelperFunctionDeclarations(context, mod);
-				for (list<LoopDependencyData *>::iterator i = loopData.begin(); i != loopData.end(); i++) {
-					//cerr << "Found a loop\n";
-					LoopDependencyData *loopData = *i;
+			for (Function &F : M.functions()) {
+				if (!F.hasFnAttribute("Extracted") && noThreads > DEFAULT_THREAD_COUNT) {
+					list<LoopDependencyData *> loopData = IP.getResultsForFunction(F);
+					cerr << "Extraction in function " << (F.getName()).data() << "\n";
+					Module *mod = (F.getParent());
+					LLVMContext &context = mod->getContext();
+					addHelperFunctionDeclarations(context, mod);
+					for (list<LoopDependencyData *>::iterator i = loopData.begin(); i != loopData.end(); i++) {
+						LoopDependencyData *loopData = *i;
 
-					if ((loopData->getDependencies()).size() == 0) {
-						if (loopData->isParallelizable()) {
-							bool success = extract(F, loopData, context);
+						if ((loopData->getDependencies()).size() == 0) {
+							if (loopData->isParallelizable()) {
+								extract(F, loopData, context);
+							}
 						}
 					}
-					else {
-						return false;
-					}
+					cerr << "Loop extraction for function complete\n";
 				}
-				cerr << "Loop extraction for function complete\n";
-				return true;
 			}
-			return false;
+			return true;
 		}
 
 	};
@@ -1031,6 +1025,6 @@ INITIALIZE_PASS_END(LoopExtractionPass, "parallelizable-loops",
 static RegisterPass<LoopExtractionPass> reg2("LoopExtractionPass",
 	"Extracts loops into functions that can be called in separate threads for parallelization");
 */
-FunctionPass *parallelize::createParallelizationPass() {
+ModulePass *parallelize::createParallelizationPass() {
 	return new LoopExtractionPass();
 }
