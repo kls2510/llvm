@@ -456,28 +456,14 @@ namespace {
 
 			//now load in our local variable values and update where they are used
 			int retValNo = 0;
+			int pos;
 			Value *lastReturnStruct = returnStructs.back();
 			list<PHINode *> accumulativePhiNodes = loopData->getOuterLoopNonInductionPHIs();
 			for (auto retVal : localArgumentsAndReturnVals) {
 				PHINode *accumulativePhi;
 				bool accumulativeValue = false;
 				for (auto &p : accumulativePhiNodes) {
-					for (auto u : p->users()) {
-						if (!isa<PHINode>(u)) {
-							if (u == retVal) {
-								cerr << "found phi node for return value:\n";
-								p->dump();
-								retVal->dump();
-								accumulativeValue = true;
-								accumulativePhi = p;
-								break;
-							}
-						}
-					}
-					if (accumulativeValue) {
-						break;
-					}
-					/* pos = 0;
+					pos = 0;
 					for (auto &op : p->operands()) {
 						if (op == retVal) {
 							accumulativeValue = true;
@@ -488,7 +474,7 @@ namespace {
 					}
 					if (accumulativeValue) {
 						break;
-					} */
+					}
 				}
 				if (!accumulativeValue) {
 					//replace uses of value with the value loaded from the last return struct if there isn't an associated phi node
