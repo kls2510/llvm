@@ -277,7 +277,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	//If there are any other phi nodes in the outer loop that aren't induction phis
 	for (auto &bb : L->getBlocks()) {
 		for (auto &i : bb->getInstList()) {
-			if (isa<PHINode>(i) && !(*(L->getSubLoops().begin()))->contains(&i)) {
+			if (isa<PHINode>(i)) {
 				PHINode *potentialAccumulator = cast<PHINode>(&i);
 				if (find(phiNodes.begin(), phiNodes.end(), potentialAccumulator) != phiNodes.end()) {
 					continue;
