@@ -56,6 +56,7 @@ namespace {
 		//Set LoopInfo pass to run before this one so we can access its results
 		void getAnalysisUsage(AnalysisUsage &AU) const override {
 			AU.addRequired<IsParallelizableLoopPass>();
+			AU.addPreserved<IsParallelizableLoopPass>();
 		}
 
 		bool extract(Function &F, LoopDependencyData *loopData, LLVMContext &context) {
@@ -989,7 +990,7 @@ namespace {
 		virtual bool runOnModule(Module &M) override {
 
 			for (Function &F : M.functions()) {
-				if (!F.hasFnAttribute("Extracted") && noThreads > DEFAULT_THREAD_COUNT) {
+				if (!F.hasFnAttribute("Extracted") && noThreads >= DEFAULT_THREAD_COUNT) {
 					//get data from the IsParallelizableLoopPass analysis
 					IsParallelizableLoopPass &IP = getAnalysis<IsParallelizableLoopPass>(F);
 					list<LoopDependencyData *> loopData = IP.getResultsForFunction(F);
