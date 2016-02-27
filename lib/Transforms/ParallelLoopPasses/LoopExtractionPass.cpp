@@ -322,23 +322,6 @@ namespace {
 			//add basic block to the new function
 			loadBlock = BasicBlock::Create(context, "load", newLoopFunc);
 
-			//add dummy calls to try and prevent its deletion
-			/* BasicBlock *dummyBlock = BasicBlock::Create(context, "dummy", callingFunction);
-			IRBuilder<> builderdummy(dummyBlock);
-			SmallVector<Value *, 1> dummyarg;
-			Value *ptr = builderdummy.CreateAlloca(Type::getInt8Ty(context));
-			dummyarg.push_back(ptr);
-			builderdummy.CreateCall(newLoopFunc, dummyarg);
-			Value *retdum;
-			if (callingFunction->getReturnType() != Type::getVoidTy(context)) {
-				retdum = builderdummy.CreateAlloca(callingFunction->getReturnType());
-				retdum = builderdummy.CreateLoad(retdum);
-				builderdummy.CreateRet(retdum);
-			}
-			else {
-				retdum = builderdummy.CreateRetVoid();
-			} */
-
 			//add calls to it, one per thread
 			IRBuilder<> builder(setupBlock);
 			Value *groupCall = builder.CreateCall(createGroup, SmallVector<Value *, 0>());

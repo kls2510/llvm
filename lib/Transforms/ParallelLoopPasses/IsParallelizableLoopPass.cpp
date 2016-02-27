@@ -76,7 +76,10 @@ bool IsParallelizableLoopPass::runOnFunction(Function &F) {
 }
 
 list<LoopDependencyData *> IsParallelizableLoopPass::getResultsForFunction(Function &F) {
-	return results.find(&F)->second;
+	if (results.find(&F) != results.end()) {
+		return results.find(&F)->second;
+	}
+	return list<LoopDependencyData *>();
 }
 
 Instruction *IsParallelizableLoopPass::findCorrespondingBranch(Value *potentialPhi, BasicBlock *backedgeBlock) {
@@ -636,7 +639,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 						}
 					}
 					else {
-						//if it is a Value declared as an argument
+						//if it is a Value declared as an argument or global array
 						Value *val = arg;
 						bool functionArg = false;
 						for (auto &farg : F.getArgumentList()) {
@@ -644,15 +647,10 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 								functionArg = true;
 							}
 						}
-						if (functionArg) {
+						if (isa<GlobalValue>(val) || functionArg) {
 							if (argValues.find(val) == argValues.end()) {
 								argValues.insert(val);
 							}
-						}
-						//don't allow calls to functions passing global arrays/state
-						if (isa<GlobalValue>(val)) {
-							cerr << "function called with global state - not parallelizable\n";
-							return false;
 						}
 					}
 				}
