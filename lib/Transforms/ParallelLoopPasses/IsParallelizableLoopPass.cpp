@@ -718,8 +718,13 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	// get dependency information for all found read / write instructions - any non - zero ->not parallelizable
 	dependencies = findDistanceVectors(dependentInstructions, DA);
 	if (dependencies.size() > 0) {
-		cerr << "Has dependencies so not parallelizable\n";
-		return false;
+		for (auto d : dependencies) {
+			if (isa<StoreInst>(d->getSrc()) || isa<StoreInst>(d->getDst)) {
+				cerr << "Has read-write/write-read dependencies so not parallelizable\n";
+				return false;
+			}
+			//else the dependency is just between to reads so OK
+		}
 	}
 
 	//ALIAS ANALYSIS
