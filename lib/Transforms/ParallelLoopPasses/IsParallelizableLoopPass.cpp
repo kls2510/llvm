@@ -935,21 +935,28 @@ bool IsParallelizableLoopPass::getDependencies(Loop *L, PHINode *phi, set<Instru
 			}
 			else if (isa<StoreInst>(&i)) {
 				//case : write
-				Instruction *ptr = cast<Instruction>(i.getOperand(1));
-				if (lifetimeValues.find(ptr->getOperand(0)) == lifetimeValues.end()) {
-					dependent = isDependentOnInductionVariable(ptr, phi, false);
+				if (isa<Instruction>(i.getOperand(1))) {
+					Instruction *ptr = cast<Instruction>(i.getOperand(1));
+					if (lifetimeValues.find(ptr->getOperand(0)) == lifetimeValues.end()) {
+						dependent = isDependentOnInductionVariable(ptr, phi, false);
+					}
+					else {
+						lifetimeVal = true;
+						dependent = true;
+					}
+					if (dependent) {
+						i.dump();
+						cerr << "\n";
+					}
+					else {
+						i.dump();
+						cerr << "Write instruction found but not dependent on i, not parallelizable\n\n";
+						parallelizable = false;
+					}
 				}
 				else {
-					lifetimeVal = true;
-					dependent = true;
-				}
-				if (dependent) {
 					i.dump();
-					cerr << "\n";
-				}
-				else {
-					i.dump();
-					cerr << "Write instruction found but not dependent on i, not parallelizable\n\n";
+					cerr << "Write instruction found location isn't a GEP instruction, not parallelizable\n\n";
 					parallelizable = false;
 				}
 			}
@@ -983,12 +990,8 @@ bool IsParallelizableLoopPass::checkPhiIsAccumulative(PHINode *inst, Loop *L, in
 	inst->dump();
 	cerr << "\n";
 
-	PHINode *phi = inst;
-
 	//find what the repeated operation is - only accept commutative operations
 	//i.e. case Add, case FAdd, case Mul, case FMul, case And, case Or, case Xor
-	int op;
-	BasicBlock *initialEntry = L->getLoopPredecessor();
 
 	for (auto u : inst->users()) {
 		if (!isa<PHINode>(u)) {
@@ -1016,39 +1019,6 @@ bool IsParallelizableLoopPass::checkPhiIsAccumulative(PHINode *inst, Loop *L, in
 			break;
 		}
 	}
-	/* for (op = 0; op < 2; op++) {
-		if (phi->getIncomingBlock(op) == initialEntry){
-			//initial entry edge, do nothing
-		}
-		else {
-			//find where incoming value is defined - this op will be what needs to be used to accumulate
-			Value *incomingNewValue = phi->getIncomingValue(op);
-			cerr << "incoming accumulative phi value:\n";
-			incomingNewValue->dump();
-			
-			if (isa<Instruction>(incomingNewValue)) {
-				Instruction *incomingInstruction = cast<Instruction>(incomingNewValue);
-				cerr << "found instruction to accumulate\n";
-				incomingInstruction->dump();
-				cerr << "\n";
-				opcode = incomingInstruction->getOpcode();
-				if (Instruction::isCommutative(opcode)) {
-					return true;
-				}
-				else {
-					cerr << "phi variable op not commutative so can't be parallelized\n";
-					return false;
-				}
-			}
-			else {
-				//TEMPORARY
-				cerr << "next phi node value that's not an instruction found\n";
-				incomingNewValue->dump();
-				cerr << "\n";
-				return false;
-			}
-		} 
-	} */
 	return false;
 }
 
