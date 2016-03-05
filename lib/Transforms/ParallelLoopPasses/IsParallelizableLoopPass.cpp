@@ -920,17 +920,22 @@ bool IsParallelizableLoopPass::getDependencies(Loop *L, PHINode *phi, set<Instru
 			if (isa<LoadInst>(&i)) {
 				//case : load
 				//get the memory location pointer
-				Instruction *ptr = cast<Instruction>(i.getOperand(0));
-				if (lifetimeValues.find(ptr->getOperand(0)) == lifetimeValues.end()) {
-					dependent = isDependentOnInductionVariable(ptr, phi, true);
+				if (isa<Instruction>(i.getOperand(0))) {
+					Instruction *ptr = cast<Instruction>(i.getOperand(0));
+					if (lifetimeValues.find(ptr->getOperand(0)) == lifetimeValues.end()) {
+						dependent = isDependentOnInductionVariable(ptr, phi, true);
+					}
+					else {
+						lifetimeVal = true;
+						dependent = true;
+					}
+					if (dependent) {
+						i.dump();
+						cerr << "\n";
+					}
 				}
 				else {
-					lifetimeVal = true;
-					dependent = true;
-				}
-				if (dependent) {
-					i.dump();
-					cerr << "\n";
+					//the place we're reading from isn't a GEP instruction so not dependent on i
 				}
 			}
 			else if (isa<StoreInst>(&i)) {
