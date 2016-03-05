@@ -292,39 +292,41 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 				//values to each thread
 				cerr << "non induction phi scev found:\n";
 				potentialAccumulator->dump();
-				const SCEV *phiScev = SE.getSCEVAtScope(potentialAccumulator, L);
-				phiScev->dump();
-				phiScev->getType()->dump();
-				if (SE.getLoopDisposition(phiScev, L) == SE.LoopComputable) {
-					cerr << "phi changes by a constant each outer loop iteration\n";
-					if (isa<SCEVAddRecExpr>(phiScev)) {
-						const SCEVAddRecExpr *phiScevExpr = cast<SCEVAddRecExpr>(phiScev);
-						const SCEV *firstVal = phiScevExpr->getStart();
-						cerr << "first val:\n";
-						firstVal->dump();
-						cerr << "\n";
-						const SCEV *stepSize = phiScevExpr->getStepRecurrence(SE);
-						cerr << "step size:\n";
-						stepSize->dump();
-						cerr << "\n";
-						if (isa<SCEVConstant>(stepSize)) {
-							const SCEVConstant *stepConst = cast<SCEVConstant>(stepSize);
-							cerr << "phi node can be split up for iterations, adding to analysis\n";
-							if (isa<SCEVConstant>(firstVal)) {
-								otherPhiNodes.insert(make_pair(potentialAccumulator, make_pair(cast<SCEVConstant>(firstVal)->getValue(), stepConst->getValue())));
+				if (SE.isSCEVable(potentialAccumulator->getType())) {
+					const SCEV *phiScev = SE.getSCEVAtScope(potentialAccumulator, L);
+					phiScev->dump();
+					phiScev->getType()->dump();
+					if (SE.getLoopDisposition(phiScev, L) == SE.LoopComputable) {
+						cerr << "phi changes by a constant each outer loop iteration\n";
+						if (isa<SCEVAddRecExpr>(phiScev)) {
+							const SCEVAddRecExpr *phiScevExpr = cast<SCEVAddRecExpr>(phiScev);
+							const SCEV *firstVal = phiScevExpr->getStart();
+							cerr << "first val:\n";
+							firstVal->dump();
+							cerr << "\n";
+							const SCEV *stepSize = phiScevExpr->getStepRecurrence(SE);
+							cerr << "step size:\n";
+							stepSize->dump();
+							cerr << "\n";
+							if (isa<SCEVConstant>(stepSize)) {
+								const SCEVConstant *stepConst = cast<SCEVConstant>(stepSize);
+								cerr << "phi node can be split up for iterations, adding to analysis\n";
+								if (isa<SCEVConstant>(firstVal)) {
+									otherPhiNodes.insert(make_pair(potentialAccumulator, make_pair(cast<SCEVConstant>(firstVal)->getValue(), stepConst->getValue())));
+								}
+								else {
+									const SCEVUnknown *scev = cast<SCEVUnknown>(firstVal);
+									cerr << "start val non-const but is value:\n";
+									scev->getValue()->dump();
+									cerr << "\n";
+									otherPhiNodes.insert(make_pair(potentialAccumulator, make_pair(scev->getValue(), stepConst->getValue())));
+								}
+								phiSatisfied = true;
 							}
 							else {
-								const SCEVUnknown *scev = cast<SCEVUnknown>(firstVal);
-								cerr << "start val non-const but is value:\n";
-								scev->getValue()->dump();
-								cerr << "\n";
-								otherPhiNodes.insert(make_pair(potentialAccumulator, make_pair(scev->getValue(), stepConst->getValue())));
+								cerr << "scev has non-constant step value - not parallelizable\n";
+								return false;
 							}
-							phiSatisfied = true;
-						}
-						else {
-							cerr << "scev has non-constant step value - not parallelizable\n";
-							return false;
 						}
 					}
 				}
