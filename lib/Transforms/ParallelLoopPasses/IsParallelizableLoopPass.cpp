@@ -315,11 +315,17 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 									otherPhiNodes.insert(make_pair(potentialAccumulator, make_pair(cast<SCEVConstant>(firstVal)->getValue(), stepConst->getValue())));
 								}
 								else {
-									const SCEVUnknown *scev = cast<SCEVUnknown>(firstVal);
-									cerr << "start val non-const but is value:\n";
-									scev->getValue()->dump();
-									cerr << "\n";
-									otherPhiNodes.insert(make_pair(potentialAccumulator, make_pair(scev->getValue(), stepConst->getValue())));
+									if (isa<SCEVUnknown>(firstVal)) {
+										const SCEVUnknown *scev = cast<SCEVUnknown>(firstVal);
+										cerr << "start val non-const but is value:\n";
+										scev->getValue()->dump();
+										cerr << "\n";
+										otherPhiNodes.insert(make_pair(potentialAccumulator, make_pair(scev->getValue(), stepConst->getValue())));
+									}
+									else {
+										cerr << "Error reading SCEV values - not parallelizable\n";
+										return false;
+									}
 								}
 								phiSatisfied = true;
 							}
