@@ -1074,10 +1074,10 @@ list<Dependence *> IsParallelizableLoopPass::findDistanceVectors(set<Instruction
 
 char IsParallelizableLoopPass::ID = 0;
 map<Function *, list<LoopDependencyData *>> IsParallelizableLoopPass::results;
-#if 0
+
 static RegisterPass<IsParallelizableLoopPass> reg("IsParallelizableLoopPass",
 	"Categorizes loops into 2 categories per function; is parallelizable and is not parallelizable");
-#endif
+
 FunctionPass *parallelize::createAnalysisParallelizationPass() {
 	return new IsParallelizableLoopPass();
 }
