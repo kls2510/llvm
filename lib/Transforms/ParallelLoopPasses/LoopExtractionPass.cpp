@@ -1023,8 +1023,8 @@ INITIALIZE_PASS_DEPENDENCY(IsParallelizableLoopPass)
 INITIALIZE_PASS_END(LoopExtractionPass, "parallelizable-loops",
                 "Parallelize loops", false, false)
 
-static RegisterPass<LoopExtractionPass> reg2("LoopExtractionPass",
-	"Extracts loops into functions that can be called in separate threads for parallelization");
+/* static RegisterPass<LoopExtractionPass> reg2("LoopExtractionPass",
+	"Extracts loops into functions that can be called in separate threads for parallelization"); */
 
 ModulePass *parallelize::createParallelizationPass() {
 	return new LoopExtractionPass();
