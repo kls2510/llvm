@@ -417,11 +417,17 @@ namespace {
 		}
 
 		Value *replaceValue(unsigned int opcode, LLVMContext &context, Type *type) {
-			if (Instruction::BinaryOps(opcode) == Instruction::BinaryOps::Add || Instruction::BinaryOps(opcode) == Instruction::BinaryOps::FAdd) {
+			if (Instruction::BinaryOps(opcode) == Instruction::BinaryOps::Add) {
 				return ConstantInt::get(type, 0);
 			}
-			else if (Instruction::BinaryOps(opcode) == Instruction::BinaryOps::Mul || Instruction::BinaryOps(opcode) == Instruction::BinaryOps::FMul) {
+			else if (Instruction::BinaryOps(opcode) == Instruction::BinaryOps::FAdd) {
+				return ConstantFP::get(type, (double)0.0);
+			}
+			else if (Instruction::BinaryOps(opcode) == Instruction::BinaryOps::Mul) {
 				return ConstantInt::get(type, 1);
+			}
+			else if (Instruction::BinaryOps(opcode) == Instruction::BinaryOps::FMul) {
+				return ConstantFP::get(type, (double)1.0);
 			}
 			else if (Instruction::BinaryOps(opcode) == Instruction::BinaryOps::And) {
 				return ConstantInt::getAllOnesValue(type);
