@@ -242,6 +242,7 @@ namespace {
 					args.push_back(start);
 					args.push_back(step);
 					args.push_back(getPTR);
+					cerr << "adding call to getPhiStartVal\n";
 					builder.CreateCall(getPhiStartVal, args);
 					k++;
 				}
@@ -296,6 +297,7 @@ namespace {
 				args.push_back(loopData->getOuterPhiStep());
 				args.push_back(getPTRStart);
 				args.push_back(getPTREnd);
+				cerr << "adding call to getBounds\n";
 				builder.CreateCall(getBounds, args);
 				
 				//return struct therefore at index noCallOperands + 2
@@ -329,12 +331,14 @@ namespace {
 
 			//add calls to it, one per thread
 			IRBuilder<> builder(setupBlock);
+			cerr << "adding call to createGroup\n";
 			Value *groupCall = builder.CreateCall(createGroup, SmallVector<Value *, 0>());
 			for (list<Value*>::iterator it = threadStructs.begin(); it != threadStructs.end(); ++it) {
 				SmallVector<Value *, 3> argsForDispatch;
 				argsForDispatch.push_back(groupCall);
 				argsForDispatch.push_back(*it);
 				argsForDispatch.push_back(newLoopFunc);
+				cerr << "adding call to asyncDispatch\n";
 				builder.CreateCall(asyncDispatch, argsForDispatch);
 				//TODO: delete - temporary for debugging
 				//SmallVector<Value *, 3> args;
@@ -344,6 +348,7 @@ namespace {
 			//Wait for threads to finish
 			SmallVector<Value *, 1> waitArgTypes;
 			waitArgTypes.push_back(groupCall);
+			cerr << "adding call to wait\n";
 			Value *complete = builder.CreateCall(wait, waitArgTypes);
 			//TODO: delete - temporary for debugging
 			//Value *complete = ConstantInt::get(Type::getInt64Ty(context), 0);
@@ -369,6 +374,7 @@ namespace {
 			SmallVector<Value *, 1> releaseArgs;
 			releaseArgs.push_back(groupCall);
 			IRBuilder<> cleanup(cont);
+			cerr << "adding call to release\n";
 			cleanup.CreateCall(release, releaseArgs);
 			loadAndReplaceLocals(cleanup, loopData, threadStructs, context);
 			cleanup.CreateBr(loopData->getLoop()->getExitBlock());
