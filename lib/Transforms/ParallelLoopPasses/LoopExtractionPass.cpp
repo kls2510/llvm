@@ -166,11 +166,9 @@ namespace {
 			Value *inductionStep = loopData->getOuterPhiStep();
 
 			if (loopData->getInductionPhi()->getType() == Type::getInt32Ty(context)) {
-				//convert start it and final it to 64 bit
-				cerr << "converting induction phi values to 64 bit\n";
-				startIt = builder.CreateIntCast(startIt, Type::getInt64Ty(context), true);
-				finalIt = builder.CreateIntCast(finalIt, Type::getInt64Ty(context), true);
-				inductionStep = builder.CreateIntCast(inductionStep, Type::getInt64Ty(context), true);
+				//use 32-bit functions instead
+				getBounds = cast<Function>(symTab.lookup(StringRef("calcBounds32")));
+				getPhiStartVal = cast<Function>(symTab.lookup(StringRef("calcStartValue32")));
 			}
 
 			//setup the threads in IR
@@ -312,11 +310,6 @@ namespace {
 				args.push_back(inductionStep);
 				args.push_back(getPTRStart);
 				args.push_back(getPTREnd);
-				for (auto a : args) {
-					cerr << "arg:\n";
-					a->dump();
-					a->getType()->dump();
-				}
 				cerr << "adding call to getBounds\n";
 				builder.CreateCall(getBounds, args);
 				
@@ -1005,6 +998,40 @@ namespace {
 			startParamTypes.push_back(Type::getInt32PtrTy(context));
 			FunctionType *startFunctionType = FunctionType::get(Type::getVoidTy(context), startParamTypes, false);
 			mod->getOrInsertFunction("calcStartValue", startFunctionType);
+
+			//create loop bounds
+			SmallVector<Type *, 11> loopParamTypes;
+			loopParamTypes.push_back(Type::getInt32Ty(context));
+			loopParamTypes.push_back(Type::getInt32Ty(context));
+			loopParamTypes.push_back(Type::getInt32Ty(context));
+			loopParamTypes.push_back(Type::getInt32Ty(context));
+			loopParamTypes.push_back(Type::getInt32Ty(context));
+			loopParamTypes.push_back(Type::getInt32Ty(context));
+			loopParamTypes.push_back(Type::getInt32Ty(context));
+			loopParamTypes.push_back(Type::getInt32Ty(context));
+			loopParamTypes.push_back(Type::getInt32Ty(context));
+			loopParamTypes.push_back(Type::getInt32PtrTy(context));
+			loopParamTypes.push_back(Type::getInt32PtrTy(context));
+			FunctionType *loopFunctionType = FunctionType::get(Type::getVoidTy(context), loopParamTypes, false);
+			mod->getOrInsertFunction("calcBounds32", loopFunctionType);
+
+			//create find start value
+			SmallVector<Type *, 13> startParamTypes;
+			startParamTypes.push_back(Type::getInt32Ty(context));
+			startParamTypes.push_back(Type::getInt32Ty(context));
+			startParamTypes.push_back(Type::getInt32Ty(context));
+			startParamTypes.push_back(Type::getInt32Ty(context));
+			startParamTypes.push_back(Type::getInt32Ty(context));
+			startParamTypes.push_back(Type::getInt32Ty(context));
+			startParamTypes.push_back(Type::getInt32Ty(context));
+			startParamTypes.push_back(Type::getInt32Ty(context));
+			startParamTypes.push_back(Type::getInt32Ty(context));
+			startParamTypes.push_back(Type::getInt32Ty(context));
+			startParamTypes.push_back(Type::getInt32Ty(context));
+			startParamTypes.push_back(Type::getInt32Ty(context));
+			startParamTypes.push_back(Type::getInt32PtrTy(context));
+			FunctionType *startFunctionType = FunctionType::get(Type::getVoidTy(context), startParamTypes, false);
+			mod->getOrInsertFunction("calcStartValue32", startFunctionType);
 		}
 
 		virtual bool runOnModule(Module &M) override {
