@@ -1000,38 +1000,38 @@ namespace {
 			mod->getOrInsertFunction("calcStartValue", startFunctionType);
 
 			//create loop bounds
-			SmallVector<Type *, 11> loopParamTypes;
-			loopParamTypes.push_back(Type::getInt32Ty(context));
-			loopParamTypes.push_back(Type::getInt32Ty(context));
-			loopParamTypes.push_back(Type::getInt32Ty(context));
-			loopParamTypes.push_back(Type::getInt32Ty(context));
-			loopParamTypes.push_back(Type::getInt32Ty(context));
-			loopParamTypes.push_back(Type::getInt32Ty(context));
-			loopParamTypes.push_back(Type::getInt32Ty(context));
-			loopParamTypes.push_back(Type::getInt32Ty(context));
-			loopParamTypes.push_back(Type::getInt32Ty(context));
-			loopParamTypes.push_back(Type::getInt32PtrTy(context));
-			loopParamTypes.push_back(Type::getInt32PtrTy(context));
-			FunctionType *loopFunctionType = FunctionType::get(Type::getVoidTy(context), loopParamTypes, false);
-			mod->getOrInsertFunction("calcBounds32", loopFunctionType);
+			SmallVector<Type *, 11> loopParamTypes32;
+			loopParamTypes32.push_back(Type::getInt32Ty(context));
+			loopParamTypes32.push_back(Type::getInt32Ty(context));
+			loopParamTypes32.push_back(Type::getInt32Ty(context));
+			loopParamTypes32.push_back(Type::getInt32Ty(context));
+			loopParamTypes32.push_back(Type::getInt32Ty(context));
+			loopParamTypes32.push_back(Type::getInt32Ty(context));
+			loopParamTypes32.push_back(Type::getInt32Ty(context));
+			loopParamTypes32.push_back(Type::getInt32Ty(context));
+			loopParamTypes32.push_back(Type::getInt32Ty(context));
+			loopParamTypes32.push_back(Type::getInt32PtrTy(context));
+			loopParamTypes32.push_back(Type::getInt32PtrTy(context));
+			FunctionType *loopFunctionType32 = FunctionType::get(Type::getVoidTy(context), loopParamTypes32, false);
+			mod->getOrInsertFunction("calcBounds32", loopFunctionType32);
 
 			//create find start value
-			SmallVector<Type *, 13> startParamTypes;
-			startParamTypes.push_back(Type::getInt32Ty(context));
-			startParamTypes.push_back(Type::getInt32Ty(context));
-			startParamTypes.push_back(Type::getInt32Ty(context));
-			startParamTypes.push_back(Type::getInt32Ty(context));
-			startParamTypes.push_back(Type::getInt32Ty(context));
-			startParamTypes.push_back(Type::getInt32Ty(context));
-			startParamTypes.push_back(Type::getInt32Ty(context));
-			startParamTypes.push_back(Type::getInt32Ty(context));
-			startParamTypes.push_back(Type::getInt32Ty(context));
-			startParamTypes.push_back(Type::getInt32Ty(context));
-			startParamTypes.push_back(Type::getInt32Ty(context));
-			startParamTypes.push_back(Type::getInt32Ty(context));
-			startParamTypes.push_back(Type::getInt32PtrTy(context));
-			FunctionType *startFunctionType = FunctionType::get(Type::getVoidTy(context), startParamTypes, false);
-			mod->getOrInsertFunction("calcStartValue32", startFunctionType);
+			SmallVector<Type *, 13> startParamTypes32;
+			startParamTypes32.push_back(Type::getInt32Ty(context));
+			startParamTypes32.push_back(Type::getInt32Ty(context));
+			startParamTypes32.push_back(Type::getInt32Ty(context));
+			startParamTypes32.push_back(Type::getInt32Ty(context));
+			startParamTypes32.push_back(Type::getInt32Ty(context));
+			startParamTypes32.push_back(Type::getInt32Ty(context));
+			startParamTypes32.push_back(Type::getInt32Ty(context));
+			startParamTypes32.push_back(Type::getInt32Ty(context));
+			startParamTypes32.push_back(Type::getInt32Ty(context));
+			startParamTypes32.push_back(Type::getInt32Ty(context));
+			startParamTypes32.push_back(Type::getInt32Ty(context));
+			startParamTypes32.push_back(Type::getInt32Ty(context));
+			startParamTypes32.push_back(Type::getInt32PtrTy(context));
+			FunctionType *startFunctionType32 = FunctionType::get(Type::getVoidTy(context), startParamTypes32, false);
+			mod->getOrInsertFunction("calcStartValue32", startFunctionType32);
 		}
 
 		virtual bool runOnModule(Module &M) override {
