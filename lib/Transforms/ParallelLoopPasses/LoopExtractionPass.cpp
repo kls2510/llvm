@@ -214,9 +214,14 @@ namespace {
 					}
 					BranchInst *branch = cast<BranchInst>(*(inductionBranch->user_begin()));
 					BasicBlock *brIfTrue = cast<BasicBlock>(branch->getOperand(1));
+					cerr << "branch to if condition is true:\n";
+					brIfTrue->dump();
 					int leaveIfCndTrue = 1;
 					for (auto bb : loopData->getLoop()->getBlocks()) {
 						if (bb == brIfTrue) {
+							cerr << "leave loop when condition is false\n";
+							bb->dump();
+							cerr << "BB in loop\n";
 							leaveIfCndTrue = 0;
 							break;
 						}
@@ -1000,11 +1005,15 @@ namespace {
 					addHelperFunctionDeclarations(context, mod);
 					for (list<LoopDependencyData *>::iterator i = loopData.begin(); i != loopData.end(); i++) {
 						LoopDependencyData *loopData = *i;
-
-						if ((loopData->getDependencies()).size() == 0) {
-							if (loopData->isParallelizable()) {
-								extract(F, loopData, context);
+						if (loopData->getTripCount() > noThreads * 100) {
+							if ((loopData->getDependencies()).size() == 0) {
+								if (loopData->isParallelizable()) {
+									extract(F, loopData, context);
+								}
 							}
+						}
+						else {
+							cerr << "trip count not large enough for parallelization\n";
 						}
 					}
 					cerr << "Loop extraction for function complete\n";
