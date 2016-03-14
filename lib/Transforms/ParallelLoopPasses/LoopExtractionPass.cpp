@@ -167,6 +167,7 @@ namespace {
 
 			if (loopData->getInductionPhi()->getType() == Type::getInt32Ty(context)) {
 				//convert start it and final it to 64 bit
+				cerr << "converting induction phi values to 64 bit\n";
 				startIt = builder.CreateIntCast(startIt, Type::getInt64Ty(context), true);
 				finalIt = builder.CreateIntCast(finalIt, Type::getInt64Ty(context), true);
 				inductionStep = builder.CreateIntCast(inductionStep, Type::getInt64Ty(context), true);
@@ -311,6 +312,11 @@ namespace {
 				args.push_back(inductionStep);
 				args.push_back(getPTRStart);
 				args.push_back(getPTREnd);
+				for (auto a : args) {
+					cerr << "arg:\n";
+					a->dump();
+					a->getType()->dump();
+				}
 				cerr << "adding call to getBounds\n";
 				builder.CreateCall(getBounds, args);
 				
