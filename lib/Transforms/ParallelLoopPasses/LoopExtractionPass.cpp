@@ -163,6 +163,15 @@ namespace {
 			elts.push_back(returnStruct->getPointerTo());
 			threadStruct->setBody(elts);
 
+			Value *inductionStep = loopData->getOuterPhiStep();
+
+			if (loopData->getInductionPhi()->getType() == Type::getInt32Ty(context)) {
+				//convert start it and final it to 64 bit
+				startIt = builder.CreateIntCast(startIt, Type::getInt64Ty(context), true);
+				finalIt = builder.CreateIntCast(finalIt, Type::getInt64Ty(context), true);
+				inductionStep = builder.CreateIntCast(inductionStep, Type::getInt64Ty(context), true);
+			}
+
 			//setup the threads in IR
 			for (int i = 0; i < noThreads; i++) {
 				AllocaInst *allocateInst = builder.CreateAlloca(threadStruct);
@@ -243,7 +252,7 @@ namespace {
 					args.push_back(ConstantInt::get(Type::getInt32Ty(context), cmpBefore));
 					args.push_back(startIt);
 					args.push_back(finalIt);
-					args.push_back(loopData->getOuterPhiStep());
+					args.push_back(inductionStep);
 					args.push_back(start);
 					args.push_back(step);
 					args.push_back(getPTR);
@@ -299,7 +308,7 @@ namespace {
 				args.push_back(ConstantInt::get(Type::getInt32Ty(context), cmpBefore));
 				args.push_back(startIt);
 				args.push_back(finalIt);
-				args.push_back(loopData->getOuterPhiStep());
+				args.push_back(inductionStep);
 				args.push_back(getPTRStart);
 				args.push_back(getPTREnd);
 				cerr << "adding call to getBounds\n";
