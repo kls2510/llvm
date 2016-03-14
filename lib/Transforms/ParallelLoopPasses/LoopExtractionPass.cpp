@@ -213,7 +213,7 @@ namespace {
 						args.push_back(ConstantInt::get(Type::getInt32Ty(context), 1));
 					}
 					BranchInst *branch = cast<BranchInst>(*(inductionBranch->user_begin()));
-					BasicBlock *brIfTrue = cast<BasicBlock>(branch->getOperand(1));
+					BasicBlock *brIfTrue = cast<BasicBlock>(branch->getOperand(2));
 					cerr << "branch to if condition is true:\n";
 					brIfTrue->dump();
 					int leaveIfCndTrue = 1;
