@@ -1037,45 +1037,41 @@ bool IsParallelizableLoopPass::checkPhiIsAccumulative(PHINode *inst, Loop *L, in
 
 list<Dependence *> IsParallelizableLoopPass::findDistanceVectors(set<Instruction *> &dependentInstructions, DependenceAnalysis *DA) {
 	//find distance vectors for loop induction dependent read/write instructions
-	cerr << "no of instruction to find dependencies between = " << dependentInstructions.size();
+	cerr << "no of instruction to find dependencies between = " << dependentInstructions.size() << "\n";
 	list<Dependence *> dependencies;
-	//if (dependentInstructions.size() > 1) {
-		for (auto si : dependentInstructions) {
-			//set<Instruction *>::iterator si = dependentInstructions.begin(); si != dependentInstructions.end()--; si++) {
-			Instruction *i1 = si;
-			//auto si2 = dependentInstructions.find(si)++;
-			auto si2 = dependentInstructions.find(si);
-			while (si2 != dependentInstructions.end()) {
-				Instruction *i2 = (*si2);
-				cerr << "trying to find dependence between";
-				i1->dump();
-				i2->dump();
-				unique_ptr<Dependence> d = DA->depends(i1, i2, true);
-
-				if (d != nullptr) {
-					// direction: NONE = 0, LT = 1, EQ = 2, LE = 3, GT = 4, NE = 5, GE = 6, ALL = 7
-					const SCEV *scev = (d->getDistance(1));
-					int distance;
-					if (scev != nullptr && isa<SCEVConstant>(scev)) {
-						const SCEVConstant *scevConst = cast<SCEVConstant>(scev);
-						distance = *(int *)(scevConst->getValue()->getValue()).getRawData();
-					}
-					else {
-						distance = 0;
-					}
-
-					//decide whether this dependency makes the loop not parallelizable
-					if (distance != 0 || d->isOrdered() || d->isConfused()) {
-						cerr << "dependency found between:\n";
-						i1->dump();
-						i2->dump();
-						cerr << "\n";
-						dependencies.push_back(d.release());
-					}
+	for (auto si : dependentInstructions) {
+		//set<Instruction *>::iterator si = dependentInstructions.begin(); si != dependentInstructions.end()--; si++) {
+		Instruction *i1 = si;
+		//auto si2 = dependentInstructions.find(si)++;
+		auto si2 = dependentInstructions.find(si);
+		while (si2 != dependentInstructions.end()) {
+			Instruction *i2 = (*si2);
+			cerr << "trying to find dependence between";
+			i1->dump();
+			i2->dump();
+			unique_ptr<Dependence> d = DA->depends(i1, i2, true);
+			if (d != nullptr) {
+				// direction: NONE = 0, LT = 1, EQ = 2, LE = 3, GT = 4, NE = 5, GE = 6, ALL = 7
+				const SCEV *scev = (d->getDistance(1));
+				int distance;
+				if (scev != nullptr && isa<SCEVConstant>(scev)) {
+					const SCEVConstant *scevConst = cast<SCEVConstant>(scev);
+					distance = *(int *)(scevConst->getValue()->getValue()).getRawData();
 				}
-				si2++;
+				else {
+					distance = 0;
+				}
+				//decide whether this dependency makes the loop not parallelizable
+				if (distance != 0 || d->isOrdered() || d->isConfused()) {
+					cerr << "dependency found between:\n";
+					i1->dump();
+					i2->dump();
+					cerr << "\n";
+					dependencies.push_back(d.release());
+				}
 			}
-		//}
+			si2++;
+		}
 	}
 	return dependencies;
 }
