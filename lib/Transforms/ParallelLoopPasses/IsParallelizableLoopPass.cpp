@@ -1048,6 +1048,9 @@ list<Dependence *> IsParallelizableLoopPass::findDistanceVectors(set<Instruction
 			auto si2 = dependentInstructions.find(si);
 			while (si2 != dependentInstructions.end()) {
 				Instruction *i2 = (*si2);
+				cerr << "trying to find dependence between";
+				i1->dump();
+				i2->dump();
 				unique_ptr<Dependence> d = DA->depends(i1, i2, true);
 
 				if (d != nullptr) {
