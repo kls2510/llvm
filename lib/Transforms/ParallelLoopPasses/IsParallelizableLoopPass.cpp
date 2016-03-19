@@ -1037,10 +1037,9 @@ bool IsParallelizableLoopPass::checkPhiIsAccumulative(PHINode *inst, Loop *L, in
 
 list<Dependence *> IsParallelizableLoopPass::findDistanceVectors(set<Instruction *> &dependentInstructions, DependenceAnalysis *DA) {
 	//find distance vectors for loop induction dependent read/write instructions
+	cerr << "no of instruction to find dependencies between = " << dependentInstructions.size();
 	list<Dependence *> dependencies;
-	if (dependentInstructions.size() > 1) {
-		//(*(dependentInstructions.begin()))->dump();
-		//(*(dependentInstructions.end()--))->dump();
+	//if (dependentInstructions.size() > 1) {
 		for (auto si : dependentInstructions) {
 			//set<Instruction *>::iterator si = dependentInstructions.begin(); si != dependentInstructions.end()--; si++) {
 			Instruction *i1 = si;
@@ -1066,7 +1065,7 @@ list<Dependence *> IsParallelizableLoopPass::findDistanceVectors(set<Instruction
 					}
 
 					//decide whether this dependency makes the loop not parallelizable
-					if (distance != 0) {
+					if (distance != 0 || d->isOrdered() || d->isConfused()) {
 						cerr << "dependency found between:\n";
 						i1->dump();
 						i2->dump();
@@ -1076,7 +1075,7 @@ list<Dependence *> IsParallelizableLoopPass::findDistanceVectors(set<Instruction
 				}
 				si2++;
 			}
-		}
+		//}
 	}
 	return dependencies;
 }
