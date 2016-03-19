@@ -728,7 +728,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	if (dependencies.size() > 0) {
 		for (auto d : dependencies) {
 			if (isa<StoreInst>(d->getSrc()) || isa<StoreInst>(d->getDst())) {
-				cerr << "Has read-write/write-read dependencies so not parallelizable\n";
+				cerr << "Has read-write/write-read/write-write dependency so not parallelizable\n";
 				return false;
 			}
 			//else the dependency is just between to reads so OK
@@ -1044,7 +1044,8 @@ list<Dependence *> IsParallelizableLoopPass::findDistanceVectors(set<Instruction
 		for (auto si : dependentInstructions) {
 			//set<Instruction *>::iterator si = dependentInstructions.begin(); si != dependentInstructions.end()--; si++) {
 			Instruction *i1 = si;
-			auto si2 = dependentInstructions.find(si)++;
+			//auto si2 = dependentInstructions.find(si)++;
+			auto si2 = dependentInstructions.find(si);
 			while (si2 != dependentInstructions.end()) {
 				Instruction *i2 = (*si2);
 				unique_ptr<Dependence> d = DA->depends(i1, i2, true);
