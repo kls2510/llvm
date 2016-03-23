@@ -1098,7 +1098,7 @@ namespace {
 					addHelperFunctionDeclarations(context, mod);
 					for (list<LoopDependencyData *>::iterator i = loopData.begin(); i != loopData.end(); i++) {
 						LoopDependencyData *loopData = *i;
-						if (loopData->getTripCount() > noThreads * 100) {
+						if (loopData->getTripCount() > noThreads * 50) {
 							if ((loopData->getDependencies()).size() == 0) {
 								if (loopData->isParallelizable()) {
 									extract(F, loopData, context);
