@@ -1105,7 +1105,7 @@ namespace {
 							currentSubloops = next->getSubLoops();
 							noSubloops++;
 						}
-						if (loopData->getTripCount() > noThreads * 100 || noSubloops > 2) {
+						if (loopData->getTripCount() > noThreads * 100 || noSubloops >= 2) {
 							if ((loopData->getDependencies()).size() == 0) {
 								if (loopData->isParallelizable()) {
 									extract(F, loopData, context);
