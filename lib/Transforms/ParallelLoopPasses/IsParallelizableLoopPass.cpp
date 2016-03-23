@@ -96,6 +96,25 @@ Instruction *IsParallelizableLoopPass::findCorrespondingBranch(Value *potentialP
 				}
 			}
 		}
+		//truncated version may be used instead
+		if (isa<TruncInst>(inst)) {
+			for (auto inst2 : inst->users()) {
+				if (isa<CmpInst>(inst2)) {
+					for (auto u : inst2->users()) {
+						if (isa<BranchInst>(u)) {
+							BranchInst *br = cast<BranchInst>(u);
+							if (br->isConditional()) {
+								Value *bb = br->getOperand(1);
+								Value *bb2 = br->getOperand(2);
+								if (bb == backedgeBlock || bb2 == backedgeBlock) {
+									return cast<Instruction>(u);
+								}
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 	return nullptr;
 }
