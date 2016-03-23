@@ -25,7 +25,6 @@ INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DependenceAnalysis)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
 INITIALIZE_PASS_END(IsParallelizableLoopPass, "parallelizable-loop-analysis",
                 "Determine if a loop can be parallelized", false, true)
 
@@ -36,7 +35,6 @@ void IsParallelizableLoopPass::getAnalysisUsage(AnalysisUsage &AU) const {
 	AU.addRequired<ScalarEvolutionWrapperPass>();
 	AU.addRequired<DependenceAnalysis>();
 	AU.addRequired<AAResultsWrapperPass>();
-	AU.addRequired<ScalarEvolutionWrapperPass>();
 	//this pass is just analysis and so does not change any other analysis results
 	AU.setPreservesAll();
 }
@@ -817,7 +815,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 							if (isa<Instruction>(arg)) {
 								Instruction *a = cast<Instruction>(arg);
 								if (a->getType()->isPointerTy()) {
-									if (isDependentOnInductionVariable(a, outerPhi, false) || lifetimeValues.find(a) != lifetimeValues.end()) {
+									if (lifetimeValues.find(a) != lifetimeValues.end()) {
 										//it should be a different location each iteration
 										cerr << "This pointer argument is dependent on the outer loop induction variable so could be parallelizable\n";
 									}
@@ -1046,7 +1044,7 @@ list<Dependence *> IsParallelizableLoopPass::findDistanceVectors(set<Instruction
 		auto si2 = dependentInstructions.find(si);
 		while (si2 != dependentInstructions.end()) {
 			Instruction *i2 = (*si2);
-			cerr << "trying to find dependence between";
+			cerr << "trying to find dependence between\n";
 			i1->dump();
 			i2->dump();
 			unique_ptr<Dependence> d = DA->depends(i1, i2, true);
