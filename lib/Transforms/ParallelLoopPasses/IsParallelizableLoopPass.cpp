@@ -184,7 +184,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	for (auto &bb : L->getBlocks()) {
 		for (auto &i : bb->getInstList()) {
 			if (isa<PHINode>(i)) {
-				if (i.getNumOperands == 2) {
+				if (i.getNumOperands() == 2) {
 					pair<PHINode *, Instruction *> p = inductionPhiNode(cast<PHINode>(&i), currentLoop);
 					if (p.first != nullptr) {
 						phiNodes.push_back(p.first);
@@ -297,7 +297,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	set<PHINode *> helperAccPhis;
 	for (auto &bb : L->getBlocks()) {
 		for (auto &i : bb->getInstList()) {
-			if (isa<PHINode>(i) && helperAccPhis.find(cast<PHINode>(&i)) == helperAccPhis.end() && i.getNumOperands == 2) {
+			if (isa<PHINode>(i) && helperAccPhis.find(cast<PHINode>(&i)) == helperAccPhis.end() && i.getNumOperands() == 2) {
 				PHINode *potentialAccumulator = cast<PHINode>(&i);
 				if (find(phiNodes.begin(), phiNodes.end(), potentialAccumulator) != phiNodes.end()) {
 					continue;
