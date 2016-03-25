@@ -157,12 +157,12 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	int noOfInductionPhiNodes = 0;
 
 	// INDUCTION PHI NODES:
-	//check all phi nodes only take two operands
+	//check all phi nodes only take one or two operands
 	for (auto &bb : L->getBlocks()) {
 		for (auto &i : bb->getInstList()) {
 			if (isa<PHINode>(i)) {
-				if (i.getNumOperands() != 2) {
-					cerr << "found phi node without 2 operands - not parallelizable\n";
+				if (i.getNumOperands() > 2) {
+					cerr << "found phi node with more than 2 operands - not parallelizable\n";
 					i.dump();
 					cerr << "\n";
 					return false;
@@ -184,15 +184,17 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	for (auto &bb : L->getBlocks()) {
 		for (auto &i : bb->getInstList()) {
 			if (isa<PHINode>(i)) {
-				pair<PHINode *, Instruction *> p = inductionPhiNode(cast<PHINode>(&i), currentLoop);
-				if (p.first != nullptr) {
-					phiNodes.push_back(p.first);
-					branchInstructions.push_back(p.second);
-					noOfInductionPhiNodes++;
-					if (currentLoop->getSubLoops().size() > 0) {
-						currentLoop = currentLoop->getSubLoops().front();
+				if (i.getNumOperands == 2) {
+					pair<PHINode *, Instruction *> p = inductionPhiNode(cast<PHINode>(&i), currentLoop);
+					if (p.first != nullptr) {
+						phiNodes.push_back(p.first);
+						branchInstructions.push_back(p.second);
+						noOfInductionPhiNodes++;
+						if (currentLoop->getSubLoops().size() > 0) {
+							currentLoop = currentLoop->getSubLoops().front();
+						}
+						break;
 					}
-					break;
 				}
 			}
 		}
@@ -295,7 +297,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	set<PHINode *> helperAccPhis;
 	for (auto &bb : L->getBlocks()) {
 		for (auto &i : bb->getInstList()) {
-			if (isa<PHINode>(i) && helperAccPhis.find(cast<PHINode>(&i)) == helperAccPhis.end()) {
+			if (isa<PHINode>(i) && helperAccPhis.find(cast<PHINode>(&i)) == helperAccPhis.end() && i.getNumOperands == 2) {
 				PHINode *potentialAccumulator = cast<PHINode>(&i);
 				if (find(phiNodes.begin(), phiNodes.end(), potentialAccumulator) != phiNodes.end()) {
 					continue;
