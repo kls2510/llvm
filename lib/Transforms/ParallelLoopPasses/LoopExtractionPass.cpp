@@ -163,6 +163,14 @@ namespace {
 			if (loopData->getInductionPhi()->getType() == Type::getInt32Ty(context)) {
 				//use 32-bit functions for induction PHI instead
 				getBounds = cast<Function>(symTab.lookup(StringRef("calcBounds32")));
+				if (finalIt->getType() != Type::getInt32Ty(context)) {
+					finalIt = builder.CreateIntCast(finalIt, Type::getInt32Ty(context), true);
+				}
+			}
+			else {
+				if (finalIt->getType() != Type::getInt64Ty(context)) {
+					finalIt = builder.CreateIntCast(finalIt, Type::getInt64Ty(context), true);
+				}
 			}
 
 			//setup the threads in IR
