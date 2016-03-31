@@ -1,4 +1,8 @@
-; RUN: ~/llvm/Debug/bin/clang %s -parallelize-loops -emit-llvm -S -o - | FileCheck %s
+; RUN: ~/llvm/Debug/bin/clang %s -parallelize-loops -emit-llvm -S -o - | LD_LIBRARY_PATH=~/lib ~/llvm/Debug/bin/lli | FileCheck %s
+
+@str = internal constant [18 x i8] c"value: %d\0A\00"
+
+declare i32 @printf(i8* nocapture, ...) nounwind
 
 define i32 @test1() #0 {
 ; CHECK: @test1
@@ -16,5 +20,8 @@ for.body:                                         ; preds = %for.body, %entry
   br i1 %exitcond, label %for.end, label %for.body
 
 for.end:                                          ; preds = %for.body
+  call i32 (i8*, ...) @printf(i8* getelementptr ([18 x i8], [18 x i8]* @str, i32 0, i64 0), i32 %add)
   ret i32 %add
 }
+
+; CHECK: value: 1499
