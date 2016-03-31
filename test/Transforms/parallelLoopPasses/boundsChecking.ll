@@ -1,6 +1,6 @@
 ; RUN: ~/llvm/Debug/bin/clang %s -parallelize-loops -emit-llvm -S -o - | LD_LIBRARY_PATH=~/lib ~/llvm/Debug/bin/lli | FileCheck %s
 
-@str = internal constant [18 x i8] c"value: %d\0A\00"
+@str = internal constant [18 x i8] "value: %d\0A\00"
 
 declare i32 @printf(i8* nocapture, ...) nounwind
 
