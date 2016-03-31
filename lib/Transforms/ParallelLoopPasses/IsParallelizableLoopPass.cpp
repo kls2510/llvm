@@ -767,6 +767,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 				if (isa<LoadInst>(i)) {
 					memAddress = i.getOperand(0);
 					while (isa<GetElementPtrInst>(memAddress)) {
+						memAddress->dump();
 						memAddress = i.getOperand(0);
 					}
 					if (isa<Instruction>(memAddress)) {
@@ -782,6 +783,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 				if (isa<StoreInst>(i)) {
 					memAddress = i.getOperand(1);
 					while (isa<GetElementPtrInst>(memAddress)) {
+						memAddress->dump();
 						memAddress = i.getOperand(0);
 					}
 					if (isa<Instruction>(memAddress)) {
