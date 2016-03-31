@@ -1,4 +1,4 @@
-; RUN: LD_LIBRARY_PATH=~/lib ~/llvm/Debug/bin/clang < %s -parallelize-loops -S -emit-llvm | FileCheck %s
+; RUN: ~/llvm/Debug/bin/clang -parallelize-loops -S -emit-llvm %s | FileCheck %s
 
 define i32 @test1() #0 {
 ; CHECK: @test1
@@ -18,5 +18,3 @@ for.body:                                         ; preds = %for.body, %entry
 for.end:                                          ; preds = %for.body
   ret i32 %add
 }
-
-; CHECK: 1499
