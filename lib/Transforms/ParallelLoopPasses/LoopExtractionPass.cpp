@@ -70,6 +70,9 @@ namespace {
 
 			//Setup structs to pass data to/from the threads
 			list<Value *> threadStructs = setupStructs(&F, context, loopData, startIt, finalIt, symTab);
+			if (*threadStructs.begin() == nullptr) {
+				return false;
+			}
 
 			//create the thread function and calls to it, and setup the return of local variables afterwards
 			Function *threadFunction = createThreadFunction(threadStructs.front()->getType(), context, mod, symTab, loopData, threadStructs, &F);
@@ -164,11 +167,15 @@ namespace {
 				//use 32-bit functions for induction PHI instead
 				getBounds = cast<Function>(symTab.lookup(StringRef("calcBounds32")));
 				if (finalIt->getType() != Type::getInt32Ty(context)) {
-					finalIt = builder.CreateIntCast(finalIt, Type::getInt32Ty(context), true);
+					cerr << "can't find bounds for 32 bit phis with 64 bit comparisons, won't continue parallelization\n";
+					list<Value *> l;
+					l.push_back(nullptr);
+					return l;
 				}
 			}
 			else {
 				if (finalIt->getType() != Type::getInt64Ty(context)) {
+					getBounds = cast<Function>(symTab.lookup(StringRef("calcBoundsFinal32")));
 					finalIt = builder.CreateIntCast(finalIt, Type::getInt64Ty(context), true);
 				}
 			}
@@ -1005,6 +1012,22 @@ namespace {
 			loopParamTypes.push_back(Type::getInt64PtrTy(context));
 			FunctionType *loopFunctionType = FunctionType::get(Type::getVoidTy(context), loopParamTypes, false);
 			mod->getOrInsertFunction("calcBounds", loopFunctionType);
+
+			//create loop bounds
+			SmallVector<Type *, 11> loopParamTypesF;
+			loopParamTypesF.push_back(Type::getInt32Ty(context));
+			loopParamTypesF.push_back(Type::getInt32Ty(context));
+			loopParamTypesF.push_back(Type::getInt32Ty(context));
+			loopParamTypesF.push_back(Type::getInt32Ty(context));
+			loopParamTypesF.push_back(Type::getInt32Ty(context));
+			loopParamTypesF.push_back(Type::getInt32Ty(context));
+			loopParamTypesF.push_back(Type::getInt64Ty(context));
+			loopParamTypesF.push_back(Type::getInt64Ty(context));
+			loopParamTypesF.push_back(Type::getInt64Ty(context));
+			loopParamTypesF.push_back(Type::getInt64PtrTy(context));
+			loopParamTypesF.push_back(Type::getInt32PtrTy(context));
+			FunctionType *loopFunctionTypeF = FunctionType::get(Type::getVoidTy(context), loopParamTypesF, false);
+			mod->getOrInsertFunction("calcBoundsFinal32", loopFunctionTypeF);
 
 			//create find start value
 			SmallVector<Type *, 13> startParamTypes;
