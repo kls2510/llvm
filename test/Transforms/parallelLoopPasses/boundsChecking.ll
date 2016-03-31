@@ -1,4 +1,4 @@
-; RUN: ~/llvm/Debug/bin/clang %s -parallelize-loops -emit-llvm -S -o - | LD_LIBRARY_PATH=~/lib ~/llvm/Debug/bin/lli | FileCheck %s
+; RUN: LD_LIBRARY_PATH=~/lib ~/llvm/Debug/bin/clang %s -parallelize-loops -emit-llvm -S -o - | ~/llvm/Debug/bin/lli | FileCheck %s
 
 ; ModuleID = 'forRegression.c'
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
