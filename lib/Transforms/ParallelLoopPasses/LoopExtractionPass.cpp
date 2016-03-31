@@ -153,7 +153,7 @@ namespace {
 
 			//add start/end/return struct to struct
 			elts.push_back(loopData->getInductionPhi()->getType());
-			elts.push_back(loopData->getInductionPhi()->getType());
+			elts.push_back(finalIt->getType());
 			//memory on original stack to store return values
 			elts.push_back(returnStruct->getPointerTo());
 			threadStruct->setBody(elts);
