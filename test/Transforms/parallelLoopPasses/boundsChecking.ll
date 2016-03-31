@@ -1,4 +1,4 @@
-; RUN: ~/llvm/Debug/bin/clang %s -parallelize-loops -emit-llvm -o - | FileCheck %s
+; RUN: ~/llvm/Debug/bin/clang %s -parallelize-loops -emit-llvm -S -o - | FileCheck %s
 
 define i32 @test1() #0 {
 ; CHECK: @test1
