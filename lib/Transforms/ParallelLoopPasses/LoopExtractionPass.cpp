@@ -270,8 +270,9 @@ namespace {
 							getPhiStartVal = cast<Function>(symTab.lookup(StringRef("calcStartValue6464")));
 						}
 					}
-					start->getType()->dump();
-					step->getType()->dump();
+					for (auto arg : args) {
+						arg->getType()->dump();
+					}
 					builder.CreateCall(getPhiStartVal, args);
 					k++;
 				}
