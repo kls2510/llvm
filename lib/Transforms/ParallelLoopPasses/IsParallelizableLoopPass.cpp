@@ -760,25 +760,18 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	for (auto &bb : L->getBlocks()) {
 		for (auto &i : bb->getInstList()) {
 			if (isa<LoadInst>(i) || isa<StoreInst>(i)) {
-				//corresponding GEP
+				//corresponding array
 				Value *memAddress = nullptr;
-				//and array
-				Value *arrayVal = nullptr;
 				if (isa<LoadInst>(i)) {
 					memAddress = i.getOperand(0);
-					while (isa<GetElementPtrInst>(memAddress)) {
-						memAddress = cast<Instruction>(memAddress)->getOperand(0);
-					}
-					arrayVal = memAddress;
 				}
 				if (isa<StoreInst>(i)) {
 					memAddress = i.getOperand(1);
-					while (isa<GetElementPtrInst>(memAddress)) {
-						memAddress = cast<Instruction>(memAddress)->getOperand(0);
-					}
-					arrayVal = memAddress;
 				}
-				allarrays.insert(arrayVal);
+				while (isa<GetElementPtrInst>(memAddress)) {
+					memAddress = cast<Instruction>(memAddress)->getOperand(0);
+				}
+				allarrays.insert(memAddress);
 			}
 		}
 	}

@@ -64,11 +64,6 @@ namespace {
 			Value *startIt = loopData->getStartIt();
 			Value *finalIt = loopData->getFinalIt();
 
-			//make sure we don't assign too many threads
-			if (loopData->getTripCount() < noThreads) {
-				return false;
-			}
-
 			//setup helper functions so declarations are there to be linked later
 			Module * mod = (F.getParent());
 			ValueSymbolTable &symTab = mod->getValueSymbolTable();
