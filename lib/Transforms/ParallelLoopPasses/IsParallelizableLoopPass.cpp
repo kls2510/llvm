@@ -1082,7 +1082,7 @@ list<Dependence *> IsParallelizableLoopPass::findDistanceVectors(set<Instruction
 				}
 				//decide whether this dependency makes the loop not parallelizable
 				cerr << "distance = " << distance << ", isOrdered = " << d->isOrdered() << ", is Confused = " << d->isConfused() << "\n";
-				if (distance != 0 || d->isOrdered() || d->isConfused()) {
+				if (distance != 0 || d->isConfused()) {
 					cerr << "dependency found between:\n";
 					i1->dump();
 					i2->dump();
