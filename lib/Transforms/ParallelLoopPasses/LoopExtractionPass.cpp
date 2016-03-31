@@ -252,17 +252,21 @@ namespace {
 					cerr << "adding call to getPhiStartVal\n";
 					if (loopData->getInductionPhi()->getType() == Type::getInt32Ty(context)) {
 						if (p.first->getType() == Type::getInt32Ty(context)) {
+							cerr << "induction:32, phi:32\n";
 							getPhiStartVal = cast<Function>(symTab.lookup(StringRef("calcStartValue3232")));
 						}
 						else {
+							cerr << "induction:32, phi:64\n";
 							getPhiStartVal = cast<Function>(symTab.lookup(StringRef("calcStartValue3264")));
 						}
 					}
 					else {
 						if (p.first->getType() == Type::getInt32Ty(context)) {
+							cerr << "induction:64, phi:32\n";
 							getPhiStartVal = cast<Function>(symTab.lookup(StringRef("calcStartValue6432")));
 						}
 						else {
+							cerr << "induction:64, phi:64\n";
 							getPhiStartVal = cast<Function>(symTab.lookup(StringRef("calcStartValue6464")));
 						}
 					}
