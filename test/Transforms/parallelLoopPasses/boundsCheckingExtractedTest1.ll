@@ -1,4 +1,4 @@
-; RUN: LD_LIBRARY_PATH=~/lib ~/llvm/Debug/bin/clang %s -parallelize-loops -emit-llvm -S -o - | ~/llvm/Debug/bin/lli | FileCheck %s
+; RUN: ~/llvm/Debug/bin/clang %s -parallelize-loops -emit-llvm -S -o - | FileCheck %s
 
 ; ModuleID = 'forRegression.c'
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -8,6 +8,9 @@ target triple = "x86_64-unknown-freebsd10.1"
 
 ; Function Attrs: nounwind uwtable
 define i32 @test1(i32* nocapture readonly %a) #0 {
+; CHECK: @test1
+; CHECK-NEXT: entry:
+; CHECK-NEXT: br label %structSetup
 entry:
   br label %for.body
 
@@ -73,4 +76,6 @@ attributes #3 = { nounwind }
 !3 = !{!"omnipotent char", !4, i64 0}
 !4 = !{!"Simple C/C++ TBAA"}
 
-; CHECK: value: 124750
+
+
+
