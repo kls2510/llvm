@@ -9,9 +9,6 @@ target triple = "x86_64-unknown-freebsd10.1"
 
 ; Function Attrs: nounwind uwtable
 define i32 @test1(i32* nocapture readonly %a) #0 {
-; CHECK: @test1
-; CHECK-NEXT: entry:
-; CHECK-NEXT: br label %structSetup
 entry:
   br label %for.body
 
@@ -28,7 +25,7 @@ for.body:                                         ; preds = %for.body, %entry
   br i1 %exitcond, label %for.end, label %for.body
 
 for.end:                                          ; preds = %for.body
-  %call = tail call i32 (i8*, ...) @printf(i8* nonnull getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i64 0, i64 0), i32 1500) #3
+  %call = tail call i32 (i8*, ...) @printf(i8* nonnull getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i64 0, i64 0), i32 %inc) #3
   ret i32 %add
 }
 
@@ -43,9 +40,6 @@ declare void @llvm.lifetime.end(i64, i8* nocapture) #1
 
 ; Function Attrs: nounwind uwtable
 define i32 @test2(i32* nocapture readonly %a) #0 {
-; CHECK: @test2
-; CHECK-NEXT: entry:
-; CHECK-NEXT: br label %for.body
 entry:
   br label %for.body
 
@@ -62,15 +56,12 @@ for.body:                                         ; preds = %entry, %for.body
   br i1 %cmp, label %for.body, label %for.end
 
 for.end:                                          ; preds = %for.body
-  %call = tail call i32 (i8*, ...) @printf(i8* nonnull getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i64 0, i64 0), i32 603) #3
+  %call = tail call i32 (i8*, ...) @printf(i8* nonnull getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i64 0, i64 0), i32 %add2) #3
   ret i32 %add
 }
 
 ; Function Attrs: nounwind uwtable
 define i32 @test3(i32* nocapture readonly %a) #0 {
-; CHECK: @test3
-; CHECK-NEXT: entry:
-; CHECK-NEXT: br label %structSetup
 entry:
   br label %for.body
 
@@ -87,15 +78,12 @@ for.body:                                         ; preds = %entry, %for.body
   br i1 %cmp, label %for.end, label %for.body
 
 for.end:                                          ; preds = %for.body
-  %call = tail call i32 (i8*, ...) @printf(i8* nonnull getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i64 0, i64 0), i32 603) #3
+  %call = tail call i32 (i8*, ...) @printf(i8* nonnull getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i64 0, i64 0), i32 %add2) #3
   ret i32 %add
 }
 
 ; Function Attrs: nounwind uwtable
 define i32 @test4(i32* nocapture readonly %a) #0 {
-; CHECK: @test4
-; CHECK-NEXT: entry:
-; CHECK-NEXT: br label %structSetup
 entry:
   br label %for.body.header
 
@@ -119,9 +107,6 @@ for.end:                                          ; preds = %for.body.header
 
 ; Function Attrs: nounwind uwtable
 define i32 @test5(i32* nocapture readonly %a) #0 {
-; CHECK: @test5
-; CHECK-NEXT: entry:
-; CHECK-NEXT: br label %structSetup
 entry:
   br label %for.body.header
 

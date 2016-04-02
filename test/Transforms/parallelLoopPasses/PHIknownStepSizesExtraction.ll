@@ -44,7 +44,7 @@ declare void @llvm.lifetime.end(i64, i8* nocapture) #1
 define i32 @test2(i32* nocapture readonly %a) #0 {
 ; CHECK: @test2
 ; CHECK-NEXT: entry:
-; CHECK-NEXT: br label %for.body
+; CHECK-NEXT: br label %structSetup
 entry:
   br label %for.body
 
