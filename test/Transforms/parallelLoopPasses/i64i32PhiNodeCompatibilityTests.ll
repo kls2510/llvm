@@ -98,7 +98,7 @@ for.body:                                         ; preds = %for.body, %entry
   br i1 %exitcond, label %for.end, label %for.body
 
 for.end:                                          ; preds = %for.body
-  ret i64 %mul
+  ret i32 %mul
 }
 
 ; Function Attrs: nounwind readonly uwtable
