@@ -75,10 +75,3 @@ attributes #3 = { nounwind }
 !2 = !{!"int", !3, i64 0}
 !3 = !{!"omnipotent char", !4, i64 0}
 !4 = !{!"Simple C/C++ TBAA"}
-
-
-; ModuleID = 'REGRESSION.c'
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-freebsd10.1"
-
-@.str = private unnamed_addr constant [11 x i8] c"value : %d\00", align 1
