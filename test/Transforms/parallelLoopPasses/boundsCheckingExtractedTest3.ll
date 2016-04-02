@@ -20,7 +20,7 @@ for.body:                                         ; preds = %for.body, %entry
   %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
   %0 = load i32, i32* %arrayidx, align 4, !tbaa !1
   %add = add nsw i32 %0, %k.08
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 112
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 12
   %cmp = icmp slt i64 %indvars.iv.next, 500
   br i1 %cmp, label %for.body, label %for.end
 
