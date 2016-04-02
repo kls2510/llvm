@@ -21,7 +21,7 @@ for.end:                                          ; preds = %for.body
 }
 
 ; Function Attrs: nounwind readonly uwtable
-define i32 @test2() #0 {
+define i64 @test2() #0 {
 ; CHECK: @test2
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT: br label %structSetup
@@ -61,7 +61,7 @@ for.end:                                          ; preds = %for.body
 }
 
 ; Function Attrs: nounwind readonly uwtable
-define i32 @test4() #0 {
+define i64 @test4() #0 {
 ; CHECK: @test4
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT: br label %structSetup
@@ -102,7 +102,7 @@ for.end:                                          ; preds = %for.body
 }
 
 ; Function Attrs: nounwind readonly uwtable
-define i32 @test7() #0 {
+define i64 @test7() #0 {
 ; CHECK: @test7
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT: br label %structSetup
