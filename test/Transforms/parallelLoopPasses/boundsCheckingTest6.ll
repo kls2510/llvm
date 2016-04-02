@@ -1,4 +1,5 @@
-; RUN: ~/llvm/Debug/bin/clang %s -parallelize-loops -emit-llvm -S -o - | FileCheck %s
+; RUN: ~/llvm/Debug/bin/clang %s -parallelize-loops
+; RUN: LD_LIBRARY_PATH=~/lib ./a.out | FileCheck %s
 
 ; ModuleID = 'REGRESSION.c'
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -7,10 +8,7 @@ target triple = "x86_64-unknown-freebsd10.1"
 @.str = private unnamed_addr constant [11 x i8] c"value : %d\00", align 1
 
 ; Function Attrs: nounwind uwtable
-define i32 @test5(i32* nocapture readonly %a) #0 {
-; CHECK: @test5
-; CHECK-NEXT: entry:
-; CHECK-NEXT: br label %structSetup
+define i32 @test6(i32* nocapture readonly %a) #0 {
 entry:
   br label %for.body
 
@@ -21,7 +19,7 @@ for.body:                                         ; preds = %entry, %for.body
   %0 = load i32, i32* %arrayidx, align 4, !tbaa !1
   %add = add nsw i32 %0, %k.07
   %indvars.iv.next = add nsw i64 %indvars.iv, -1
-  %cmp = icmp sgt i64 %indvars.iv.next, 3
+  %cmp = icmp sgt i64 %indvars.iv.next, 2
   br i1 %cmp, label %for.body, label %for.end
 
 for.end:                                          ; preds = %for.body
@@ -57,7 +55,7 @@ for.body:                                         ; preds = %for.body, %entry
 
 for.end:                                          ; preds = %for.body
   %arraydecay = getelementptr inbounds [901 x i32], [901 x i32]* %a, i64 0, i64 0
-  %call = call i32 @test5(i32* %arraydecay)
+  %call = call i32 @test6(i32* %arraydecay)
   %2 = load i32, i32* %arraydecay, align 16, !tbaa !1
   call void @llvm.lifetime.end(i64 3604, i8* nonnull %0) #3
   ret i32 %2
@@ -76,7 +74,4 @@ attributes #3 = { nounwind }
 !3 = !{!"omnipotent char", !4, i64 0}
 !4 = !{!"Simple C/C++ TBAA"}
 
-
-; ModuleID = 'REGRESSION.c'
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-freebsd10.1"
+; CHECK: value : 405449
