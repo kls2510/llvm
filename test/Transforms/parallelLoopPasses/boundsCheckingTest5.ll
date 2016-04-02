@@ -8,18 +8,18 @@ target triple = "x86_64-unknown-freebsd10.1"
 @.str = private unnamed_addr constant [11 x i8] c"value : %d\00", align 1
 
 ; Function Attrs: nounwind uwtable
-define i32 @test4(i32* nocapture readonly %a) #0 {
+define i32 @test5(i32* nocapture readonly %a) #0 {
 entry:
   br label %for.body
 
 for.body:                                         ; preds = %entry, %for.body
-  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %k.08 = phi i32 [ 2, %entry ], [ %add, %for.body ]
+  %indvars.iv = phi i64 [ 900, %entry ], [ %indvars.iv.next, %for.body ]
+  %k.07 = phi i32 [ 2, %entry ], [ %add, %for.body ]
   %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
   %0 = load i32, i32* %arrayidx, align 4, !tbaa !1
-  %add = add nsw i32 %0, %k.08
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 3
-  %cmp = icmp slt i64 %indvars.iv.next, 604
+  %add = add nsw i32 %0, %k.07
+  %indvars.iv.next = add nsw i64 %indvars.iv, -1
+  %cmp = icmp sgt i64 %indvars.iv.next, 3
   br i1 %cmp, label %for.body, label %for.end
 
 for.end:                                          ; preds = %for.body
@@ -39,25 +39,25 @@ declare void @llvm.lifetime.end(i64, i8* nocapture) #1
 ; Function Attrs: nounwind uwtable
 define i32 @main() #0 {
 entry:
-  %a = alloca [604 x i32], align 16
-  %0 = bitcast [604 x i32]* %a to i8*
-  call void @llvm.lifetime.start(i64 2416, i8* %0) #3
+  %a = alloca [901 x i32], align 16
+  %0 = bitcast [901 x i32]* %a to i8*
+  call void @llvm.lifetime.start(i64 3604, i8* %0) #3
   br label %for.body
 
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds [604 x i32], [604 x i32]* %a, i64 0, i64 %indvars.iv
+  %arrayidx = getelementptr inbounds [901 x i32], [901 x i32]* %a, i64 0, i64 %indvars.iv
   %1 = trunc i64 %indvars.iv to i32
   store i32 %1, i32* %arrayidx, align 4, !tbaa !1
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond = icmp eq i64 %indvars.iv.next, 604
+  %exitcond = icmp eq i64 %indvars.iv.next, 901
   br i1 %exitcond, label %for.end, label %for.body
 
 for.end:                                          ; preds = %for.body
-  %arraydecay = getelementptr inbounds [604 x i32], [604 x i32]* %a, i64 0, i64 0
-  %call = call i32 @test4(i32* %arraydecay)
+  %arraydecay = getelementptr inbounds [901 x i32], [901 x i32]* %a, i64 0, i64 0
+  %call = call i32 @test5(i32* %arraydecay)
   %2 = load i32, i32* %arraydecay, align 16, !tbaa !1
-  call void @llvm.lifetime.end(i64 2416, i8* nonnull %0) #3
+  call void @llvm.lifetime.end(i64 3604, i8* nonnull %0) #3
   ret i32 %2
 }
 
@@ -74,4 +74,4 @@ attributes #3 = { nounwind }
 !3 = !{!"omnipotent char", !4, i64 0}
 !4 = !{!"Simple C/C++ TBAA"}
 
-; CHECK: value : 60905
+; CHECK: value : 405446
