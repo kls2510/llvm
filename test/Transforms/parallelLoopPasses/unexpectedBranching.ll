@@ -4,10 +4,6 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-freebsd10.1"
 
-; ModuleID = 'branching.c'
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-freebsd10.1"
-
 ; Function Attrs: nounwind uwtable
 define i32 @test1(i32 %i, i32* nocapture %a) #0 {
 ;CHECK: test1
@@ -27,10 +23,7 @@ if.then:                                          ; preds = %for.body
   %dec = add nsw i32 %0, -1
   store i32 %dec, i32* %arrayidx, align 4, !tbaa !1
   br label %for.inc
-
-  ;CHECK: continue[0-9]+:
-  ;CHECK NEXT: call void @release(%struct.dispatch_group_s* %[0-9]+)
-  ;CHECK NEXT: br label %structSetup
+  
 for.inc:                                          ; preds = %for.body, %if.then
   %indvars.iv.next27 = add nuw nsw i64 %indvars.iv26, 1
   %exitcond28 = icmp eq i64 %indvars.iv.next27, 500
@@ -48,6 +41,10 @@ for.body.6:                                       ; preds = %for.inc, %for.body.
 
 for.end.11:                                       ; preds = %for.body.6
   ret i32 %mul
+  
+  ;CHECK: continue[0-9]+:
+  ;CHECK NEXT: call void @release(%struct.dispatch_group_s* %[0-9]+)
+  ;CHECK NEXT: br label %structSetup
 }
 
 ; Function Attrs: nounwind readonly uwtable
