@@ -75,13 +75,14 @@ for.body:                                         ; preds = %entry, %for.body
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 3
   %add2 = add nuw nsw i32 %i.011, 2
   %cmp = icmp slt i64 %indvars.iv.next, 500
-  br i1 %cmp, label %for.end, label %for.body
+  br i1 %cmp, label %for.body, label %for.end
 
 for.end:                                          ; preds = %for.body
   %call = tail call i32 (i8*, ...) @printf(i8* nonnull getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i64 0, i64 0), i32 %add2) #3
   ret i32 %add
 }
 
+//DOESN'T PARALLELIZE
 ; Function Attrs: nounwind uwtable
 define i32 @test4(i32* nocapture readonly %a) #0 {
 entry:
@@ -105,6 +106,7 @@ for.end:                                          ; preds = %for.body.header
   ret i32 0
 }
 
+//DOESN'T PARALLELIZE
 ; Function Attrs: nounwind uwtable
 define i32 @test5(i32* nocapture readonly %a) #0 {
 entry:
