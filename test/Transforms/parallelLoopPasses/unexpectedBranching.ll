@@ -4,30 +4,41 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-freebsd10.1"
 
-; Function Attrs: nounwind readnone uwtable
-define i32 @test1(i32 %i) #0 {
+; Function Attrs: nounwind readonly uwtable
+define i32 @test1(i32 %i, i32* nocapture readonly %a) #0 {
+;CHECK : test1
+;CHECK : entry:
+;CHECK : br label %for.body
 entry:
-  %cmp = icmp sgt i32 %i, 5
-  ;CHECK : br i1 %cmp, label %structSetup, label %if.else
-  br i1 %cmp, label %for.body, label %if.else
-
-if.else:                                          ; preds = %entry
-  %cmp1 = icmp slt i32 %i, 1
-  %mul = mul nsw i32 %i, 3
-  %mul. = select i1 %cmp1, i32 %mul, i32 3
-  ;CHECK : br label %structSetup
   br label %for.body
 
-for.body:                                         ; preds = %if.else, %entry, %for.body
-  %j.013 = phi i32 [ %inc, %for.body ], [ 0, %entry ], [ 0, %if.else ]
-  %k.112 = phi i32 [ %mul5, %for.body ], [ 5, %entry ], [ %mul., %if.else ]
-  %mul5 = mul nsw i32 %k.112, 3
-  %inc = add nuw nsw i32 %j.013, 1
-  %exitcond = icmp eq i32 %inc, 500
-  br i1 %exitcond, label %for.end, label %for.body
+for.body:                                         ; preds = %entry, %for.inc
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.inc ]
+  %k.018 = phi i32 [ 0, %entry ], [ %inc, %for.inc ]
+  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
+  %0 = load i32, i32* %arrayidx, align 4, !tbaa !1
+  %cmp1 = icmp sgt i32 %0, %i
+  %1 = trunc i64 %indvars.iv to i32
+  ;CHECK : br i1 %cmp1, label %structSetup, label %for.inc
+  br i1 %cmp1, label %for.body.4, label %for.inc
 
-for.end:                                          ; preds = %for.body
-  ret i32 %mul5
+for.inc:                                          ; preds = %for.body
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %inc = add nuw nsw i32 %k.018, 1
+  %cmp = icmp slt i64 %indvars.iv.next, 500
+  ;CHECK : br i1 %cmp, label %for.body, %structSetup
+  br i1 %cmp, label %for.body, label %for.body.4
+
+for.body.4:                                       ; preds = %for.inc, %for.body, %for.body.4
+  %k.117 = phi i32 [ %mul, %for.body.4 ], [ %inc, %for.inc ], [ %1, %for.body ]
+  %j.016 = phi i32 [ %inc6, %for.body.4 ], [ 0, %for.inc ], [ 0, %for.body ]
+  %mul = mul nsw i32 %k.117, 3
+  %inc6 = add nuw nsw i32 %j.016, 1
+  %exitcond = icmp eq i32 %inc6, 500
+  br i1 %exitcond, label %for.end.7, label %for.body.4
+
+for.end.7:                                        ; preds = %for.body.4
+  ret i32 %mul
 }
 
 ; Function Attrs: nounwind readonly uwtable
