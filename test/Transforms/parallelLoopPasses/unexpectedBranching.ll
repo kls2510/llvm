@@ -4,11 +4,91 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-freebsd10.1"
 
+; ModuleID = 'branching.c'
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-freebsd10.1"
+
+; Function Attrs: nounwind uwtable
+define i32 @test1(i32 %i, i32* nocapture %a) #0 {
+;CHECK: test1
+;CHECK NEXT: entry:
+;CHECK NEXT: br label %structSetup[0.9]+
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.inc, %entry
+  %indvars.iv26 = phi i64 [ 0, %entry ], [ %indvars.iv.next27, %for.inc ]
+  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv26
+  %0 = load i32, i32* %arrayidx, align 4, !tbaa !1
+  %cmp1 = icmp sgt i32 %0, %i
+  br i1 %cmp1, label %if.then, label %for.inc
+
+if.then:                                          ; preds = %for.body
+  %dec = add nsw i32 %0, -1
+  store i32 %dec, i32* %arrayidx, align 4, !tbaa !1
+  br label %for.inc
+
+  ;CHECK: continue31:
+  ;CHECK NEXT: call void @release(%struct.dispatch_group_s* %[0.9]+)
+  ;CHECK NEXT: br label %structSetup
+for.inc:                                          ; preds = %for.body, %if.then
+  %indvars.iv.next27 = add nuw nsw i64 %indvars.iv26, 1
+  %exitcond28 = icmp eq i64 %indvars.iv.next27, 500
+  br i1 %exitcond28, label %for.body.6, label %for.body
+
+for.body.6:                                       ; preds = %for.inc, %for.body.6
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body.6 ], [ 0, %for.inc ]
+  %x.024 = phi i32 [ %mul, %for.body.6 ], [ 1, %for.inc ]
+  %arrayidx8 = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
+  %1 = load i32, i32* %arrayidx8, align 4, !tbaa !1
+  %mul = mul nsw i32 %1, %x.024
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 500
+  br i1 %exitcond, label %for.end.11, label %for.body.6
+
+for.end.11:                                       ; preds = %for.body.6
+  ret i32 %mul
+}
+
 ; Function Attrs: nounwind readonly uwtable
 define i32 @test1(i32 %i, i32* nocapture readonly %a) #0 {
-;CHECK : test1
-;CHECK : entry:
-;CHECK : br label %for.body
+
+entry:
+  %cmp = icmp sgt i32 %i, 10
+  br i1 %cmp, label %for.body, label %if.end.5
+
+for.body:                                         ; preds = %entry, %for.body
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
+  %c.025 = phi i32 [ %inc.c.0, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
+  %0 = load i32, i32* %arrayidx, align 4, !tbaa !1
+  %cmp2 = icmp sgt i32 %0, %i
+  %inc = zext i1 %cmp2 to i32
+  %inc.c.0 = add nsw i32 %inc, %c.025
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond26 = icmp eq i64 %indvars.iv.next, 500
+  br i1 %exitcond26, label %if.end.5, label %for.body
+
+if.end.5:                                         ; preds = %for.body, %entry
+  %c.2 = phi i32 [ 0, %entry ], [ %inc.c.0, %for.body ]
+  br label %for.body.8
+
+for.body.8:                                       ; preds = %for.body.8, %if.end.5
+  %x.023 = phi i32 [ 1, %if.end.5 ], [ %mul, %for.body.8 ]
+  %j.022 = phi i32 [ 0, %if.end.5 ], [ %inc10, %for.body.8 ]
+  %mul = mul nsw i32 %x.023, %c.2
+  %inc10 = add nuw nsw i32 %j.022, 1
+  %exitcond = icmp eq i32 %inc10, 500
+  br i1 %exitcond, label %for.end.11, label %for.body.8
+
+for.end.11:                                       ; preds = %for.body.8
+  ret i32 %mul
+}
+
+
+; Function Attrs: nounwind readonly uwtable
+define i32 @test1(i32 %i, i32* nocapture readonly %a) #0 {
+
 entry:
   br label %for.body
 
