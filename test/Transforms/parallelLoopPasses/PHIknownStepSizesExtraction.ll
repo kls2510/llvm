@@ -7,7 +7,7 @@ target triple = "x86_64-unknown-freebsd10.1"
 @.str = private unnamed_addr constant [12 x i8] c"value : %d\0A\00", align 1
 
 ; Function Attrs: nounwind uwtable
-define i32 @test1(i32* nocapture readonly %a) #0 
+define i32 @test1(i32* nocapture readonly %a) #0 {
 ; CHECK: @test1
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT: br label %structSetup
