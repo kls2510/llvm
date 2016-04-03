@@ -8,7 +8,7 @@ target triple = "x86_64-unknown-freebsd10.1"
 define i32 @test1(i32 %i, i32* nocapture %a) #0 {
 ;CHECK: test1
 ;CHECK NEXT: entry:
-;CHECK NEXT: br label %structSetup[0-9]+
+;CHECK NEXT: br label {{%structSetup[0-9]+}}
 entry:
   br label %for.body
 
@@ -42,8 +42,8 @@ for.body.6:                                       ; preds = %for.inc, %for.body.
 for.end.11:                                       ; preds = %for.body.6
   ret i32 %mul
   
-  ;CHECK: continue[0-9]+:
-  ;CHECK NEXT: call void @release(%struct.dispatch_group_s* %[0-9]+)
+  ;CHECK: {{continue[0-9]+}}:
+  ;CHECK NEXT: {{call void @release(%struct.dispatch_group_s* %[0-9]+)}}
   ;CHECK NEXT: br label %structSetup
 }
 
