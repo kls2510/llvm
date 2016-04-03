@@ -175,5 +175,5 @@ attributes #3 = { nounwind }
 
 ; CHECK: value : 1500
 ; CHECK: value : 603
-; CHECK: value : 603
-; CHECK: value : 349795
+; CHECK: value : 334
+; CHECK: value : 374437
