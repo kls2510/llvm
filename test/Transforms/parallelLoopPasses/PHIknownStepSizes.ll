@@ -25,7 +25,7 @@ for.body:                                         ; preds = %for.body, %entry
   br i1 %exitcond, label %for.end, label %for.body
 
 for.end:                                          ; preds = %for.body
-  %call = tail call i32 (i8*, ...) @printf(i8* nonnull getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i64 0, i64 0), i32 %inc) #3
+  %call = tail call i32 (i8*, ...) @printf(i8* nonnull getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i64 0, i64 0), i32 1500) #3
   ret i32 %add
 }
 
@@ -56,7 +56,7 @@ for.body:                                         ; preds = %entry, %for.body
   br i1 %cmp, label %for.body, label %for.end
 
 for.end:                                          ; preds = %for.body
-  %call = tail call i32 (i8*, ...) @printf(i8* nonnull getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i64 0, i64 0), i32 %add2) #3
+  %call = tail call i32 (i8*, ...) @printf(i8* nonnull getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i64 0, i64 0), i32 603) #3
   ret i32 %add
 }
 
@@ -74,11 +74,11 @@ for.body:                                         ; preds = %entry, %for.body
   %add = add nsw i32 %0, %k.09
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 3
   %add2 = add nuw nsw i32 %i.011, 2
-  %cmp = icmp slt i64 %indvars.iv.next, 500
-  br i1 %cmp, label %for.body, label %for.end
+  %cmp = icmp slt i64 %indvars.iv.next, 700
+  br i1 %cmp, label %for.end, label %for.body
 
 for.end:                                          ; preds = %for.body
-  %call = tail call i32 (i8*, ...) @printf(i8* nonnull getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i64 0, i64 0), i32 %add2) #3
+  %call = tail call i32 (i8*, ...) @printf(i8* nonnull getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i64 0, i64 0), i32 603) #3
   ret i32 %add
 }
 
@@ -175,5 +175,5 @@ attributes #3 = { nounwind }
 
 ; CHECK: value : 1500
 ; CHECK: value : 603
-; CHECK: value : 334
-; CHECK: value : 374437
+; CHECK: value : 603
+; CHECK: value : 349795
