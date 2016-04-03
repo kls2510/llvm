@@ -82,7 +82,6 @@ for.end:                                          ; preds = %for.body
   ret i32 %add
 }
 
-//DOESN'T PARALLELIZE
 ; Function Attrs: nounwind uwtable
 define i32 @test4(i32* nocapture readonly %a) #0 {
 entry:
@@ -106,7 +105,6 @@ for.end:                                          ; preds = %for.body.header
   ret i32 0
 }
 
-//DOESN'T PARALLELIZE
 ; Function Attrs: nounwind uwtable
 define i32 @test5(i32* nocapture readonly %a) #0 {
 entry:
