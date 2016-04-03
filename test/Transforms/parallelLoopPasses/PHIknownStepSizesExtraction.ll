@@ -82,7 +82,7 @@ for.body:                                         ; preds = %entry, %for.body
   %add = add nsw i32 %0, %k.09
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 3
   %add2 = add nuw nsw i32 %i.011, 2
-  %cmp = icmp slt i64 %indvars.iv.next, 500
+  %cmp = icmp slt i64 %indvars.iv.next, 700
   br i1 %cmp, label %for.end, label %for.body
 
 for.end:                                          ; preds = %for.body
