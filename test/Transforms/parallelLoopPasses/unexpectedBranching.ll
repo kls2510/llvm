@@ -12,7 +12,7 @@ target triple = "x86_64-unknown-freebsd10.1"
 define i32 @test1(i32 %i, i32* nocapture %a) #0 {
 ;CHECK: test1
 ;CHECK NEXT: entry:
-;CHECK NEXT: br label %structSetup[0.9]+
+;CHECK NEXT: br label %structSetup[0-9]+
 entry:
   br label %for.body
 
@@ -28,8 +28,8 @@ if.then:                                          ; preds = %for.body
   store i32 %dec, i32* %arrayidx, align 4, !tbaa !1
   br label %for.inc
 
-  ;CHECK: continue31:
-  ;CHECK NEXT: call void @release(%struct.dispatch_group_s* %[0.9]+)
+  ;CHECK: continue[0-9]+:
+  ;CHECK NEXT: call void @release(%struct.dispatch_group_s* %[0-9]+)
   ;CHECK NEXT: br label %structSetup
 for.inc:                                          ; preds = %for.body, %if.then
   %indvars.iv.next27 = add nuw nsw i64 %indvars.iv26, 1
@@ -47,77 +47,6 @@ for.body.6:                                       ; preds = %for.inc, %for.body.
   br i1 %exitcond, label %for.end.11, label %for.body.6
 
 for.end.11:                                       ; preds = %for.body.6
-  ret i32 %mul
-}
-
-; Function Attrs: nounwind readonly uwtable
-define i32 @test1(i32 %i, i32* nocapture readonly %a) #0 {
-
-entry:
-  %cmp = icmp sgt i32 %i, 10
-  br i1 %cmp, label %for.body, label %if.end.5
-
-for.body:                                         ; preds = %entry, %for.body
-  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
-  %c.025 = phi i32 [ %inc.c.0, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4, !tbaa !1
-  %cmp2 = icmp sgt i32 %0, %i
-  %inc = zext i1 %cmp2 to i32
-  %inc.c.0 = add nsw i32 %inc, %c.025
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond26 = icmp eq i64 %indvars.iv.next, 500
-  br i1 %exitcond26, label %if.end.5, label %for.body
-
-if.end.5:                                         ; preds = %for.body, %entry
-  %c.2 = phi i32 [ 0, %entry ], [ %inc.c.0, %for.body ]
-  br label %for.body.8
-
-for.body.8:                                       ; preds = %for.body.8, %if.end.5
-  %x.023 = phi i32 [ 1, %if.end.5 ], [ %mul, %for.body.8 ]
-  %j.022 = phi i32 [ 0, %if.end.5 ], [ %inc10, %for.body.8 ]
-  %mul = mul nsw i32 %x.023, %c.2
-  %inc10 = add nuw nsw i32 %j.022, 1
-  %exitcond = icmp eq i32 %inc10, 500
-  br i1 %exitcond, label %for.end.11, label %for.body.8
-
-for.end.11:                                       ; preds = %for.body.8
-  ret i32 %mul
-}
-
-
-; Function Attrs: nounwind readonly uwtable
-define i32 @test1(i32 %i, i32* nocapture readonly %a) #0 {
-
-entry:
-  br label %for.body
-
-for.body:                                         ; preds = %entry, %for.inc
-  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.inc ]
-  %k.018 = phi i32 [ 0, %entry ], [ %inc, %for.inc ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4, !tbaa !1
-  %cmp1 = icmp sgt i32 %0, %i
-  %1 = trunc i64 %indvars.iv to i32
-  ;CHECK : br i1 %cmp1, label %structSetup, label %for.inc
-  br i1 %cmp1, label %for.body.4, label %for.inc
-
-for.inc:                                          ; preds = %for.body
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %inc = add nuw nsw i32 %k.018, 1
-  %cmp = icmp slt i64 %indvars.iv.next, 500
-  ;CHECK : br i1 %cmp, label %for.body, %structSetup
-  br i1 %cmp, label %for.body, label %for.body.4
-
-for.body.4:                                       ; preds = %for.inc, %for.body, %for.body.4
-  %k.117 = phi i32 [ %mul, %for.body.4 ], [ %inc, %for.inc ], [ %1, %for.body ]
-  %j.016 = phi i32 [ %inc6, %for.body.4 ], [ 0, %for.inc ], [ 0, %for.body ]
-  %mul = mul nsw i32 %k.117, 3
-  %inc6 = add nuw nsw i32 %j.016, 1
-  %exitcond = icmp eq i32 %inc6, 500
-  br i1 %exitcond, label %for.end.7, label %for.body.4
-
-for.end.7:                                        ; preds = %for.body.4
   ret i32 %mul
 }
 
