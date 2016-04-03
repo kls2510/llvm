@@ -134,7 +134,9 @@ pair<PHINode *, Instruction *> IsParallelizableLoopPass::inductionPhiNode(PHINod
 	Instruction *branchInstruction = nullptr;
 	branchInstruction = findCorrespondingBranch(currentPhiVal, potentialPhi->getParent());
 	if (branchInstruction == nullptr) {
-		branchInstruction = findCorrespondingBranch(nextPhiVal, potentialPhi->getParent());
+		if (nextPhiVal != nullptr) {
+			branchInstruction = findCorrespondingBranch(nextPhiVal, potentialPhi->getParent());
+		}
 	}
 	if (branchInstruction != nullptr) {
 		cerr << "found induction phi with branch instruction:\n";

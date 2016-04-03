@@ -94,7 +94,7 @@ for.end:                                          ; preds = %for.body
 define i32 @test4(i32* nocapture readonly %a) #0 {
 ; CHECK: @test4
 ; CHECK-NEXT: entry:
-; CHECK-NEXT: br label %structSetup
+; CHECK-NEXT: br label %for.body.header
 entry:
   br label %for.body.header
 
@@ -120,7 +120,7 @@ for.end:                                          ; preds = %for.body.header
 define i32 @test5(i32* nocapture readonly %a) #0 {
 ; CHECK: @test5
 ; CHECK-NEXT: entry:
-; CHECK-NEXT: br label %structSetup
+; CHECK-NEXT: br label %for.body.header
 entry:
   br label %for.body.header
 
