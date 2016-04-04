@@ -558,6 +558,8 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 							//same goes for any values loaded from the value that we're passing uniquely to each thread
 							for (auto u : actualLifetimeVal->users()) {
 								Instruction *lifetimeUser = cast<Instruction>(u);
+								cerr << "checking if need to move: ";
+								u->dump();
 								if (!L->contains(lifetimeUser)) {
 									bool uniqueToLoop = true;
 									for (auto mu : lifetimeUser->users()) {
@@ -581,8 +583,6 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 									}
 									if (uniqueToLoop) {
 										privateLoopVarUses.insert(u);
-										cerr << "lifetime val used in instruction in loop:";
-										u->dump();
 									}
 									else {
 										return false;
@@ -592,6 +592,8 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 							argValues.insert(actualLifetimeVal);
 							lifetimeValues.insert(actualLifetimeVal);
 							cerr << "pass in latter as argument\n";
+							cerr << "added this to lifetime value list:";
+							actualLifetimeVal->dump();
 						}
 						else {
 							cerr << "lifetime start in loop doesn't end until outside the loop - not parallelizable\n";
@@ -612,15 +614,13 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 					if (isa<Value>(op)) {
 						if (isa<Instruction>(op)) {
 							Instruction *inst = cast<Instruction>(&op);
-							//if the instruction is a GEP and the memory it's accessing will definitely be local
-							//i.e. is within a lifetime start/end, then we don't need to pass it in as an arg
-							if (isa<GetElementPtrInst>(inst)) {
-								if (lifetimeValues.find(inst->getOperand(0)) != lifetimeValues.end()) {
-									cerr << "already added lifetime value, so not adding to args:\n";
-									inst->dump();
-									cerr << "\n";
-									continue;
-								}
+							//lifetime start/end, then we don't need to pass it in as an arg
+							if (lifetimeValues.find(inst) != lifetimeValues.end()
+								|| voidCastsForLoop.find(inst) != voidCastsForLoop.end()) {
+								cerr << "already added via lifetime value, so not adding to args:\n";
+								inst->dump();
+								cerr << "\n";
+								continue;
 							}
 							//else if the value is an instruction declared outside the loop
 							else if (!(L->contains(inst))) {
@@ -740,6 +740,10 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 	//DEPENDENCY ANALYSIS
 	set<Instruction *> dependentInstructions;
     // get all read / write instructions in the loop and check that all write indexes depend on the outer phi value
+	cerr << "checking for dependencies, with lifetime values to ignore:";
+	for (auto x : lifetimeValues) {
+		x->dump();
+	}
 	bool allWriteDependentOnPhi = getDependencies(L, outerPhi, dependentInstructions, lifetimeValues);
 	if (!allWriteDependentOnPhi) {
 		//writes to the same location across threads will cause error
