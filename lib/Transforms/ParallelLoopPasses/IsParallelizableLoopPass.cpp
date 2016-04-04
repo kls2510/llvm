@@ -656,6 +656,12 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 				int i;
 				for (i = 0; i < numArgs; i++) {
 					Value *arg = call->getArgOperand(i);
+					for (auto voidCast : voidCastsForLoop) {
+						if (arg == voidCast) {
+							//don't add void cast to arguments
+							continue;
+						}
+					}
 					if (isa<Instruction>(arg)) {
 						Instruction *inst = cast<Instruction>(arg);
 						if (!(L->contains(inst))) {
@@ -808,8 +814,9 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 					//check if memory altered is only in arguments and it's different for each loop
 					if (callee->onlyAccessesArgMemory()) {
 						cerr << "But only accesses arg values, args are:\n";
+						bool par = true;
+						cerr << "num args = " << callee->getNumOperands() << "\n";
 						for (auto &arg : call->operands()) {
-							bool par = true;
 							arg->dump();
 							if (isa<Instruction>(arg)) {
 								cerr << "Is an instruction\n";
@@ -822,21 +829,22 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 									else {
 										cerr << "This pointer argument is perhaps not unique to each thread\n";
 										par = false;
+										break;
 									}
 								}
+								continue;
 							}
-							if (!isa<Instruction>(arg)){
-								arg->dump();
-								cerr << "Is not an instruction\n";
-								cerr << "This argument is perhaps not unique to each thread\n";
-								par = false;
-							}
-							if (!par) {
-								cerr << "call to function that may write to same memory across iterations found - not parallelizable\n";
-								callee->dump();
-								cerr << "\n";
-								return false;
-							}
+							arg->dump();
+							cerr << "Is not an instruction\n";
+							cerr << "This argument is perhaps not unique to each thread\n";
+							par = false;
+							break;
+						}
+						if (!par) {
+							cerr << "call to function that may write to same memory across iterations found - not parallelizable\n";
+							callee->dump();
+							cerr << "\n";
+							return false;
 						}
 					}
 					else {
