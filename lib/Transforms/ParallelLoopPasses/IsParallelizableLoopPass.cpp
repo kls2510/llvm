@@ -614,6 +614,17 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 					if (isa<Value>(op)) {
 						if (isa<Instruction>(op)) {
 							Instruction *inst = cast<Instruction>(&op);
+							//if the instruction is a GEP and the memory it's accessing will definitely be local
+							//i.e. is within a lifetime start/end, then we don't need to pass it in as an arg
+							if (isa<GetElementPtrInst>(inst)) {
+								if (lifetimeValues.find(inst->getOperand(0)) != lifetimeValues.end()
+									|| voidCastsForLoop.find(inst) != voidCastsForLoop.end()) {
+									cerr << "already added lifetime value, so not adding to args:\n";
+									inst->dump();
+									cerr << "\n";
+									continue;
+								}
+							}
 							//lifetime start/end, then we don't need to pass it in as an arg
 							if (lifetimeValues.find(inst) != lifetimeValues.end()
 								|| voidCastsForLoop.find(inst) != voidCastsForLoop.end()) {
@@ -664,12 +675,20 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 						//if the instruction is a GEP and the memory it's accessing will definitely be local
 						//i.e. is within a lifetime start/end, then we don't need to pass it in as an arg
 						if (isa<GetElementPtrInst>(inst)) {
-							if (lifetimeValues.find(inst->getOperand(0)) != lifetimeValues.end()) {
+							if (lifetimeValues.find(inst->getOperand(0)) != lifetimeValues.end()
+								|| voidCastsForLoop.find(inst) != voidCastsForLoop.end()) {
 								cerr << "already added lifetime value, so not adding to args:\n";
 								inst->dump();
 								cerr << "\n";
 								continue;
 							}
+						}
+						else if (lifetimeValues.find(inst) != lifetimeValues.end()
+							|| voidCastsForLoop.find(inst) != voidCastsForLoop.end()) {
+							cerr << "already added via lifetime value, so not adding to args:\n";
+							inst->dump();
+							cerr << "\n";
+							continue;
 						}
 						//else if the value is an instruction declared outside the loop
 						else if (!(L->contains(inst))) {
@@ -961,11 +980,15 @@ bool IsParallelizableLoopPass::getDependencies(Loop *L, PHINode *phi, set<Instru
 				//case : write
 				if (isa<Instruction>(i.getOperand(1))) {
 					Instruction *ptr = cast<Instruction>(i.getOperand(1));
+					cerr << "checking for match with lifetime vals:\n";
+					ptr->getOperand(0)->dump();
+					i.getOperand(1)->dump();
 					if (lifetimeValues.find(ptr->getOperand(0)) == lifetimeValues.end()
 						|| lifetimeValues.find(i.getOperand(1)) == lifetimeValues.end()) {
 						dependent = isDependentOnInductionVariable(ptr, phi, false);
 					}
 					else {
+						cerr << "match found\n";
 						lifetimeVal = true;
 						dependent = true;
 					}
