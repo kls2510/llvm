@@ -983,6 +983,13 @@ bool IsParallelizableLoopPass::getDependencies(Loop *L, PHINode *phi, set<Instru
 					cerr << "checking for match with lifetime vals:\n";
 					ptr->getOperand(0)->dump();
 					i.getOperand(1)->dump();
+					cerr << "in list:\n";
+					for (auto l : lifetimeValues) {
+						l->dump();
+						if (l == i.getOperand(1) || l == ptr->getOperand(0)) {
+							cerr << "match found";
+						}
+					}
 					if (lifetimeValues.find(ptr->getOperand(0)) == lifetimeValues.end()
 						|| lifetimeValues.find(i.getOperand(1)) == lifetimeValues.end()) {
 						dependent = isDependentOnInductionVariable(ptr, phi, false);
