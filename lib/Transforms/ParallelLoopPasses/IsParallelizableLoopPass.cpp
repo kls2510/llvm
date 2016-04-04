@@ -581,6 +581,8 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 									}
 									if (uniqueToLoop) {
 										privateLoopVarUses.insert(u);
+										cerr << "lifetime val used in instruction in loop:";
+										u->dump();
 									}
 									else {
 										return false;
@@ -934,7 +936,8 @@ bool IsParallelizableLoopPass::getDependencies(Loop *L, PHINode *phi, set<Instru
 				//get the memory location pointer
 				if (isa<Instruction>(i.getOperand(0))) {
 					Instruction *ptr = cast<Instruction>(i.getOperand(0));
-					if (lifetimeValues.find(ptr->getOperand(0)) == lifetimeValues.end()) {
+					if (lifetimeValues.find(ptr->getOperand(0)) == lifetimeValues.end()
+						|| lifetimeValues.find(i.getOperand(0)) == lifetimeValues.end()) {
 						dependent = isDependentOnInductionVariable(ptr, phi, true);
 					}
 					else {
@@ -954,7 +957,8 @@ bool IsParallelizableLoopPass::getDependencies(Loop *L, PHINode *phi, set<Instru
 				//case : write
 				if (isa<Instruction>(i.getOperand(1))) {
 					Instruction *ptr = cast<Instruction>(i.getOperand(1));
-					if (lifetimeValues.find(ptr->getOperand(0)) == lifetimeValues.end()) {
+					if (lifetimeValues.find(ptr->getOperand(0)) == lifetimeValues.end()
+						|| lifetimeValues.find(i.getOperand(1)) == lifetimeValues.end()) {
 						dependent = isDependentOnInductionVariable(ptr, phi, false);
 					}
 					else {
