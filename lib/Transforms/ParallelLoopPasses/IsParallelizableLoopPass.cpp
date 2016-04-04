@@ -614,27 +614,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 					if (isa<Value>(op)) {
 						if (isa<Instruction>(op)) {
 							Instruction *inst = cast<Instruction>(&op);
-							//if the instruction is a GEP and the memory it's accessing will definitely be local
-							//i.e. is within a lifetime start/end, then we don't need to pass it in as an arg
-							if (isa<GetElementPtrInst>(inst)) {
-								if (lifetimeValues.find(inst->getOperand(0)) != lifetimeValues.end()
-									|| voidCastsForLoop.find(inst) != voidCastsForLoop.end()) {
-									cerr << "already added lifetime value, so not adding to args:\n";
-									inst->dump();
-									cerr << "\n";
-									continue;
-								}
-							}
-							//lifetime start/end, then we don't need to pass it in as an arg
-							if (lifetimeValues.find(inst) != lifetimeValues.end()
-								|| voidCastsForLoop.find(inst) != voidCastsForLoop.end()) {
-								cerr << "already added via lifetime value, so not adding to args:\n";
-								inst->dump();
-								cerr << "\n";
-								continue;
-							}
-							//else if the value is an instruction declared outside the loop
-							else if (!(L->contains(inst))) {
+							if (!(L->contains(inst))) {
 								//must pass in local value as arg so it is available
 								if (argValues.find(inst) == argValues.end()) {
 									argValues.insert(inst);
@@ -672,26 +652,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 					Value *arg = call->getArgOperand(i);
 					if (isa<Instruction>(arg)) {
 						Instruction *inst = cast<Instruction>(arg);
-						//if the instruction is a GEP and the memory it's accessing will definitely be local
-						//i.e. is within a lifetime start/end, then we don't need to pass it in as an arg
-						if (isa<GetElementPtrInst>(inst)) {
-							if (lifetimeValues.find(inst->getOperand(0)) != lifetimeValues.end()
-								|| voidCastsForLoop.find(inst) != voidCastsForLoop.end()) {
-								cerr << "already added lifetime value, so not adding to args:\n";
-								inst->dump();
-								cerr << "\n";
-								continue;
-							}
-						}
-						else if (lifetimeValues.find(inst) != lifetimeValues.end()
-							|| voidCastsForLoop.find(inst) != voidCastsForLoop.end()) {
-							cerr << "already added via lifetime value, so not adding to args:\n";
-							inst->dump();
-							cerr << "\n";
-							continue;
-						}
-						//else if the value is an instruction declared outside the loop
-						else if (!(L->contains(inst))) {
+						if (!(L->contains(inst))) {
 							//must pass in local value as arg so it is available
 							if (argValues.find(inst) == argValues.end()) {
 								argValues.insert(inst);
@@ -959,11 +920,24 @@ bool IsParallelizableLoopPass::getDependencies(Loop *L, PHINode *phi, set<Instru
 				//get the memory location pointer
 				if (isa<Instruction>(i.getOperand(0))) {
 					Instruction *ptr = cast<Instruction>(i.getOperand(0));
-					if (lifetimeValues.find(ptr->getOperand(0)) == lifetimeValues.end()
-						|| lifetimeValues.find(i.getOperand(0)) == lifetimeValues.end()) {
-						dependent = isDependentOnInductionVariable(ptr, phi, true);
+					cerr << "checking for match with lifetime vals:\n";
+					ptr->getOperand(0)->dump();
+					i.getOperand(0)->dump();
+					cerr << "in list:\n";
+					bool match = false;
+					for (auto l : lifetimeValues) {
+						l->dump();
+						if (l == i.getOperand(0) || l == ptr->getOperand(0)) {
+							match = true;
+							break;
+						}
+					}
+					if (!match) {
+						cerr << "match not found\n";
+						dependent = isDependentOnInductionVariable(ptr, phi, false);
 					}
 					else {
+						cerr << "match found\n";
 						lifetimeVal = true;
 						dependent = true;
 					}
@@ -984,14 +958,16 @@ bool IsParallelizableLoopPass::getDependencies(Loop *L, PHINode *phi, set<Instru
 					ptr->getOperand(0)->dump();
 					i.getOperand(1)->dump();
 					cerr << "in list:\n";
+					bool match = false;
 					for (auto l : lifetimeValues) {
 						l->dump();
 						if (l == i.getOperand(1) || l == ptr->getOperand(0)) {
-							cerr << "match found";
+							match = true;
+							break;
 						}
 					}
-					if (lifetimeValues.find(ptr->getOperand(0)) == lifetimeValues.end()
-						|| lifetimeValues.find(i.getOperand(1)) == lifetimeValues.end()) {
+					if (!match) {
+						cerr << "match not found\n";
 						dependent = isDependentOnInductionVariable(ptr, phi, false);
 					}
 					else {
