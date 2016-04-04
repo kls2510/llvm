@@ -798,6 +798,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 				}
 				else {
 					cerr << "call to function that may write to memory found\n";
+					call->dump();
 					//check if memory altered is only in arguments and it's different for each loop
 					if (callee->onlyAccessesArgMemory()) {
 						cerr << "But only accesses arg values, args are:\n";
@@ -805,6 +806,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 							bool par = true;
 							arg->dump();
 							if (isa<Instruction>(arg)) {
+								cerr << "Is an instruction\n";
 								Instruction *a = cast<Instruction>(arg);
 								if (a->getType()->isPointerTy()) {
 									if (lifetimeValues.find(a) != lifetimeValues.end()) {
@@ -818,6 +820,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 								}
 							}
 							else {
+								cerr << "Not an instruction\n";
 								cerr << "This argument is perhaps not unique to each thread\n";
 								par = false;
 							}
