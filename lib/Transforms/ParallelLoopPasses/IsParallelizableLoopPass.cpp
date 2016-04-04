@@ -815,7 +815,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 					if (callee->onlyAccessesArgMemory()) {
 						cerr << "But only accesses arg values, args are:\n";
 						bool par = true;
-						cerr << "num args = " << callee->getNumOperands() << "\n";
+						cerr << "num args = " << callee->getArgumentList().size() << "\n";
 						for (auto &arg : call->operands()) {
 							arg->dump();
 							if (isa<Instruction>(arg)) {
@@ -841,15 +841,16 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 							break;
 						}
 						if (!par) {
+							cerr << "par is false";
 							cerr << "call to function that may write to same memory across iterations found - not parallelizable\n";
-							callee->dump();
+							//callee->dump();
 							cerr << "\n";
 							return false;
 						}
 					}
 					else {
 						cerr << "call to function that may write to same memory across iterations found - not parallelizable\n";
-						callee->dump();
+						//callee->dump();
 						cerr << "\n";
 						return false;
 					}
