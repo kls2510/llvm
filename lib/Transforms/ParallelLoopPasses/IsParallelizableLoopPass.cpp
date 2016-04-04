@@ -535,6 +535,12 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 							}
 						}
 						if (end)   {
+							//check that null pointer cast is only used in lifetime begin/ends
+							for (auto u : lifetimeCastVal->users()) {
+								if (u != call && u != endCall) {
+									cerr << "lifetime call void cast value used elsewhere - not parallelizable\n";
+								}
+							}
 							//check that the null pointer cast is inside the loop before the call to lifetime begin - otherwise we'll need to move
 							//it into the loop 
 							if (!L->contains(cast<Instruction>(lifetimeCastVal))) {
@@ -819,8 +825,9 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 									}
 								}
 							}
-							else {
-								cerr << "Not an instruction\n";
+							if (!isa<Instruction>(arg)){
+								arg->dump();
+								cerr << "Is not an instruction\n";
 								cerr << "This argument is perhaps not unique to each thread\n";
 								par = false;
 							}

@@ -84,7 +84,7 @@ namespace {
 			replaceLoopValues(loopData, context, threadFunction, loadedArrayAndLocalValues, loopData->getLoop(), loopData->getArgumentArgValues(), loopData->getReturnValues());
 
 			//copy loop blocks into the function and delete them from the caller
-			extractTheLoop(loopData->getLoop(), threadFunction, &F, context);
+			extractTheLoop(loopData->getLoop(), threadFunction, &F, context, symTab);
 
 			//Mark the function to avoid infinite extraction
 			threadFunction->addFnAttr("Extracted", "true");
@@ -842,11 +842,19 @@ namespace {
 			}
 		}
 
-		void extractTheLoop(Loop *loop, Function *function, Function *callingFunction, LLVMContext &context) {
+		void extractTheLoop(Loop *loop, Function *function, Function *callingFunction, LLVMContext &context, ValueSymbolTable &symTab) {
 			BasicBlock &insertBefore = function->back();
 			BasicBlock *loopEntry;
 			map<Value *, Value *> valuemap;
 			BasicBlock *current;
+			Function *lifetimeStart = nullptr;
+			Function *lifetimeEnd = nullptr;
+			if (symTab.lookup(StringRef("llvm.lifetime.start"))) {
+				lifetimeStart = cast<Function>(symTab.lookup(StringRef("llvm.lifetime.start")));
+			}
+			if (symTab.lookup(StringRef("llvm.lifetime.end"))) {
+				lifetimeEnd = cast<Function>(symTab.lookup(StringRef("llvm.lifetime.end")));
+			}
 			//copy loop into new function
 			int i = 0;
 			for (auto &bb : loop->getBlocks()) {
@@ -857,9 +865,22 @@ namespace {
 				IRBuilder<> inserter(current);
 				valuemap.insert(make_pair(bb, current));
 				for (auto &instr : bb->getInstList()) {
-					Instruction *inst = instr.clone();
-					Instruction *inserted = inserter.Insert(inst);
-					valuemap.insert(make_pair(&instr, inserted));
+					if (isa<CallInst>(&instr)) {
+						CallInst *cInst = cast<CallInst>(&instr);
+						if (cInst->getCalledFunction() == lifetimeStart || cInst->getCalledFunction() == lifetimeEnd) {
+							//don't copy lifetime start/ends
+						}
+						else {
+							Instruction *inst = instr.clone();
+							Instruction *inserted = inserter.Insert(inst);
+							valuemap.insert(make_pair(&instr, inserted));
+						}
+					}
+					else {
+						Instruction *inst = instr.clone();
+						Instruction *inserted = inserter.Insert(inst);
+						valuemap.insert(make_pair(&instr, inserted));
+					}
 				}
 				i++;
 			}
@@ -868,46 +889,48 @@ namespace {
 			for (auto &bb : loop->getBlocks()) {
 				for (auto &inst : bb->getInstList()) {
 					Instruction *newInst = cast<Instruction>(valuemap.find(&inst)->second);
-					if (!isa<PHINode>(inst)) {
-						User::op_iterator oldoperand = inst.op_begin();
-						User::op_iterator newoperand = newInst->op_begin();
-						while (oldoperand != inst.op_end()) {
-							map<Value *, Value *>::iterator pos = valuemap.find(*oldoperand);
+					if (newInst != nullptr) {
+						if (!isa<PHINode>(inst)) {
+							User::op_iterator oldoperand = inst.op_begin();
+							User::op_iterator newoperand = newInst->op_begin();
+							while (oldoperand != inst.op_end()) {
+								map<Value *, Value *>::iterator pos = valuemap.find(*oldoperand);
+								if (pos != valuemap.end()) {
+									Value *mappedOp = pos->second;
+									//replace in new instruction with new value
+									*newoperand = mappedOp;
+								}
+								oldoperand++;
+								newoperand++;
+							}
+						}
+						else {
+							PHINode *phi = cast<PHINode>(&inst);
+							PHINode *newPhi = cast<PHINode>(newInst);
+							map<Value *, Value *>::iterator pos = valuemap.find(phi->getIncomingValue(0));
 							if (pos != valuemap.end()) {
 								Value *mappedOp = pos->second;
 								//replace in new instruction with new value
-								*newoperand = mappedOp;
+								newPhi->setIncomingValue(0, mappedOp);
 							}
-							oldoperand++;
-							newoperand++;
-						}
-					}
-					else {
-						PHINode *phi = cast<PHINode>(&inst);
-						PHINode *newPhi = cast<PHINode>(newInst);
-						map<Value *, Value *>::iterator pos = valuemap.find(phi->getIncomingValue(0));
-						if (pos != valuemap.end()) {
-							Value *mappedOp = pos->second;
-							//replace in new instruction with new value
-							newPhi->setIncomingValue(0, mappedOp);
-						}
-						pos = valuemap.find(phi->getIncomingValue(1));
-						if (pos != valuemap.end()) {
-							Value *mappedOp = pos->second;
-							//replace in new instruction with new value
-							newPhi->setIncomingValue(1, mappedOp);
-						}
-						pos = valuemap.find(phi->getIncomingBlock(0));
-						if (pos != valuemap.end()) {
-							Value *mappedOp = pos->second;
-							//replace in new instruction with new value
-							newPhi->setIncomingBlock(0, cast<BasicBlock>(mappedOp));
-						}
-						pos = valuemap.find(phi->getIncomingBlock(1));
-						if (pos != valuemap.end()) {
-							Value *mappedOp = pos->second;
-							//replace in new instruction with new value
-							newPhi->setIncomingBlock(1, cast<BasicBlock>(mappedOp));
+							pos = valuemap.find(phi->getIncomingValue(1));
+							if (pos != valuemap.end()) {
+								Value *mappedOp = pos->second;
+								//replace in new instruction with new value
+								newPhi->setIncomingValue(1, mappedOp);
+							}
+							pos = valuemap.find(phi->getIncomingBlock(0));
+							if (pos != valuemap.end()) {
+								Value *mappedOp = pos->second;
+								//replace in new instruction with new value
+								newPhi->setIncomingBlock(0, cast<BasicBlock>(mappedOp));
+							}
+							pos = valuemap.find(phi->getIncomingBlock(1));
+							if (pos != valuemap.end()) {
+								Value *mappedOp = pos->second;
+								//replace in new instruction with new value
+								newPhi->setIncomingBlock(1, cast<BasicBlock>(mappedOp));
+							}
 						}
 					}
 				}
