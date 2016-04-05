@@ -373,7 +373,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 					//if the actual phi name is used in the loop for operations other than accumualation->not parallelizable
 					//(i.e.x += x * y possible and this wouldn't be correct)
 					//all outer loop phis shouldn't be used anywhere except in inner phis
-					//only the inermost acc phi should have a use that's not a PHI node
+					//only the innermost phi should have a use that's not a PHI node
 					int numPhiNodeUsesInInnerPhis = 0;
 					for (auto u : potentialAccumulator->users()) {
 						if (isa<PHINode>(u)) {
@@ -381,7 +381,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 							helperAccPhis.insert(cast<PHINode>(u));
 						}
 					}
-					if (noLoops == 1) {
+					if (numPhiNodeUsesInInnerPhis == 0) {
 						if (potentialAccumulator->getNumUses() - numPhiNodeUsesInInnerPhis > 1) {
 							cerr << "accumulative phi node has too many users: " << potentialAccumulator->getNumUses() - numPhiNodeUsesInInnerPhis << " - not parallelizable\n";
 							potentialAccumulator->dump();
@@ -416,9 +416,9 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 								helperAccPhis.insert(cast<PHINode>(u));
 							}
 						}
-						if (currentSubloop == noLoops) {
+						if (numPhiNodeUsesInInnerPhis == 0) {
 							if (p->getNumUses() - numPhiNodeUsesInInnerPhis > 1) {
-								cerr << "inner accumulative phi node has too many users: " << p->getNumUses() - numPhiNodeUsesInInnerPhis << " - not parallelizable\n";
+								cerr << "innermost accumulative phi node has too many users: " << p->getNumUses() - numPhiNodeUsesInInnerPhis << " - not parallelizable\n";
 								p->dump();
 								for (auto u : p->users()) {
 									if (!isa<PHINode>(u)) {
