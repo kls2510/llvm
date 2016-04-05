@@ -663,40 +663,43 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 					Value *arg = call->getArgOperand(i);
 					cerr << "checking arg value isn't a void cast for a lifetime value\n";
 					arg->dump();
+					bool voidVal = false;
 					for (auto voidCast : voidCastsForLoop) {
 						cerr << "comparing with:\n";
 						voidCast->dump();
 						if (arg == voidCast) {
 							//don't add void cast to arguments
 							cerr << "match : not adding to arguments\n";
-							continue;
+							voidVal = true;
 						}
 					}
-					if (isa<Instruction>(arg)) {
-						Instruction *inst = cast<Instruction>(arg);
-						if (!(L->contains(inst))) {
-							//must pass in local value as arg so it is available
-							if (argValues.find(inst) == argValues.end()) {
-								cerr << "adding to arg vals val in call inst:\n";
-								inst->dump();
-								argValues.insert(inst);
+					if (!voidVal) {
+						if (isa<Instruction>(arg)) {
+							Instruction *inst = cast<Instruction>(arg);
+							if (!(L->contains(inst))) {
+								//must pass in local value as arg so it is available
+								if (argValues.find(inst) == argValues.end()) {
+									cerr << "adding to arg vals val in call inst:\n";
+									inst->dump();
+									argValues.insert(inst);
+								}
 							}
 						}
-					}
-					else {
-						//if it is a Value declared as an argument or global array
-						Value *val = arg;
-						bool functionArg = false;
-						for (auto &farg : F.getArgumentList()) {
-							if (val == cast<Value>(&farg)) {
-								functionArg = true;
+						else {
+							//if it is a Value declared as an argument or global array
+							Value *val = arg;
+							bool functionArg = false;
+							for (auto &farg : F.getArgumentList()) {
+								if (val == cast<Value>(&farg)) {
+									functionArg = true;
+								}
 							}
-						}
-						if (isa<GlobalValue>(val) || functionArg) {
-							if (argValues.find(val) == argValues.end()) {
-								cerr << "adding to arg vals, val in call inst and global:\n";
-								val->dump();
-								argValues.insert(val);
+							if (isa<GlobalValue>(val) || functionArg) {
+								if (argValues.find(val) == argValues.end()) {
+									cerr << "adding to arg vals, val in call inst and global:\n";
+									val->dump();
+									argValues.insert(val);
+								}
 							}
 						}
 					}
