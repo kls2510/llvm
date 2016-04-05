@@ -372,6 +372,8 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 					}
 					//if the actual phi name is used in the loop for operations other than accumualation->not parallelizable
 					//(i.e.x += x * y possible and this wouldn't be correct)
+					//all outer loop phis shouldn't be used anywhere except in inner phis
+					//only the inermost acc phi should have a use that's not a PHI node
 					int numPhiNodeUsesInInnerPhis = 0;
 					for (auto u : potentialAccumulator->users()) {
 						if (isa<PHINode>(u)) {
@@ -379,18 +381,34 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 							helperAccPhis.insert(cast<PHINode>(u));
 						}
 					}
-					if (potentialAccumulator->getNumUses() - numPhiNodeUsesInInnerPhis > 1) {
-						cerr << "accumulative phi node has too many users: " << potentialAccumulator->getNumUses() - numPhiNodeUsesInInnerPhis << " - not parallelizable\n";
-						potentialAccumulator->dump();
-						for (auto u : potentialAccumulator->users()) {
-							if (!isa<PHINode>(u)) {
-								u->dump();
+					if (noLoops == 1) {
+						if (potentialAccumulator->getNumUses() - numPhiNodeUsesInInnerPhis > 1) {
+							cerr << "accumulative phi node has too many users: " << potentialAccumulator->getNumUses() - numPhiNodeUsesInInnerPhis << " - not parallelizable\n";
+							potentialAccumulator->dump();
+							for (auto u : potentialAccumulator->users()) {
+								if (!isa<PHINode>(u)) {
+									u->dump();
+								}
 							}
+							return false;
 						}
-						return false;
 					}
-					//same for all inner phis that are part of the accumulation
+					else {
+						if (potentialAccumulator->getNumUses() - numPhiNodeUsesInInnerPhis > 0) {
+							cerr << "outer accumulative phi node has too many users: " << potentialAccumulator->getNumUses() - numPhiNodeUsesInInnerPhis << " - not parallelizable\n";
+							potentialAccumulator->dump();
+							for (auto u : potentialAccumulator->users()) {
+								if (!isa<PHINode>(u)) {
+									u->dump();
+								}
+							}
+							return false;
+						}
+					}
+					int currentSubloop = 1;
+					//repeat for all inner phis that are part of the accumulation
 					for (auto p : helperAccPhis) {
+						currentSubloop++;
 						numPhiNodeUsesInInnerPhis = 0;
 						for (auto u : p->users()) {
 							if (isa<PHINode>(u)) {
@@ -398,15 +416,29 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 								helperAccPhis.insert(cast<PHINode>(u));
 							}
 						}
-						if (p->getNumUses() - numPhiNodeUsesInInnerPhis > 1) {
-							cerr << "inner accumulative phi node has too many users: " << p->getNumUses() - numPhiNodeUsesInInnerPhis << " - not parallelizable\n";
-							p->dump();
-							for (auto u : p->users()) {
-								if (!isa<PHINode>(u)) {
-									u->dump();
+						if (currentSubloop == noLoops) {
+							if (p->getNumUses() - numPhiNodeUsesInInnerPhis > 1) {
+								cerr << "inner accumulative phi node has too many users: " << p->getNumUses() - numPhiNodeUsesInInnerPhis << " - not parallelizable\n";
+								p->dump();
+								for (auto u : p->users()) {
+									if (!isa<PHINode>(u)) {
+										u->dump();
+									}
 								}
+								return false;
 							}
-							return false;
+						}
+						else {
+							if (p->getNumUses() - numPhiNodeUsesInInnerPhis > 0) {
+								cerr << "inner accumulative phi node has too many users: " << p->getNumUses() - numPhiNodeUsesInInnerPhis << " - not parallelizable\n";
+								p->dump();
+								for (auto u : p->users()) {
+									if (!isa<PHINode>(u)) {
+										u->dump();
+									}
+								}
+								return false;
+							}
 						}
 					}
 
@@ -1100,7 +1132,7 @@ bool IsParallelizableLoopPass::checkPhiIsAccumulative(PHINode *inst, Loop *L, in
 		}
 		else {
 			//check corresponding inner phi nodes
-			if (!checkPhiIsAccumulative(cast<PHINode>(u), L->getSubLoops().front(), opcode)) {
+			if (!checkPhiIsAccumulative(cast<PHINode>(u), L, opcode)) {
 				cerr << "phi variable's inner phi node is not accumulative so can't be parallelized\n";
 				u->dump();
 				acc = false;
