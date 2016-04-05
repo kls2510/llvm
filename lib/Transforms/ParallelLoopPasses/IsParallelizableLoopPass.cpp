@@ -389,8 +389,30 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 						}
 						return false;
 					}
+					//same for all inner phis that are part of the accumulation
+					for (auto p : helperAccPhis) {
+						numPhiNodeUsesInInnerPhis = 0;
+						for (auto u : p->users()) {
+							if (isa<PHINode>(u)) {
+								numPhiNodeUsesInInnerPhis++;
+								helperAccPhis.insert(cast<PHINode>(u));
+							}
+						}
+						if (p->getNumUses() - numPhiNodeUsesInInnerPhis > 1) {
+							cerr << "inner accumulative phi node has too many users: " << p->getNumUses() - numPhiNodeUsesInInnerPhis << " - not parallelizable\n";
+							p->dump();
+							for (auto u : p->users()) {
+								if (!isa<PHINode>(u)) {
+									u->dump();
+								}
+							}
+							return false;
+						}
+					}
+
 					//if the next value it's assigned is used elsewhere in the loop (except in an inner loop's phi node) 
-					//then not parallelizable (as we change this value between threads in transform)
+					//then not parallelizable (as we change this value between threads in transform). this next value
+					//is the same for every inner phi node
 					for (auto u : nextValue->users()) {
 						if (isa<Instruction>(u)) {
 							if (L->contains(cast<Instruction>(u)) && !isa<PHINode>(u)) {
@@ -1043,40 +1065,49 @@ bool IsParallelizableLoopPass::checkNestedLoops(Loop *L, int &noLoops) {
 }
 
 bool IsParallelizableLoopPass::checkPhiIsAccumulative(PHINode *inst, Loop *L, int &opcode){
-	cerr << "non-induction phi-node found in outer loop\n";
+	cerr << "non-induction phi-node found in loop\n";
 	inst->dump();
 	cerr << "\n";
 
 	//find what the repeated operation is - only accept commutative operations
 	//i.e. case Add, case FAdd, case Mul, case FMul, case And, case Or, case Xor
-
+	bool acc = true;
 	for (auto u : inst->users()) {
+		cerr << "found instruction that uses the potential acc phi:\n";
+		u->dump();
 		if (!isa<PHINode>(u)) {
-			cerr << "new accumulative phi value:\n";
+			cerr << "new accumulative phi user:\n";
 			u->dump();
 
 			if (isa<Instruction>(u)) {
 				Instruction *incomingInstruction = cast<Instruction>(u);
 				opcode = incomingInstruction->getOpcode();
 				if (Instruction::isCommutative(opcode)) {
-					return true;
+					cerr << "found instruction's opcode is commutative\n";
 				}
 				else {
 					cerr << "phi variable op not commutative so can't be parallelized\n";
-					return false;
+					acc = false;
 				}
 			}
 			else {
-				//TEMPORARY
 				cerr << "next phi node value that's not an instruction found\n";
 				u->dump();
 				cerr << "\n";
-				return false;
+				acc = false;
 			}
 			break;
 		}
+		else {
+			//check corresponding inner phi nodes
+			if (!checkPhiIsAccumulative(cast<PHINode>(u), L->getSubLoops().front(), opcode)) {
+				cerr << "phi variable's inner phi node is not accumulative so can't be parallelized\n";
+				u->dump();
+				acc = false;
+			}
+		}
 	}
-	return false;
+	return acc;
 }
 
 list<Dependence *> IsParallelizableLoopPass::findDistanceVectors(set<Instruction *> &dependentInstructions, DependenceAnalysis *DA) {
