@@ -939,9 +939,9 @@ bool IsParallelizableLoopPass::getDependencies(Loop *L, PHINode *phi, set<Instru
 				//case : load
 				//get the memory location pointer
 				if (isa<Instruction>(i.getOperand(0))) {
-					Instruction *ptr = cast<Instruction>(i.getOperand(0));
+					Value *ptr = i.getOperand(0);
 					while (isa<GetElementPtrInst>(ptr)) {
-						ptr = cast<Instruction>(ptr->getOperand(0));
+						ptr = cast<Instruction>(ptr)->getOperand(0);
 					}
 					cerr << "checking for match with lifetime vals:\n";
 					ptr->dump();
@@ -976,9 +976,9 @@ bool IsParallelizableLoopPass::getDependencies(Loop *L, PHINode *phi, set<Instru
 			else if (isa<StoreInst>(&i)) {
 				//case : write
 				if (isa<Instruction>(i.getOperand(1))) {
-					Instruction *ptr = cast<Instruction>(i.getOperand(1));
+					Value *ptr = i.getOperand(1);
 					while (isa<GetElementPtrInst>(ptr)) {
-						ptr = cast<Instruction>(ptr->getOperand(0));
+						ptr = cast<Instruction>(ptr)->getOperand(0);
 					}
 					cerr << "checking for match with lifetime vals:\n";
 					ptr->dump();
