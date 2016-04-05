@@ -1,5 +1,4 @@
-; RUN: ~/llvm/Debug/bin/clang %s -parallelize-loops
-; RUN: LD_LIBRARY_PATH=~/lib ./a.out | FileCheck %s
+; RUN: ~/llvm/Debug/bin/clang %s -parallelize-loops -emit-llvm -S -o - | FileCheck %s
 
 ; ModuleID = 'globalVarTests.c'
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -12,6 +11,9 @@ target triple = "x86_64-unknown-freebsd10.1"
 
 ; Function Attrs: nounwind uwtable
 define void @test1(i32* nocapture %a) #0 {
+; CHECK: test1
+; CHECK-NEXT: entry:
+; CHECK-NEXT: br label %for.body
 entry:
   br label %for.body
 
@@ -40,9 +42,17 @@ for.end:                                          ; preds = %if.end
 
 ; Function Attrs: nounwind uwtable
 define i32 @test2() #0 {
+; CHECK: test2
+; CHECK-NEXT: entry:
+; CHECK-NEXT: %ACC.promoted = load i32, i32* @ACC, align 4, !tbaa !1
+; CHECK-NEXT: br label %for.body
 entry:
   %ACC.promoted = load i32, i32* @ACC, align 4, !tbaa !1
   br label %for.body
+
+; CHECK: for.end:                                          
+; CHECK-NEXT:  store i32 [[SAVETHIS1:%[0-9]+]], i32* @ACC, align 4, !tbaa !1
+; CHECK-NEXT:  ret i32 [[SAVETHIS2:%[0-9]+]]
 
 for.body:                                         ; preds = %for.body, %entry
   %add9 = phi i32 [ %ACC.promoted, %entry ], [ %add, %for.body ]
@@ -59,13 +69,28 @@ for.body:                                         ; preds = %for.body, %entry
 for.end:                                          ; preds = %for.body
   store i32 %add, i32* @ACC, align 4, !tbaa !1
   ret i32 %add2.sum.0
+  
+; CHECK: continue:  
+; CHECK: [[SAVETHIS1]] = load i32, i32* {{%[0-9]+}}
+; CHECK: [[SAVETHIS2]] = add i32 {{%[0-9]+}}, {{%[0-9]+}}
+; CHECK: br label %for.end  
+
 }
 
 ; Function Attrs: nounwind uwtable
 define void @test3() #0 {
+; CHECK: test3
+; CHECK-NEXT: entry:
+; CHECK-NEXT: %ACC.promoted = load i32, i32* @ACC, align 4, !tbaa !1
+; CHECK-NEXT: br label %structSetup
 entry:
   %ACC.promoted = load i32, i32* @ACC, align 4, !tbaa !1
   br label %for.body
+  
+; CHECK:for.end:                                         
+; CHECK-NEXT:  store i32 [[SAVETHIS3:%[0-9]+]], i32* @ACC, align 4, !tbaa !1
+; CHECK-NEXT:  ret void
+
 
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
@@ -80,10 +105,18 @@ for.body:                                         ; preds = %for.body, %entry
 for.end:                                          ; preds = %for.body
   store i32 %add, i32* @ACC, align 4, !tbaa !1
   ret void
+  
+; CHECK: continue:  
+; CHECK: [[SAVETHIS3]] = add i32 {{%[0-9]+}}, {{%[0-9]+}}
+; CHECK: br label %for.end  
 }
 
 ; Function Attrs: nounwind uwtable
 define void @test4() #0 {
+; CHECK: test4
+; CHECK-NEXT: entry:
+; CHECK-NEXT: %0 = load i32, i32* @ACC, align 4, !tbaa !1
+; CHECK-NEXT: br label %structSetup
 entry:
   %0 = load i32, i32* @ACC, align 4, !tbaa !1
   br label %for.body
@@ -135,10 +168,3 @@ attributes #2 = { nounwind }
 !2 = !{!"int", !3, i64 0}
 !3 = !{!"omnipotent char", !4, i64 0}
 !4 = !{!"Simple C/C++ TBAA"}
-
-; CHECK: value : 434850
-; CHECK: value : 998
-; CHECK: value : 500898
-; CHECK: value : 500898
-
-
