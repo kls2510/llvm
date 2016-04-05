@@ -431,6 +431,9 @@ namespace {
 					PHINode *phi = cast<PHINode>(&i);
 					int i;
 					for (i = 0; i < 2; i++) {
+						if (i == 1 && (phi->getNumOperands() == 1)) {
+							break;
+						}
 						if (phi->getIncomingBlock(i) == toReplace) {
 							phi->setIncomingBlock(i, cont);
 						}
