@@ -167,8 +167,8 @@ attributes #3 = { nounwind }
 ; CHECK: @threadFunction(i8*)
 ; CHECK: %loadVal_2 = load i32*, i32** %loadVal_1
 ; CHECK-NEXT: %1 = bitcast i32* %loadVal_2 to i8*
-; CHECK: call void @llvm.lifetime.start(i64 4, i8* %1) #5
-; CHECK: call void @llvm.lifetime.end(i64 4, i8* %1) #5
+; CHECK: call void @llvm.lifetime.start(i64 4, i8* %1)
+; CHECK: call void @llvm.lifetime.end(i64 4, i8* %1)
 
 ; CHECK: @threadFunction.1(i8*)
 ; CHECK: %loadVal_2 = load i32*, i32** %loadVal_1
