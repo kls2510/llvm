@@ -867,14 +867,14 @@ namespace {
 				for (auto &instr : bb->getInstList()) {
 					if (isa<CallInst>(&instr)) {
 						CallInst *cInst = cast<CallInst>(&instr);
-						if (cInst->getCalledFunction() == lifetimeStart || cInst->getCalledFunction() == lifetimeEnd) {
+						/* if (cInst->getCalledFunction() == lifetimeStart || cInst->getCalledFunction() == lifetimeEnd) {
 							//don't copy lifetime start/ends
-						}
-						else {
+						} 
+						else {*/
 							Instruction *inst = instr.clone();
 							Instruction *inserted = inserter.Insert(inst);
 							valuemap.insert(make_pair(&instr, inserted));
-						}
+						//}
 					}
 					else {
 						Instruction *inst = instr.clone();
