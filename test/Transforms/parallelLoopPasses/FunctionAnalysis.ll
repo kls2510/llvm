@@ -151,6 +151,12 @@ if.end:                                           ; preds = %if.then, %entry
   ret void
 }
 
+; Function Attrs: nounwind argmemonly
+declare void @llvm.lifetime.start(i64, i8* nocapture) #1
+
+; Function Attrs: nounwind argmemonly
+declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+
 ; Function Attrs: nounwind uwtable
 define i32 @test5() #3 {
 entry:
