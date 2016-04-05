@@ -317,7 +317,6 @@ attributes #4 = { nounwind }
 !3 = !{!"omnipotent char", !4, i64 0}
 !4 = !{!"Simple C/C++ TBAA"}
 
-
 ; CHECK: value : 124500
 ; CHECK: value : 8640
 ; CHECK: value : 6175
