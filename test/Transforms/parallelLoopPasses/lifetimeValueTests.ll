@@ -174,5 +174,5 @@ attributes #3 = { nounwind }
 ; CHECK: %loadVal_2 = load i32*, i32** %loadVal_1
 ; CHECK-NEXT: %1 = bitcast i32* %loadVal_2 to i8*
 ; CHECK: %6 = phi i64 [ 0, %for.cond.1.preheader_ ], [ %10, %for.body.4_ ]
-; CHECK-NEXT: call void @llvm.lifetime.start(i64 4, i8* %1) #5
-; CHECK: call void @llvm.lifetime.end(i64 4, i8* %1) #5
+; CHECK-NEXT: call void @llvm.lifetime.start(i64 4, i8* %1)
+; CHECK: call void @llvm.lifetime.end(i64 4, i8* %1)
