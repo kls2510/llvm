@@ -542,26 +542,8 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 									return false;
 								}
 							}
-							//check that the null pointer cast is inside the loop before the call to lifetime begin - no longer need to do this?
 							voidCastsForLoop.insert(lifetimeCastVal);
-							/*if (!L->contains(cast<Instruction>(lifetimeCastVal))) {
-								bool uniqueToLifetime = true;
-								call->dump();
-								endCall->dump();
-								for (auto u : lifetimeCastVal->users()) {
-									if (u != call && u != endCall) {
-										cerr << "void cast is outside loop and used elsewhere other than for lifetime calls - not parallelizable\n";
-										u->dump();
-										uniqueToLifetime = false;
-									}
-								}
-								if (uniqueToLifetime) {
-									voidCastsForLoop.insert(lifetimeCastVal);
-								}
-								else {
-									return false;
-								}
-							}*/
+							
 							//same goes for any values loaded from the value that we're passing uniquely to each thread
 							for (auto u : actualLifetimeVal->users()) {
 								Instruction *lifetimeUser = cast<Instruction>(u);

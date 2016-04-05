@@ -866,8 +866,8 @@ namespace {
 				valuemap.insert(make_pair(bb, current));
 				for (auto &instr : bb->getInstList()) {
 					if (isa<CallInst>(&instr)) {
-						CallInst *cInst = cast<CallInst>(&instr);
-						/* if (cInst->getCalledFunction() == lifetimeStart || cInst->getCalledFunction() == lifetimeEnd) {
+						/*CallInst *cInst = cast<CallInst>(&instr);
+						if (cInst->getCalledFunction() == lifetimeStart || cInst->getCalledFunction() == lifetimeEnd) {
 							//don't copy lifetime start/ends
 						} 
 						else {*/
