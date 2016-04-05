@@ -1,5 +1,11 @@
 ; RUN: ~/llvm/Debug/bin/clang %s -parallelize-loops -emit-llvm -S -o - | FileCheck %s
 
+; ModuleID = 'lifetimeVal.c'
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-freebsd10.1"
+
+@.str = private unnamed_addr constant [4 x i8] c"%d\0A\00", align 1
+
 ; Function Attrs: nounwind uwtable
 define i32 @raydir(i32 %i, i32 %j, i32* nocapture %k) argmemonly {
 entry:
@@ -38,11 +44,6 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup.3
   %add16 = add nsw i32 %add, %5
   ret i32 %add16
 
-for.cond.cleanup.3:                               ; preds = %for.body.4
-  %indvars.iv.next34 = add nuw nsw i64 %indvars.iv33, 1
-  %exitcond35 = icmp eq i64 %indvars.iv.next34, 500
-  br i1 %exitcond35, label %for.cond.cleanup, label %for.cond.1.preheader
-
 ; CHECK: structSetup:
 ; CHECK-NEXT:  %4 = alloca %ThreadPasser
 ; CHECK-NEXT:  %5 = alloca %ThreadReturner
@@ -53,6 +54,10 @@ for.cond.cleanup.3:                               ; preds = %for.body.4
 ; CHECK-NEXT:  store [50000 x i32]* %vla30, [50000 x i32]** %8
 ; CHECK-NEXT:  %9 = getelementptr inbounds %ThreadPasser, %ThreadPasser* %4, i32 0, i32 2
 ; CHECK-NEXT:  %10 = getelementptr inbounds %ThreadPasser, %ThreadPasser* %4, i32 0, i32 3
+for.cond.cleanup.3:                               ; preds = %for.body.4
+  %indvars.iv.next34 = add nuw nsw i64 %indvars.iv33, 1
+  %exitcond35 = icmp eq i64 %indvars.iv.next34, 500
+  br i1 %exitcond35, label %for.cond.cleanup, label %for.cond.1.preheader
 
 for.body.4:                                       ; preds = %for.body.4, %for.cond.1.preheader
   %indvars.iv = phi i64 [ 0, %for.cond.1.preheader ], [ %indvars.iv.next, %for.body.4 ]
@@ -110,7 +115,6 @@ for.cond.cleanup.3:                               ; preds = %for.body.4
 ; CHECK-NEXT:  store [50000 x i32]* %vla30, [50000 x i32]** %7
 ; CHECK-NEXT:  %8 = getelementptr inbounds %ThreadPasser.2, %ThreadPasser.2* %3, i32 0, i32 2
 ; CHECK-NEXT: %9 = getelementptr inbounds %ThreadPasser.2, %ThreadPasser.2* %3, i32 0, i32 3
-  
 for.body.4:                                       ; preds = %for.body.4, %for.cond.1.preheader
   %indvars.iv = phi i64 [ 0, %for.cond.1.preheader ], [ %indvars.iv.next, %for.body.4 ]
   %cast = bitcast i32* %t0 to i8*
@@ -126,6 +130,39 @@ for.body.4:                                       ; preds = %for.body.4, %for.co
   %exitcond = icmp eq i64 %indvars.iv.next, 100
   br i1 %exitcond, label %for.cond.cleanup.3, label %for.body.4
 }
+
+
+; Function Attrs: nounwind argmemonly
+declare void @llvm.lifetime.start(i64, i8* nocapture) #1
+
+; Function Attrs: nounwind argmemonly
+declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+
+; Function Attrs: nounwind uwtable
+define i32 @main() #0 {
+entry:
+  %call = tail call i32 @test1()
+  %call2 = tail call i32 @test2()
+  %add = add i32 %call, %call2
+  %call1 = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), i32 %add) #3
+  ret i32 0
+}
+
+; Function Attrs: nounwind
+declare i32 @printf(i8* nocapture readonly, ...) #2
+
+attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #1 = { nounwind argmemonly }
+attributes #2 = { nounwind "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #3 = { nounwind }
+
+!llvm.ident = !{!0}
+
+!0 = !{!"clang version 3.8.0 (https://github.com/kls2510/clang.git f3231de0fc839bd243c2318188a4a37c704dd8d4) (https://github.com/kls2510/llvm.git 646b2f6468619509b4611d1286e771367b15a7b6)"}
+!1 = !{!2, !2, i64 0}
+!2 = !{!"int", !3, i64 0}
+!3 = !{!"omnipotent char", !4, i64 0}
+!4 = !{!"Simple C/C++ TBAA"}
 
 ; CHECK: @threadFunction(i8*)
 ; CHECK: %loadVal_2 = load i32*, i32** %loadVal_1
