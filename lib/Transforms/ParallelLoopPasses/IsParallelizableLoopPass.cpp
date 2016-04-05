@@ -624,6 +624,8 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 							if (!(L->contains(inst))) {
 								//must pass in local value as arg so it is available
 								if (argValues.find(inst) == argValues.end()) {
+									cerr << "adding to arg vals, in non-call inst:\n";
+									inst->dump();
 									argValues.insert(inst);
 								}
 							}
@@ -640,6 +642,8 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 							}
 							if (functionArg || isa<GlobalValue>(val)) {
 								if (argValues.find(val) == argValues.end()) {
+									cerr << "adding to arg vals, a non-call inst a global val:\n";
+									val->dump();
 									argValues.insert(val);
 								}
 							}
@@ -664,7 +668,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 						voidCast->dump();
 						if (arg == voidCast) {
 							//don't add void cast to arguments
-							//TODO: FIX THIS
+							cerr << "match : not adding to arguments\n";
 							continue;
 						}
 					}
@@ -673,6 +677,8 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 						if (!(L->contains(inst))) {
 							//must pass in local value as arg so it is available
 							if (argValues.find(inst) == argValues.end()) {
+								cerr << "adding to arg vals val in call inst:\n";
+								inst->dump();
 								argValues.insert(inst);
 							}
 						}
@@ -688,6 +694,8 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 						}
 						if (isa<GlobalValue>(val) || functionArg) {
 							if (argValues.find(val) == argValues.end()) {
+								cerr << "adding to arg vals, val in call inst and global:\n";
+								val->dump();
 								argValues.insert(val);
 							}
 						}
