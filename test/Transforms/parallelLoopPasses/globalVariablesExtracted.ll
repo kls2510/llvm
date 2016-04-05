@@ -45,7 +45,7 @@ define i32 @test2() #0 {
 ; CHECK: test2
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT: %ACC.promoted = load i32, i32* @ACC, align 4, !tbaa !1
-; CHECK-NEXT: br label %for.body
+; CHECK-NEXT: br label %structSetup
 entry:
   %ACC.promoted = load i32, i32* @ACC, align 4, !tbaa !1
   br label %for.body
