@@ -940,21 +940,24 @@ bool IsParallelizableLoopPass::getDependencies(Loop *L, PHINode *phi, set<Instru
 				//get the memory location pointer
 				if (isa<Instruction>(i.getOperand(0))) {
 					Instruction *ptr = cast<Instruction>(i.getOperand(0));
+					while (isa<GetElementPtrInst>(ptr)) {
+						ptr = cast<Instruction>(ptr->getOperand(0));
+					}
 					cerr << "checking for match with lifetime vals:\n";
-					ptr->getOperand(0)->dump();
+					ptr->dump();
 					i.getOperand(0)->dump();
 					cerr << "in list:\n";
 					bool match = false;
 					for (auto l : lifetimeValues) {
 						l->dump();
-						if (l == i.getOperand(0) || l == ptr->getOperand(0)) {
+						if (l == i.getOperand(0) || l == ptr) {
 							match = true;
 							break;
 						}
 					}
 					if (!match) {
 						cerr << "match not found\n";
-						dependent = isDependentOnInductionVariable(ptr, phi, false);
+						dependent = isDependentOnInductionVariable(cast<Instruction>(i.getOperand(0)), phi, false);
 					}
 					else {
 						cerr << "match found\n";
@@ -974,21 +977,24 @@ bool IsParallelizableLoopPass::getDependencies(Loop *L, PHINode *phi, set<Instru
 				//case : write
 				if (isa<Instruction>(i.getOperand(1))) {
 					Instruction *ptr = cast<Instruction>(i.getOperand(1));
+					while (isa<GetElementPtrInst>(ptr)) {
+						ptr = cast<Instruction>(ptr->getOperand(0));
+					}
 					cerr << "checking for match with lifetime vals:\n";
-					ptr->getOperand(0)->dump();
+					ptr->dump();
 					i.getOperand(1)->dump();
 					cerr << "in list:\n";
 					bool match = false;
 					for (auto l : lifetimeValues) {
 						l->dump();
-						if (l == i.getOperand(1) || l == ptr->getOperand(0)) {
+						if (l == i.getOperand(1) || l == ptr) {
 							match = true;
 							break;
 						}
 					}
 					if (!match) {
 						cerr << "match not found\n";
-						dependent = isDependentOnInductionVariable(ptr, phi, false);
+						dependent = isDependentOnInductionVariable(cast<Instruction>(i.getOperand(1)), phi, false);
 					}
 					else {
 						cerr << "match found\n";
