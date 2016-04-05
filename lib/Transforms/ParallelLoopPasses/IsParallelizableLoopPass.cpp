@@ -539,11 +539,12 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 							for (auto u : lifetimeCastVal->users()) {
 								if (u != call && u != endCall) {
 									cerr << "lifetime call void cast value used elsewhere - not parallelizable\n";
+									return false;
 								}
 							}
-							//check that the null pointer cast is inside the loop before the call to lifetime begin - otherwise we'll need to move
-							//it into the loop 
-							if (!L->contains(cast<Instruction>(lifetimeCastVal))) {
+							//check that the null pointer cast is inside the loop before the call to lifetime begin - no longer need to do this?
+							voidCastsForLoop.insert(lifetimeCastVal);
+							/*if (!L->contains(cast<Instruction>(lifetimeCastVal))) {
 								bool uniqueToLifetime = true;
 								call->dump();
 								endCall->dump();
@@ -560,7 +561,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 								else {
 									return false;
 								}
-							}
+							}*/
 							//same goes for any values loaded from the value that we're passing uniquely to each thread
 							for (auto u : actualLifetimeVal->users()) {
 								Instruction *lifetimeUser = cast<Instruction>(u);
@@ -656,9 +657,14 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 				int i;
 				for (i = 0; i < numArgs; i++) {
 					Value *arg = call->getArgOperand(i);
+					cerr << "checking arg value isn't a void cast for a lifetime value\n";
+					arg->dump();
 					for (auto voidCast : voidCastsForLoop) {
+						cerr << "comparing with:\n";
+						voidCast->dump();
 						if (arg == voidCast) {
 							//don't add void cast to arguments
+							//TODO: FIX THIS
 							continue;
 						}
 					}
@@ -816,7 +822,7 @@ bool IsParallelizableLoopPass::isParallelizable(Loop *L, Function &F, ScalarEvol
 						cerr << "But only accesses arg values, args are:\n";
 						bool par = true;
 						cerr << "num args = " << callee->getArgumentList().size() << "\n";
-						int i;
+						unsigned long i;
 						for (i = 0; i < callee->getArgumentList().size(); i++) {
 							Value *arg = call->getArgOperand(i);
 							arg->dump();
